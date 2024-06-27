@@ -1,0 +1,89 @@
+image: node:14.12.0
+pipelines:
+
+  branches: # Pipelines that can only be triggered manually
+    development:
+        - step:
+            name: Installing & Running Tests
+            caches:
+              - node
+            script:
+              - rm -rf package-lock.json
+              - rm -rf node_modules
+              - npm install
+        - step:
+            name: Build
+            deployment: staging
+            script:
+              - npm install --production
+              - REACT_APP_ENVIRONMENT=staging npm run build
+              - echo "\REACT_APP_BASE_URL='$BASE_URL';" >> .env
+            artifacts:
+              - build/**
+        - step:
+            name: Deploy to S3
+            script:
+              - pipe: atlassian/aws-s3-deploy:0.2.4
+                variables:
+                  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                  AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                  S3_BUCKET: 'admin-dashboard-prem-industries'
+                  ACL: "public-read"
+                  LOCAL_PATH: "build"
+    master:
+
+      - step:
+
+          name: Installing dependencies
+          caches:
+
+            - node
+
+          script:
+
+            - rm -rf package-lock.json
+
+            - rm -rf node_modules
+
+            - npm install
+
+      - step:
+
+          name: Build
+          script:
+            - npm install
+            - npm run build
+          artifacts:
+            - build/**
+
+      - step:
+            name: Deploy to S3
+            deployment: production
+            script:
+              - pipe: atlassian/aws-s3-deploy:0.2.4
+                variables:
+                  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                  AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                  S3_BUCKET: 'admin-dashboard-prem-industries'
+                  ACL: "public-read"
+                  LOCAL_PATH: "build"
+
+      - step:
+
+          name: Invalidate Cloudfront Cache
+
+          script:
+
+            - pipe: atlassian/aws-cloudfront-invalidate:0.1.1
+
+              variables:
+
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+
+                DISTRIBUTION_ID: $PRODUCTION_DISTRIBUTION_ID

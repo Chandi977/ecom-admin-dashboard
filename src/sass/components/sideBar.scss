@@ -1,0 +1,94 @@
+@font-face {
+    font-family: "inter";
+    src: url("../../assets/fonts/Inter-VariableFont_slnt\,wght.ttf");
+}
+
+.sideBar_main{
+    width: 100%;
+    height: auto;
+    >div{
+        width: 100%;
+        height: auto;
+        border-bottom: 2px solid #eeeeee;
+        margin-top: 10px;
+    }
+    .button_{
+        width: 100%;
+        height: 45px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        background: #fff;
+        cursor: pointer;
+        padding-left: 15px;
+        margin-bottom: 10px;
+        >p:nth-child(1){
+            font-size: 20px;
+            margin-top: 13px;
+            color: #526581;
+        }
+        >p:nth-child(2){
+            font-family: "inter";
+            font-size: 16px;
+            color: #526581;
+            text-transform: capitalize;
+            margin-left: 10px;
+            margin-top: 17px;
+        }
+    }
+    .button_:hover{
+        background: #0C4E9C;
+       >p:nth-child(1){
+        color: #fff;
+       }
+       >p:nth-child(2){
+        color: #fff;
+       }
+    }
+    .select__{
+        width: 100%;
+        height: 40px;
+        border: none;
+        border-radius: 10px;
+        padding-left: 15px;
+        font-family: "inter";
+        color: #526581;
+        font-size: 16px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    .select__:focus{
+        outline: none;
+    }
+    .flex__{
+        width: 100%;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        background: #fff;
+        margin-bottom: 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        padding-left: 15px;
+        >p:nth-child(1){
+            font-size: 20px;
+            margin-top: 13px;
+            color: #526581;
+        }
+        .select__{
+            width: 100%;
+            height: 40px;
+            border: none;
+            border-radius: 10px;
+            padding-left: 15px;
+            font-family: "inter";
+            color: #526581;
+            font-size: 16px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        .select__:focus{
+            outline: none;
+        }
+    }
+}

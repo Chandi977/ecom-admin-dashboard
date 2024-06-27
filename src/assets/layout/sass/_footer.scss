@@ -1,0 +1,21 @@
+.layout-footer {
+    transition: margin-left $transitionDuration;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 1rem;
+    border-top: 1px solid var(--surface-border);
+    color: #7f8da1;
+
+    .footer_links {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        width: 20%;
+
+        p {
+            cursor: pointer;
+            color: #7f8da1;
+        }
+    }
+}
