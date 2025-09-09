@@ -3,5 +3,3 @@
 export const DEV = "https://server.prempackaging.com/premind/api";
 
 // export const DEV = "https://server.prempackaging.com/premind/api/";
-
-

@@ -92,7 +92,7 @@ export const AppTopbar = (props) => {
             <div className="layout-topbar">
                 <Link to="/" className="layout-topbar-logo">
                     {/* <img src={props.layoutColorMode === "light" ? "assets/layout/images/logo_zugaob.svg" : "assets/layout/images/logo_zugaob.svg"} alt="logo" /> */}
-                    <img src="/images/prem.png" width={120} height={400}></img>
+                    <img src="/images/prem.png" width={80} height={800}></img>
                 </Link>
 
                 <button type="button" className="p-link layout-topbar-menu-button layout-topbar-button" onClick={props.onMobileTopbarMenuClick}>
@@ -121,15 +121,21 @@ export const AppTopbar = (props) => {
                     </div>
                 </div> */}
 
-                <div className="user_info">
-                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3nNAks_aW4HGy_S8euxRBBnbtqJRQDNvBKA&usqp=CAU" alt="profile_img" />
-                    <div className="p_div">
-                        <p className="p1">{name}</p>
-                        <p className="p2">{role}</p>
+                <div className="user_info shadow-lg" style={{ display: "flex", alignItems: "center", background: "#f6f8fa", borderRadius: "12px", padding: "10px 18px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", marginLeft: "20px", minWidth: "220px" }}>
+                    <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="profile_img" style={{ width: 48, height: 48, borderRadius: "50%", marginRight: "14px", border: "2px solid #e3e3e3", background: "#fff" }} />
+                    <div className="p_div" style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                        <p style={{ margin: 0, fontSize: "1.05rem", color: "#222" }}>
+                            <span style={{ color: "#888" }}>UID:</span> <b style={{ color: "#1976d2" }}>{name}</b>
+                        </p>
+                        <p style={{ margin: 0, fontSize: "0.98rem", color: "#222" }}>
+                            <span style={{ color: "#888" }}>Role:</span> <b style={{ color: "#E92227" }}>{role}</b>
+                        </p>
                     </div>
                 </div>
-                <div style={{ marginLeft: "30px", cursor: "pointer" }} onClick={handleSignout}>
-                    <i className="pi pi-sign-out"></i>
+                <div className="p-2 shadow-lg" style={{ marginLeft: "30px", cursor: "pointer", backgroundColor: "#E92227", color: "white", borderRadius: "12px" }} onClick={handleSignout}>
+                    <b>
+                        <span>Logout</span> <i className="pi pi-sign-out"></i>
+                    </b>
                 </div>
             </div>
         </>

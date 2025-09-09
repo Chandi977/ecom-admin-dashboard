@@ -90,7 +90,7 @@ function Product() {
         const products = await handleGetRequest("/product/all");
 
         setProducts(products?.data);
-        console.log(products);
+        console.log("Product Details: ", products);
         setCategories(cat?.data);
         setSubCategories(subcat?.data);
         setBrands(brand?.data);
@@ -253,6 +253,7 @@ function Product() {
         onsubmit,
 
         onSubmit: async (data) => {
+            console.log("DATA SEND: ", data);
             const imu = Url?.map((im) => {
                 return {
                     image: im,
@@ -369,6 +370,7 @@ function Product() {
         const form = new FormData();
         form.append("image", file);
         const res = await dispatch(handlePostRequest(form, "/uploadImage", true, true));
+        console.log("Image Upload Response: ", res);
         setImages([...images, res?.data?.url]);
         setUrl([...Url, file.name]);
     };
@@ -691,7 +693,7 @@ function Product() {
                                 {/* BUY IT WITH */}
                                 <div className="p-field col-12 md:col-12">
                                     <div className="p-field" style={{ display: "flex", flexDirection: "column" }}>
-<label htmlFor="name" className={classNames({ "p-error": isFormFieldValid("name") }, "Label__Text")} style={{ marginBottom: "10px" , fontWeight:"700"}}>
+                                        <label htmlFor="name" className={classNames({ "p-error": isFormFieldValid("name") }, "Label__Text")} style={{ marginBottom: "10px", fontWeight: "700" }}>
                                             Buy It With (Only 3 Products)
                                         </label>
 
@@ -952,7 +954,7 @@ function Product() {
                                         </label>
                                         <InputText placeholder="Product" id="aboutItem" name="aboutItem" value={formik.values.aboutItem} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("aboutItem") }, "Input__Round")} />
 
-                                        {getFormErrorMessage("delivery_time")}
+                                        {getFormErrorMessage("aboutItem")}
                                     </div>
                                 </div>
 
@@ -1004,7 +1006,6 @@ function Product() {
                                     </div>
                                 </div>
 
-                                
                                 {/* RELATED PRODUCTS */}
                                 <div className="p-field col-12 md:col-12">
                                     <div className="p-field" style={{ display: "flex", flexDirection: "column" }}>
@@ -1074,7 +1075,7 @@ function Product() {
                                                     {relatedProducts.map((selectedProduct, index) => (
                                                         <li key={index} style={{ marginBottom: "5px" }}>
                                                             <div key={index} className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
-                                                                {selectedProduct?.brand?.name} {selectedProduct.name} {selectedProduct.model}
+                                                                {selectedProduct?.brand?.name} {selectedProduct?.name} {selectedProduct?.model}
                                                                 <button type="button" onClick={() => handleRemoveSelectedProductRP(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
                                                                     <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
                                                                 </button>

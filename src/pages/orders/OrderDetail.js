@@ -101,7 +101,7 @@ function OrderDetail() {
                             ? "PackPro"
                             : rowData?.product?.brand
                         : // If item.brand is an object, render a specific property (you can adjust this based on your data structure)
-                          rowData?.product?.brand?.name)} {" "}
+                          rowData?.product?.brand?.name)}{" "}
                 {rowData?.product?.name}{" "}
             </p>
         );
@@ -562,9 +562,7 @@ function OrderDetail() {
                     </div>
                 }
             >
-                
                 <p>UTR Number: {resData?.utrNumber}</p>
-                
             </Dialog>
         </>
     );

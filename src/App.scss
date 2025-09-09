@@ -45,9 +45,9 @@ $card-yellow: #f3c33c;
 .notification_dropDown {
     display: none;
 }
-.not__div:hover  {
-   .notification_dropDown{
-    display: block !important;
+.not__div:hover {
+    .notification_dropDown {
+        display: block !important;
         position: absolute;
         top: 25px;
         right: 30px;
@@ -57,29 +57,27 @@ $card-yellow: #f3c33c;
         box-shadow: 0px 0px 4px rgb(212, 209, 209);
         padding: 10px;
         z-index: 1;
-        .notification__ineer{
+        .notification__ineer {
             margin-top: 10px;
             border: 1px solid #cecece;
             border-radius: 6px;
             padding: 10px;
             cursor: pointer;
-            >div:nth-child(1)
-            {
+            > div:nth-child(1) {
                 display: flex;
                 justify-content: space-between;
-                >p:nth-child(1)
-                {
+                > p:nth-child(1) {
                     font-weight: bold;
                 }
             }
         }
-   }
+    }
 }
 
-.buttonsaaa{
-   margin-left: 20px;
-   border-radius: 6px;
-   cursor: pointer;
+.buttonsaaa {
+    margin-left: 20px;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
 .cardflex {
@@ -257,14 +255,14 @@ $card-yellow: #f3c33c;
     justify-content: flex-end;
 
     .Btn__DarkAdd {
-        width: 92px !important;
+        width: 180px !important;
         height: 45px !important;
         background-color: $lightblue-color;
         border: 1px solid $primary-color;
         color: $primary-color;
 
         &:hover {
-            width: 92px !important;
+            width: 180px !important;
             height: 45px !important;
             background-color: $lightblue-color;
             border: 1px solid $primary-color;
@@ -281,7 +279,7 @@ $card-yellow: #f3c33c;
 
         &:hover {
             width: 45px !important;
-                height: 45px !important;
+            height: 45px !important;
             margin-left: 20px;
             border: 1px solid $darkred-color;
             color: $darkred-color;
@@ -738,7 +736,7 @@ $card-yellow: #f3c33c;
     display: flex;
     justify-content: space-between;
     margin-top: 30px;
-    
+
     .right_section {
         width: 100%;
         height: auto;

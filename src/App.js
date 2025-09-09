@@ -55,13 +55,13 @@ import Deal from "./pages/deals/Deal";
 import CustomPackaging from "./pages/custom-packaging/customPackaging";
 import CustomersData from "./pages/customer-query/customer";
 import ContactData from "./pages/mainWebsiteContact/contact";
-import NotifyData from "./pages/Notify/notify"
-import AllAdmin from "./pages/Admin/adminTable"
+import NotifyData from "./pages/Notify/notify";
+import AllAdmin from "./pages/Admin/adminTable";
 import PinCodes from "./pages/Pincode/pincode";
 import PinCodeUpdate from "./pages/Pincode/pinCodeUpdate";
 import Coupons from "./pages/Coupon/coupon";
 import CouponUpdate from "./pages/Coupon/CouonUpdate";
- 
+
 const App = () => {
     const naviagte = useHistory();
     const [layoutMode, setLayoutMode] = useState("static");
@@ -336,7 +336,7 @@ const App = () => {
                         <div className="layout-sidebar" onClick={onSidebarClick}>
                             <AppMenu model={menu} onMenuItemClick={onMenuItemClick} layoutColorMode={layoutColorMode} />
                         </div>
-                        <div className="layout-main-container">
+                        <div className="layout-main-container" style={{ backgroundColor: "#F6F8FA" }}>
                             <div className="layout-main">
                                 {<Route exact path="/customers" component={Customers} />}
                                 {<Route exact path="/" component={Dashboard} />}
