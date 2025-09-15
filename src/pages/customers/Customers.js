@@ -287,7 +287,7 @@ function Customers() {
 
             <div className="Page__Header">
                 <div>
-                    <h2 style={{ fontWeight: 700, fontSize: "2rem", marginBottom: 4, color: "#222" }}>Users</h2>
+                    <h2 style={{ fontWeight: 700, fontSize: "2rem", marginBottom: 4, color: "#222" }}>Users ({total})</h2>
                     {/* <BreadCrumb model={breadItems} home={home} /> */}
                 </div>
                 <div className="Top__Btn">

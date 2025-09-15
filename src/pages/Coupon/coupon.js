@@ -36,6 +36,7 @@ function Coupons() {
         };
         const res = await handleGetRequest("/coupon/get/all", params);
         const total = await handleGetRequest("/coupon/count");
+        // console.log("res", res);
         setManufacturers(res?.data);
         setTotal(total?.data);
     };
@@ -49,7 +50,7 @@ function Coupons() {
     const actionBodyTemplate = (rowData) => {
         return (
             <div>
-                <Button icon="pi pi-ellipsis-v" className="p-button-rounded mr-2 Elipse_Icon" onClick={(e) => handleActionButton(e, rowData)} aria-controls="popup_menu" aria-haspopup />
+                <Button icon="pi pi-pencil" className="p-button-rounded mr-2 Elipse_Icon" onClick={(e) => handleActionButton(e, rowData)} aria-controls="popup_menu" aria-haspopup />
             </div>
         );
     };
@@ -136,6 +137,10 @@ function Coupons() {
         const role = localStorage.getItem("role");
         setRole(role);
     }, []);
+
+    // const reversedManufacturers = [...manufacturers].reverse();
+    // console.log("reversed array", reversedManufacturers);
+    // console.log("original array", manufacturers);
     return (
         <>
             <Dialog visible={showDialog} header="Add Coupon" style={{ width: "750px" }} onHide={() => setShowDialog(false)}>
@@ -144,8 +149,8 @@ function Coupons() {
 
             <div className="Page__Header">
                 <div>
-                    <h2>Coupon Code</h2>
-                    <BreadCrumb model={breadItems} home={home} />
+                    <h2 className="pb-4">Coupon Codes ({total})</h2>
+                    {/* <BreadCrumb model={breadItems} home={home} /> */}
                 </div>
                 {role === "admin" && (
                     <div className="Top__Btn">
@@ -156,24 +161,24 @@ function Coupons() {
             </div>
             <div className="grid">
                 <div className="col-12">
-                    <div className="card">
+                    <div className="card text-center">
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
-                            emptyMessage="No List found."
+                            emptyMessage="No Coupon Code found."
                             responsiveLayout="scroll"
                             value={manufacturers}
                             selection={selectedRow}
                             onSelectionChange={(e) => setselectedRow(e.value)}
                         >
                             <Column selectionMode="multiple" style={{ width: "3em" }} />
-                            <Column field="name" header="Name" />
-                            <Column header="Coupon Code" field="couponCode"  />
-                            <Column field="type" header="Type"  />
+                            <Column field="name" header="Coupon Name" />
+                            <Column header="Coupon Code" field="couponCode" />
+                            {/* <Column field="type" header="Type" /> */}
                             <Column header="Created On" body={dateTemplate} />
-                            <Column header="Action" body={actionBodyTemplate} />
+                            <Column className="text-center" header="Update / Delete Coupon" body={actionBodyTemplate} />
                         </DataTable>
                         <Paginator data={manufacturers} total={total} skip={skip} handleskip={handleskip} />
                     </div>

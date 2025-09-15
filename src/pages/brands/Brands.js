@@ -12,7 +12,7 @@ import Axios from "axios";
 import { DEV } from "../../services/constants";
 import Paginator from "../../components/Paginator";
 import AddbrandDialog from "./AddbrandDialog";
-import { FaSortAmountDown, FaSortAmountUp } from "react-icons/fa";
+import { FaSort } from "react-icons/fa";
 
 function Brands() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -21,6 +21,7 @@ function Brands() {
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
     const [sortOrder, setSortOrder] = useState("latest"); // latest or oldest
+    const [showSortDropdown, setShowSortDropdown] = useState(false);
     const dispatch = useDispatch();
     const history = useHistory();
     const [role, setRole] = useState("");
@@ -250,9 +251,48 @@ function Brands() {
             <div className="Page__Header">
                 <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
                     <h2 style={{ fontWeight: 700, fontSize: "2rem", marginBottom: 4, color: "#222" }}>Brands List ({manufacturers.length})</h2>
-                    <div>
-                        <Button label="Latest to Top" icon={<FaSortAmountDown />} className={sortOrder === "latest" ? "p-button-info" : ""} onClick={() => setSortOrder("latest")} style={{ marginRight: "8px", borderRadius: "7px", fontWeight: 500 }} />
-                        <Button label="Oldest to Top" icon={<FaSortAmountUp />} className={sortOrder === "oldest" ? "p-button-info" : ""} onClick={() => setSortOrder("oldest")} style={{ borderRadius: "7px", fontWeight: 500 }} />
+                    <div style={{ position: "relative", display: "inline-block" }} onMouseEnter={() => setShowSortDropdown(true)} onMouseLeave={() => setShowSortDropdown(false)}>
+                        <button className="sort-filter-btn" style={{ background: "#e3f2fd", border: "none", borderRadius: "50%", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative" }}>
+                            <FaSort style={{ color: "#1976d2", fontSize: "1.3rem" }} />
+                        </button>
+                        {showSortDropdown && (
+                            <div
+                                className="sort-tooltip"
+                                style={{
+                                    position: "absolute",
+                                    top: 44,
+                                    left: "50%",
+                                    transform: "translateX(-50%)",
+                                    background: "#222",
+                                    color: "#fff",
+                                    padding: "10px 18px",
+                                    borderRadius: "10px",
+                                    fontSize: "1rem",
+                                    zIndex: 10,
+                                    minWidth: "160px",
+                                    boxShadow: "0 2px 12px rgba(0,0,0,0.12)",
+                                }}
+                            >
+                                <div
+                                    style={{ marginBottom: "8px", cursor: "pointer", background: sortOrder === "latest" ? "#1976d2" : "transparent", color: sortOrder === "latest" ? "#fff" : "#fff", padding: "6px 10px", borderRadius: "6px" }}
+                                    onClick={() => {
+                                        setSortOrder("latest");
+                                        setShowSortDropdown(false);
+                                    }}
+                                >
+                                    Latest to Top
+                                </div>
+                                <div
+                                    style={{ cursor: "pointer", background: sortOrder === "oldest" ? "#1976d2" : "transparent", color: sortOrder === "oldest" ? "#fff" : "#fff", padding: "6px 10px", borderRadius: "6px" }}
+                                    onClick={() => {
+                                        setSortOrder("oldest");
+                                        setShowSortDropdown(false);
+                                    }}
+                                >
+                                    Oldest to Top
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
                 {role === "admin" && (

@@ -173,6 +173,12 @@ function AllAdmin() {
                     align-items: center;
                     position: relative;
                     border: 3px solid #F6F6F6;
+                    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+                }
+                .admin-card:hover {
+                    transform: translateY(-6px) scale(1.02);
+                    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+                    border-color: #e3f2fd;
                 }
                 .admin-avatar {
                     width: 64px;
@@ -277,7 +283,7 @@ function AllAdmin() {
                             <div className="admin-name">{admin.first_name || "-"}</div>
                             <div className="admin-email">{admin.email_address || "-"}</div>
                             <div className="admin-contact">{admin.mobile_number || "-"}</div>
-                            <div className="admin-role">{admin.role || "Admin"}</div>
+                            {/* <div className="admin-role">{admin.role || "Admin"}</div> */}
                             <div className="admin-date">{moment(admin.createdAt).format("DD/MM/YYYY")}</div>
                         </div>
                         <div className="admin-actions">
