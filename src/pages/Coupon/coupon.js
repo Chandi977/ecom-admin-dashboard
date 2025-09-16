@@ -171,6 +171,7 @@ function Coupons() {
                             responsiveLayout="scroll"
                             value={manufacturers}
                             selection={selectedRow}
+                            rows={12}
                             onSelectionChange={(e) => setselectedRow(e.value)}
                         >
                             <Column selectionMode="multiple" style={{ width: "3em" }} />

@@ -130,7 +130,7 @@ function CouponUpdate() {
     const getFormErrorMessage = (field) => isFormFieldValid(field) && <small className="p-error">{formik.errors[field]}</small>;
 
     const handleCancel = () => {
-        history.push("/");
+        history.push("/coupon");
     };
 
     return (
