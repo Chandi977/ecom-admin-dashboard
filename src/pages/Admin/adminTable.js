@@ -1,63 +1,43 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
-import { BreadCrumb } from "primereact/breadcrumb";
 import { Dialog } from "primereact/dialog";
 import CustomerDialog from "./CustomerDialog";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
-import Axios from "axios";
-import { DEV } from "../../services/constants";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
-import { AiTwotoneDelete } from "react-icons/ai";
-import { JsonToExcel } from "react-json-to-excel";
+import { exportJsonToExcel } from "../../utils/exportToExcel";
 
 function AllAdmin() {
-    const [selectedRow, setselectedRow] = useState([]);
     const [showDialog, setShowDialog] = useState(false);
-    const [total, setTotal] = useState(0);
-    const [skip, setSkip] = useState(0);
     const dispatch = useDispatch();
     const [users, setUsers] = useState([]);
     const [customers, setCustomers] = useState([]);
-    const breadItems = [{ label: "Home" }, { label: "Admin" }];
-    const temporary = ["name", "email", "number", "role", "city", "zipcode", "createdAt"];
-    const home = { icon: "pi pi-home", url: "/" };
     const history = useHistory();
-    const [values, setValues] = useState({
-        name: "",
-        email: "",
-        number: "",
-        role: "",
-        city: "",
-        zipcode: "",
-        createdAt: "",
-    });
 
-    const getData = async () => {
-        const params = {
-            skip: skip,
-        };
-        const res = await handleGetRequest("/all/admin", params);
-        const total = await handleGetRequest("/count/admin");
+    const getData = useCallback(async () => {
+        const res = await handleGetRequest("/all/admin");
         const users = await handleGetRequest("/all/admin/list");
         setUsers(users?.data);
-        setTotal(total?.data);
         setCustomers(res?.data);
-    };
+    }, []);
 
     useEffect(() => {
         getData();
-    }, [skip]);
+    }, [getData]);
 
     const handleDelete = async (value) => {
+        if (!value?._id) {
+            toast.info("Select an admin to delete.");
+            return;
+        }
         const data = {
             id: [value?._id],
         };
         console.log(data);
-        const res = dispatch(handlePostRequest(data, "/deleteUser", true, true));
+        dispatch(handlePostRequest(data, "/deleteUser", true, true));
         getData();
         toast.success("users deleted.");
         window.location.reload();
@@ -76,72 +56,8 @@ function AllAdmin() {
         setShowDialog(false);
     };
 
-    const handledDelete = () => {
-        const selectedId = selectedRow.map((val, index) => {
-            return val?._id;
-        });
-        const data = {
-            id: selectedId,
-        };
-        if (selectedId?.length > 0) {
-            const res = dispatch(handlePostRequest(data, "/deleteUser", true, true));
-            getData();
-            toast.success("users deleted.");
-        } else {
-            toast.info("Please select atleast one user");
-        }
-    };
-
-    const handleAddress = (rowData) => {
-        return <p>{rowData?.role}</p>;
-    };
-
-    const handleCity = (rowData) => {
-        return <p>{rowData?.contact_address?.length > 0 ? rowData?.contact_address?.[0]?.town : "not found"}</p>;
-    };
-
-    const handleZipcode = (rowData) => {
-        return <p>{rowData?.contact_address?.length > 0 ? rowData?.contact_address?.[0]?.pincode : "not found"}</p>;
-    };
-
-    const handleDate = (rowData) => {
-        return <p>{moment(rowData?.createdAt).format("DD/MM/YYYY")}</p>;
-    };
-
-    const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
-        const result = await Axios.get(DEV + "/searchusers", {
-            params: {
-                [names]: value,
-            },
-        });
-        setCustomers(result?.data?.data);
-    };
-
-    const handleFilter = (name) => {
-        return (
-            <input
-                style={{
-                    width: "100%",
-                    height: "37px",
-                    borderRadius: "5px",
-                    border: "1px solid #cecece",
-                }}
-                value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
-            ></input>
-        );
-    };
-
-    const handleskip = (num) => {
-        setSkip(num);
+    const handleBulkDelete = () => {
+        toast.info("Select an admin to delete.");
     };
 
     const handlesuccess = () => {
@@ -268,8 +184,12 @@ function AllAdmin() {
                 </div>
                 <div className="Top__Btn">
                     <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
-                    <Button icon="pi pi-trash" iconPos="right" onClick={handledDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />
-                    <JsonToExcel title="Download" data={users} fileName="users" btnClassName="buttonsaaa" />
+                    <Button icon="pi pi-trash" iconPos="right" onClick={handleBulkDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />
+                    <Button
+                        label="Download"
+                        className="buttonsaaa"
+                        onClick={() => exportJsonToExcel({ data: users, fileName: "users" })}
+                    />
                 </div>
             </div>
 

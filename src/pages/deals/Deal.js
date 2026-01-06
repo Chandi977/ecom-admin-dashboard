@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useFormik } from "formik";
@@ -21,7 +21,7 @@ function Deal() {
     const [selectedProduct, setSelectedProduct] = useState();
     const [products, setProducts] = useState();
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const res = await handleGetRequest(`/deal/get/${id}`);
         const data = await handleGetRequest(`/product/all`);
         setProducts(data?.data);
@@ -32,10 +32,10 @@ function Deal() {
         setMetaTitle(res?.data?.meta_title);
         setMetaDescription(res?.data?.meta_description);
         setManufacturers(res?.data);
-    };
+    }, [id]);
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
     const breadItems = [{ label: "Home" }, { label: "Deals", url: "/deals" }];
     const home = { icon: "pi pi-home", url: "/" };
@@ -82,7 +82,7 @@ function Deal() {
             </div>
             <div className="customer_details_section">
                 <div className="left_section">
-                    <img src="" />
+                    <img src="" alt="Deal" />
                     <div className="id_section">
                         <div
                             style={{
@@ -143,11 +143,13 @@ function Deal() {
                                             Product
                                         </label>
                                         <select style={{ marginTop: "10px", height: "30px", border: "1px solid #cecece", borderRadius: "6px" }} value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)}>
-                                            <option selected disabled>
+                                            <option value="" disabled>
                                                 Please select product
                                             </option>
                                             {products?.map((item) => (
-                                                <option value={item._id}>{item.name}</option>
+                                                <option key={item._id} value={item._id}>
+                                                    {item.name}
+                                                </option>
                                             ))}
                                         </select>
                                         {getFormErrorMessage("name")}

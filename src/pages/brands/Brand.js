@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useFormik } from "formik";
@@ -17,11 +17,6 @@ function Brand() {
     const [manufacturer, setManufacturers] = useState();
     const history = useHistory();
     const { id } = useParams();
-    const [homepage, setHomePAge] = useState();
-    const [faq, setFaq] = useState([]);
-    const [width, setWidth] = useState();
-    const [profile, setProfile] = useState();
-    const [rim_diameter, setRimDimater] = useState();
     const [brand_id, setBrandId] = useState();
     const [name, setName] = useState();
     const [slug, setSlug] = useState();
@@ -29,14 +24,14 @@ function Brand() {
     const [meta_description, setMetaDescription] = useState();
     const [image, setImage] = useState();
     const [url, setUrl] = useState();
-    const dispatch=useDispatch();
+    const dispatch = useDispatch();
 
-    const makecall = async (image) => {
+    const makecall = useCallback(async (image) => {
         const result = await handleGetRequest(`/getImage?image=${image}`);
         return result?.data?.url;
-    };
+    }, []);
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const res = await handleGetRequest(`/brand/get/${id}`);
         setBrandId(res?.data?.brand_id);
         setName(res?.data?.name);
@@ -47,29 +42,13 @@ function Brand() {
         const temp = await makecall(res?.data?.image);
         setUrl(temp);
         setManufacturers(res?.data);
-    };
+    }, [id, makecall]);
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
     const breadItems = [{ label: "Home" }, { label: "Brands", url: "/brands" }];
     const home = { icon: "pi pi-home", url: "/" };
-
-    const addFaq = () => {
-        setFaq([
-            ...faq,
-            {
-                question: "",
-                answer: "",
-            },
-        ]);
-    };
-
-    const handleFaq = (value, names, index) => {
-        const temp = faq;
-        temp[index][names] = value;
-        setFaq(temp);
-    };
 
     const formik = useFormik({
         initialValues: {
@@ -124,7 +103,7 @@ function Brand() {
             </div>
             <div className="customer_details_section">
                 <div className="left_section">
-                    <img src={url} />
+                    <img src={url} alt="Brand" />
                     <div className="id_section">
                         <div
                             style={{

@@ -1,5 +1,4 @@
 import React from "react";
-import styles from "./styles/main.css";
 
 export const AppFooter = (props) => {
     return (

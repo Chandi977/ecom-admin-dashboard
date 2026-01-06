@@ -15,6 +15,7 @@ import ModalDialog from "./ModalDialog";
 import { toast } from "react-toastify";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 import Paginator from "../../components/Paginator";
 import { handlePostRequest } from "../../services/PostTemplate";
 
@@ -113,17 +114,8 @@ function AddVehicleModal() {
         manufacturer: "",
     });
 
-    const temporary = ["id", "title", "manufacturer"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/searchModels", {
             params: {
                 [names]: value,
@@ -132,8 +124,10 @@ function AddVehicleModal() {
         setManufacturers(result?.data?.data);
     };
 
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+
     const handleFilter = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "1px solid #cecece" }} value={values[name]} onChange={(e) => handleApplyFilter(e.target.value, name)}></input>;
+        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "1px solid #cecece" }} value={values[name]} onChange={(e) => debouncedApplyFilter(e.target.value, name)}></input>;
     };
 
     const handleskip = (num) => {

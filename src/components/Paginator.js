@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { handleGetRequest } from "../services/GetTemplate";
-import styles from "./page.scss";
 
 function Paginator({ data, total, skip, handleskip }) {
-    console.log(total);
     const [NoOfPages, setNo] = useState([]);
     const [selectedPage, setSelectedPage] = useState(1);
-    useEffect(async () => {
-        let num = Math.ceil(total / 10);
+    useEffect(() => {
+        const num = Math.ceil(total / 10);
         const temp = [];
         for (let i = 0; i < num; i++) {
             temp.push(i + 1);
@@ -40,6 +37,10 @@ function Paginator({ data, total, skip, handleskip }) {
         }
     };
 
+    if (!total || total <= (data?.length || 0)) {
+        return null;
+    }
+
     return (
         <div className="page__main">
             <p className="single_open" onClick={handlesingleBack}>
@@ -47,10 +48,14 @@ function Paginator({ data, total, skip, handleskip }) {
             </p>
             {NoOfPages?.map((no, index) => {
                 if (no === selectedPage) {
-                    return <p className="selected">{no}</p>;
+                    return (
+                        <p key={`page-${no}`} className="selected">
+                            {no}
+                        </p>
+                    );
                 } else {
                     return (
-                        <p className="not-selected" onClick={() => handleSelect(no)}>
+                        <p key={`page-${no}`} className="not-selected" onClick={() => handleSelect(no)}>
                             {no}
                         </p>
                     );

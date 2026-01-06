@@ -23,7 +23,7 @@ const CustomerPasswordDialog = ({ onHideCustomerPasswordDialog, user }) => {
                     id: user,
                     password: data?.newPassword,
                 };
-                const result = dispatch(handlePostRequest(dat, "/adminPass", true, true));
+                await dispatch(handlePostRequest(dat, "/adminPass", true, true));
                 toast.success("password edited");
                 onHideCustomerPasswordDialog();
             }

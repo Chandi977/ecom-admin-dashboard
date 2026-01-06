@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { BreadCrumb } from "primereact/breadcrumb";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
 import { DataTable } from "primereact/datatable";
@@ -15,6 +14,7 @@ import { DEV } from "../../services/constants";
 import Paginator from "../../components/Paginator";
 import AddcategoryDialog from "./AddcategoryDialog";
 import { FaPen } from "react-icons/fa";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function Categories() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -26,12 +26,10 @@ function Categories() {
     const history = useHistory();
     const [role, setRole] = useState("");
 
-    const breadItems = [{ label: "Home" }, { label: "Categories" }];
-    const home = { icon: "pi pi-home", url: "/" };
     const handledClicked = () => {
         setShowDialog(true);
     };
-    const getBrands = async () => {
+    const getBrands = useCallback(async () => {
         const params = {
             skip: skip,
         };
@@ -39,14 +37,10 @@ function Categories() {
         const total = await handleGetRequest("/category/count");
         setManufacturers(res?.data);
         setTotal(total?.data);
-    };
+    }, [skip]);
     useEffect(() => {
         getBrands();
-    }, [skip]);
-    const handleActionButton = (e, rowData) => {
-        e.preventDefault();
-        history.push(`/category/${rowData?._id}`);
-    };
+    }, [getBrands]);
     const actionBodyTemplate = (rowData) => {
         return (
             <div>
@@ -75,7 +69,7 @@ function Categories() {
         const data = {
             id: selectedId,
         };
-        const res = dispatch(handlePostRequest(data, "/category/delete", true, true));
+        dispatch(handlePostRequest(data, "/category/delete", true, true));
         getBrands();
         toast.success("Category Deleted.");
         window.location.reload();
@@ -94,17 +88,8 @@ function Categories() {
         slug: "",
     });
 
-    const temporary = ["category_id", "name", "slug"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/category/search", {
             params: {
                 [names]: value,
@@ -112,6 +97,8 @@ function Categories() {
         });
         setManufacturers(result?.data?.data);
     };
+
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
 
     const handleFilter = (name) => {
         return (
@@ -123,7 +110,7 @@ function Categories() {
                     border: "1px solid #cecece",
                 }}
                 value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
+                onChange={(e) => debouncedApplyFilter(e.target.value, name)}
             ></input>
         );
     };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
@@ -9,6 +9,7 @@ import moment from "moment/moment";
 import Paginator from "../../components/Paginator";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function Orders() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -17,12 +18,8 @@ function Orders() {
     const breadItems = [{ label: "Orders" }];
     const [skip, setSkip] = useState(0);
     const [total, setTotal] = useState(0);
-    const [role, setRole] = useState("");
     const history = useHistory();
-    const handledClicked = () => {
-        history.push("");
-    };
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const params = {
             skip: skip,
         };
@@ -35,12 +32,12 @@ function Orders() {
         setResData(res?.data);
         setTotal(total?.data);
         // console.log("response", sortedData);
-    };
+    }, [skip]);
     
 
     useEffect(() => {
         getData();
-    }, [skip]);
+    }, [getData]);
 
     const handleActionButton = (e, rowData) => {
         e.preventDefault();
@@ -52,16 +49,6 @@ function Orders() {
             <div>
                 <Button icon="pi pi-eye" className="p-button-rounded mr-2 Elipse_Icon" onClick={(e) => handleActionButton(e, rowData)} />
             </div>
-        );
-    };
-    const buttonTemplate = (rowData) => {
-        return <Button label={rowData?.status} onClick={handledClicked} className="status_button" style={{ width: "4000px" }} />;
-    };
-    const nameTemplate = (rowData) => {
-        return (
-            <p style={{ textTransform: "capitalize" }}>
-                {rowData?.first_name} {rowData?.last_name}
-            </p>
         );
     };
     const timeTemplate = (rowData) => {
@@ -97,17 +84,8 @@ function Orders() {
         status: "",
     });
 
-    const temporary = ["order_id", "first_name", "phone", "state", "city", "zipcode", "price", "status"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/order/search", {
             params: {
                 [names]: value,
@@ -115,6 +93,8 @@ function Orders() {
         });
         setResData(result?.data?.data);
     };
+
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
 
     const handleFilter = (name) => {
         return (
@@ -126,23 +106,11 @@ function Orders() {
                     border: "1px solid #cecece",
                 }}
                 value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
+                onChange={(e) => debouncedApplyFilter(e.target.value, name)}
             ></input>
         );
     };
 
-    const paymentTempalte = (rowData) => {
-        return (
-            <div>
-                <p style={{ textTransform: "capitalize" }}>{rowData?.payment === true ? "successful" : "declined"}</p>
-            </div>
-        );
-    };
-
-    useEffect(() => {
-        const role = localStorage.getItem("role");
-        setRole(role);
-    }, []);
 
     return (
         <>

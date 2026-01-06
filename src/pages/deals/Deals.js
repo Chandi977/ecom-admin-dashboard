@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
@@ -14,6 +14,7 @@ import Axios from "axios";
 import { DEV } from "../../services/constants";
 import Paginator from "../../components/Paginator";
 import AdddealDialog from "./AdddealDialog";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function Deals() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -30,7 +31,7 @@ function Deals() {
     const handledClicked = () => {
         setShowDialog(true);
     };
-    const getBrands = async () => {
+    const getBrands = useCallback(async () => {
         const params = {
             skip: skip,
         };
@@ -38,10 +39,10 @@ function Deals() {
         const total = await handleGetRequest("/deal/count");
         setManufacturers(res?.data);
         setTotal(total?.data);
-    };
+    }, [skip]);
     useEffect(() => {
         getBrands();
-    }, [skip]);
+    }, [getBrands]);
     const handleActionButton = (e, rowData) => {
         e.preventDefault();
         history.push(`/deal/${rowData?._id}`);
@@ -72,7 +73,7 @@ function Deals() {
         const data = {
             id: selectedId,
         };
-        const res = dispatch(handlePostRequest(data, "/deal/delete", true, true));
+        dispatch(handlePostRequest(data, "/deal/delete", true, true));
         getBrands();
         toast.success("deal deleted.");
         window.location.reload();
@@ -91,17 +92,8 @@ function Deals() {
         discount: "",
     });
 
-    const temporary = ["id", "newPrice", "discount"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/deal/search", {
             params: {
                 [names]: value,
@@ -109,6 +101,8 @@ function Deals() {
         });
         setManufacturers(result?.data?.data);
     };
+
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
 
     const handleFilter = (name) => {
         return (
@@ -120,7 +114,7 @@ function Deals() {
                     border: "1px solid #cecece",
                 }}
                 value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
+                onChange={(e) => debouncedApplyFilter(e.target.value, name)}
             ></input>
         );
     };

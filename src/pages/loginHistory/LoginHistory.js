@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
@@ -9,15 +9,13 @@ import moment from "moment";
 import Paginator from "../../components/Paginator";
 
 function LoginHistory() {
-    const [loading, setloading] = useState();
-    const [editable, setEditable] = useState(false);
     const [selectedRow, setselectedRow] = useState([]);
     const breadItems = [{ label: "Home" }, { label: "Login History" }];
     const [Logs, setLogs] = useState([]);
     const [skip, setSkip] = useState(0);
     const [total, setTotal] = useState(0);
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const params = {
             skip: skip,
         };
@@ -25,14 +23,13 @@ function LoginHistory() {
         const total = await handleGetRequest("/countlogs");
         setTotal(total?.data);
         setLogs(res?.data);
-    };
+    }, [skip]);
 
     useEffect(() => {
         getData();
-    }, [skip]);
+    }, [getData]);
 
     const home = { icon: "pi pi-home", url: "https://www.primefaces.org/primereact/showcase" };
-    const menu = useRef(null);
     const history = useHistory();
     const handledClicked = () => {
         history.push("");

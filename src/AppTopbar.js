@@ -1,22 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import classNames from "classnames";
 import { Helmet } from "react-helmet";
 import { useHistory } from "react-router-dom";
-import Pusher from "pusher-js";
-import { handleGetRequest } from "./services/GetTemplate";
-import { BsBellFill } from "react-icons/bs";
-import moment from "moment";
-import { useDispatch } from "react-redux";
-import { handlePostRequest } from "./services/PostTemplate";
 
 export const AppTopbar = (props) => {
-    const [notifications, setNotifications] = useState([]);
-    console.log(notifications);
     const name = localStorage.getItem("user");
     const role = localStorage.getItem("role");
     const history = useHistory();
-    const dispatch = useDispatch();
     const handleSignout = () => {
         localStorage.removeItem("user");
         localStorage.removeItem("token");
@@ -92,7 +83,7 @@ export const AppTopbar = (props) => {
             <div className="layout-topbar">
                 <Link to="/" className="layout-topbar-logo">
                     {/* <img src={props.layoutColorMode === "light" ? "assets/layout/images/logo_zugaob.svg" : "assets/layout/images/logo_zugaob.svg"} alt="logo" /> */}
-                    <img src="/images/prem.png" width={80} height={800}></img>
+                    <img src="/images/prem.png" width={80} height={800} alt="Prem logo"></img>
                 </Link>
 
                 <button type="button" className="p-link layout-topbar-menu-button layout-topbar-button" onClick={props.onMobileTopbarMenuClick}>

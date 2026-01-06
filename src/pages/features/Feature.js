@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useFormik } from "formik";
@@ -17,35 +17,22 @@ import { HiCamera } from "react-icons/hi";
 function Feature() {
     const [editable, setEditable] = useState(false);
     const [manufacturer, setManufacturers] = useState();
-    const [loading, setLoading] = useState();
     const [image, setImage] = useState();
     const [url, setUrl] = useState();
     const history = useHistory();
     const dispatch = useDispatch();
     const { id } = useParams();
 
-    const makecall = async (image) => {
-        const result = await handleGetRequest(`/getImage?image=${image}`);
-        return result?.data?.url;
-    };
-
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const res = await handleGetRequest(`/feature/${id}`);
-        const keyData = res?.data;
         setManufacturers(res?.data);
-        console.log(keyData);
-        Object.keys(keyData).forEach((key) => {
-            if (formik.initialValues.hasOwnProperty(key)) {
-                formik.setFieldValue(key, keyData[key]);
-            }
-        });
         setImage(res?.data?.image);
-        const temp = await makecall(res?.data?.image);
-        setUrl(temp);
-    };
+        const result = await handleGetRequest(`/getImage?image=${res?.data?.image}`);
+        setUrl(result?.data?.url);
+    }, [id]);
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
     const handleEdit = () => {
         if (editable) {
@@ -63,19 +50,18 @@ function Feature() {
     });
     const formik = useFormik({
         validationSchema: validationSchema,
+        enableReinitialize: true,
         initialValues: {
-            title: "",
-            createdAt: "",
-            meta_title: "",
-            meta_Description: "",
-            id: "",
+            title: manufacturer?.title || "",
+            createdAt: manufacturer?.createdAt || "",
+            meta_title: manufacturer?.meta_title || "",
+            meta_Description: manufacturer?.meta_Description || "",
+            id: manufacturer?._id || "",
         },
 
         onSubmit: async (data) => {
             data["image"] = image;
-            setLoading(true);
             const res = await handlePutRequest(data, "/editFeature");
-            setLoading(false);
             if (res?.success === true) {
                 toast.success("feature edited");
             }
@@ -113,7 +99,7 @@ function Feature() {
             </div>
             <div className="customer_details_section">
                 <div className="left_section">
-                    <img src={url} />
+                    <img src={url} alt="Feature" />
                     <div className="id_section">
                         <div
                             style={{

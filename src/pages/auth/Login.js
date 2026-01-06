@@ -23,8 +23,8 @@ function Login() {
     useEffect(() => {
         getData();
     }, []);
-    const [loading, setloading] = useState(false);
-    const [loadingIcon, setloadingIcon] = useState("");
+    const [loading] = useState(false);
+    const [loadingIcon] = useState("");
     const dispatch = useDispatch();
 
     let history = useHistory();
@@ -49,7 +49,7 @@ function Login() {
                     type: "web",
                 };
                 console.log(dat);
-                const rest = await dispatch(handlePostRequest(dat, "/addlog"));
+                await dispatch(handlePostRequest(dat, "/addlog"));
                 history.push("/");
                 window.location.reload();
                 dispatch(AuthSlice(userData));

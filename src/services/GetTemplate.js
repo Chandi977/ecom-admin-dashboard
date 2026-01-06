@@ -5,10 +5,15 @@ import { DEV } from "./constants";
 export const handleGetRequest = async (url, params, isShowToast = false) => {
     const token = localStorage.getItem("token");
     try {
+        const requestParams = {
+            ...(params || {}),
+        };
         const response = await axios.get(DEV + url, {
             params: {
-                ...(params?.skip && { skip: params?.skip }),
+                ...(requestParams?.skip && { skip: requestParams?.skip }),
+                ...requestParams,
             },
+            ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
         });
         if (isShowToast) toast.success(response?.data?.message);
         return response.data;

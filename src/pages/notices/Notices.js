@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
@@ -11,25 +11,24 @@ function Notices() {
     const breadItems = [{ label: "Home" }, { label: "Banner" }];
     const home = { icon: "pi pi-home", url: "https://www.primefaces.org/primereact/showcase" };
     const [banner, setBanner] = useState([]);
-    const [image, setImage] = useState(null);
     const [url, setUrl] = useState("");
     const dispatch = useDispatch();
 
-    const makecall = async (image) => {
+    const makecall = useCallback(async (image) => {
         const result = await handleGetRequest(`/getImage?image=${image}`);
         return result?.data?.url;
-    };
+    }, []);
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const res = await handleGetRequest("/getbanner");
         const ima = await makecall(res?.data?.image);
         setUrl(ima);
         setBanner(res?.data);
-    };
+    }, [makecall]);
 
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
     const handleImage = async (file) => {
         const data = {
@@ -46,7 +45,6 @@ function Notices() {
         const form = new FormData();
         form.append("image", file);
         const res = await dispatch(handlePostRequest(form, "/uploadImage", true, true));
-        setImage(file.name);
         setUrl(res?.data?.url);
         await handleImage(file.name);
     };
@@ -60,7 +58,7 @@ function Notices() {
                 </div>
             </div>
             <div style={{ marginTop: "20px" }}>
-                <img src={url} style={{ objectFit: "cover", width: "100%", height: "400px" }}></img>
+                <img src={url} style={{ objectFit: "cover", width: "100%", height: "400px" }} alt="Banner" />
             </div>
             <div style={{ display: "flex", marginTop: "20px", marginBottom: "20px", justifyContent: "center" }}>
                 <Dropzone onDrop={(acceptedFiles) => handleUpload(acceptedFiles[0])}>

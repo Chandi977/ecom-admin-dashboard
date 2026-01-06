@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
@@ -14,6 +14,7 @@ import Axios from "axios";
 import { DEV } from "../../services/constants";
 import Paginator from "../../components/Paginator";
 import AddproductDialog from "./AddproductDialog";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function Products() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -31,7 +32,7 @@ function Products() {
     const handledClicked = () => {
         setShowDialog(true);
     };
-    const getBrands = async () => {
+    const getBrands = useCallback(async () => {
         const params = {
             skip: skip,
         };
@@ -40,12 +41,12 @@ function Products() {
         setProducts(res?.data);
         setManufacturers(res?.data);
         setTotal(total?.data);
-    };
+    }, [skip]);
 
     console.log(products);
     useEffect(() => {
         getBrands();
-    }, [skip]);
+    }, [getBrands]);
     const handleActionButton = (e, rowData) => {
         e.preventDefault();
         history.push(`/product/${rowData?._id}`);
@@ -76,7 +77,7 @@ function Products() {
         const data = {
             id: selectedId,
         };
-        const res = dispatch(handlePostRequest(data, "/product/delete", true, true));
+        dispatch(handlePostRequest(data, "/product/delete", true, true));
         getBrands();
         toast.success("product deleted.");
         window.location.reload();
@@ -96,24 +97,31 @@ function Products() {
         model: "",
     });
 
-    const temporary = ["product_id", "name", "slug", "model"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
+        setValues((prev) => ({ ...prev, [names]: value }));
+        if (!value) {
+            getBrands();
+            return;
+        }
+        const token = localStorage.getItem("token");
+        try {
+            const result = await Axios.get(DEV + "/product/search", {
+                params: {
+                    [names]: value,
+                },
+                ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+            });
+            setManufacturers(result?.data?.data || []);
+        } catch (error) {
+            if (error?.response?.status === 404) {
+                setManufacturers([]);
+                return;
             }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
-        const result = await Axios.get(DEV + "/product/search", {
-            params: {
-                [names]: value,
-            },
-        });
-        setManufacturers(result?.data?.data);
+            toast.warn(error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!");
+        }
     };
+
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
 
     const handleFilter = (name) => {
         return (
@@ -125,7 +133,7 @@ function Products() {
                     border: "1px solid #cecece",
                 }}
                 value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
+                onChange={(e) => debouncedApplyFilter(e.target.value, name)}
             ></input>
         );
     };

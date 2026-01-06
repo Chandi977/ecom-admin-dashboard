@@ -13,6 +13,7 @@ import { handleDeleteRequest } from "../../services/DeleteTemplate";
 import GlobalOfferDialogue from "./GlobalOfferDialogue";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
 import Paginator from "../../components/Paginator";
@@ -106,17 +107,8 @@ function GlobalOffers() {
         status: "",
     });
 
-    const temporary = ["tyreType", "discount", "time", "status"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/searchOffer", {
             params: {
                 [names]: value,
@@ -125,8 +117,10 @@ function GlobalOffers() {
         setManufacturers(result?.data?.data);
     };
 
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+
     const handleFilter = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "1px solid #cecece" }} value={values[name]} onChange={(e) => handleApplyFilter(e.target.value, name)}></input>;
+        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "1px solid #cecece" }} value={values[name]} onChange={(e) => debouncedApplyFilter(e.target.value, name)}></input>;
     };
 
     const onsuccess = () => {

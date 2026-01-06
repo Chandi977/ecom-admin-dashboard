@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Chart } from "primereact/chart";
 import { handleGetRequest } from "../services/GetTemplate";
 
@@ -18,7 +18,7 @@ const Dashboard = () => {
     });
     const [dataset, setDataSet] = useState([]);
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         // const users = await handleGetRequest("/countUsers");
         // const orders = await handleGetRequest("/ordersCount");
         const categories = await handleGetRequest("/category/count");
@@ -51,11 +51,11 @@ const Dashboard = () => {
                 },
             ],
         });
-    };
+    }, []);
 
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
     console.log(dataset);
     const [basicData, setBasicData] = useState({
@@ -74,43 +74,6 @@ const Dashboard = () => {
 
     console.log("Stats:", stats);
 
-    const [chartData, setChartData] = useState({});
-    const [chartOptions, setChartOptions] = useState({});
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                // Make the API call
-                const response = await handleGetRequest("/order/count/status");
-
-                // Assuming response.data contains the necessary information
-                const stats = response.data;
-                console.log("92", stats);
-
-                const data = {
-                    labels: ["Placed", "Payment Done", "Payment Verified", "Dispatched", "Delivered"],
-                    datasets: [
-                        {
-                            data: [stats.placedCount, stats.paymentDoneCount, stats.paymentVerifiedCount, stats.dispatchedCount, stats.deliveredCount],
-                            backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"],
-                            hoverBackgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"],
-                        },
-                    ],
-                };
-                const options = {
-                    cutout: "60%",
-                };
-
-                console.log("Data from API:", data);
-                setChartData(data);
-                setChartOptions(options);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            }
-        };
-
-        fetchData(); // Call the fetchData function when the component mounts
-    }, []);
 
     const getLightTheme = () => {
         let basicOptions = {
@@ -164,7 +127,7 @@ const Dashboard = () => {
         };
     };
 
-    const { basicOptions, multiAxisOptions } = getLightTheme();
+    const { basicOptions } = getLightTheme();
     return (
         <>
             <div className="dashboard-cards" style={{ display: "flex", gap: "24px", marginBottom: "32px", marginTop: "16px", flexWrap: "wrap" }}>

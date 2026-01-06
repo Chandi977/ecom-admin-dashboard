@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useFormik } from "formik";
@@ -9,10 +9,6 @@ import { handleGetRequest } from "../../services/GetTemplate";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
 import { Dropdown } from "primereact/dropdown";
-import Dropzone from "react-dropzone";
-import { useDispatch } from "react-redux";
-import { handlePostRequest } from "../../services/PostTemplate";
-import { HiCamera } from "react-icons/hi";
 
 function PinCodeUpdate() {
     const [manufacturer, setManufacturers] = useState();
@@ -28,14 +24,13 @@ function PinCodeUpdate() {
     const [above30, setAbove30] = useState(); // Number
     const [b2cZone, setB2cZone] = useState(""); // String
     const [b2bZone, setB2bZone] = useState(""); // String
-    const dispatch = useDispatch();
 
     // const makecall = async (image) => {
     //     const result = await handleGetRequest(`/getImage?image=${image}`);
     //     return result?.data?.url;
     // };
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const res = await handleGetRequest(`/pincode/get/${id}`);
         setPincode(res?.data?.pincode);
         setCity(res?.data?.city);
@@ -48,10 +43,10 @@ function PinCodeUpdate() {
         setB2cZone(res?.data?.b2cZone);
         setB2bZone(res?.data?.b2bZone);
         setManufacturers(res?.data);
-    };
+    }, [id]);
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
     const dropdownOptions = [
         { label: 'True', value: true },

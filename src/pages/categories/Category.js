@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useFormik } from "formik";
@@ -19,7 +19,7 @@ function Category() {
     const [meta_description, setMetaDescription] = useState();
     const [category_id, setCategoryId] = useState();
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const res = await handleGetRequest(`/category/get/${id}`);
         setName(res?.data?.name);
         setSlug(res?.data?.slug);
@@ -28,10 +28,10 @@ function Category() {
         setCategoryId(res?.data?.category_id);
 
         setManufacturers(res?.data);
-    };
+    }, [id]);
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
     const breadItems = [{ label: "Home" }, { label: "Categories", url: "/categories" }];
     const home = { icon: "pi pi-home", url: "/" };
@@ -78,7 +78,7 @@ function Category() {
             </div>
             <div className="customer_details_section">
                 <div className="left_section">
-                    <img src="" />
+                    <img src="" alt="Category" />
                     <div className="id_section">
                         <div
                             style={{

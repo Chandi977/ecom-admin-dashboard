@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useFormik } from "formik";
 import classNames from "classnames";
 import { Button } from "primereact/button";
@@ -9,7 +9,6 @@ import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 
 const CustomerDialog = ({ onHideCustomerDialog, handlesuccess }) => {
     const [role, setRole] = useState();
-    const [department, setDepartment] = useState();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const dispatch = useDispatch();
@@ -28,8 +27,7 @@ const CustomerDialog = ({ onHideCustomerDialog, handlesuccess }) => {
 
         onSubmit: async (data) => {
             data.role = role;
-            data.department = department;
-            const res = dispatch(handlePostRequest(data, "/signup", true, true));
+            await dispatch(handlePostRequest(data, "/signup", true, true));
             handlesuccess();
         },
     });
@@ -159,8 +157,8 @@ const CustomerDialog = ({ onHideCustomerDialog, handlesuccess }) => {
                             <label htmlFor="icon" className={classNames("Label__Text")}>
                                 Role
                             </label>
-                            <select style={{ height: "35px", border: "1px solid #cecece", borderRadius: "5px" }} required onChange={(e) => setRole(e.target.value)}>
-                                <option selected disabled>
+                            <select style={{ height: "35px", border: "1px solid #cecece", borderRadius: "5px" }} required value={role} onChange={(e) => setRole(e.target.value)}>
+                                <option value="" disabled>
                                     Please select role
                                 </option>
                                 <option value="admin">Admin</option>

@@ -16,6 +16,7 @@ import Axios from "axios";
 import { DEV } from "../../services/constants";
 import Paginator from "../../components/Paginator";
 import AddFaqDialog from "./AddFaqDialog";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function Faqs() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -103,17 +104,8 @@ function Faqs() {
         id: "",
     });
 
-    const temporary = ["width", "profile", "rim_diameter", "homePage", "id"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/faqSearch", {
             params: {
                 [names]: value,
@@ -121,6 +113,8 @@ function Faqs() {
         });
         setManufacturers(result?.data?.data);
     };
+
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
 
     const handleFilter = (name) => {
         return (
@@ -132,7 +126,7 @@ function Faqs() {
                     border: "1px solid #cecece",
                 }}
                 value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
+                onChange={(e) => debouncedApplyFilter(e.target.value, name)}
             ></input>
         );
     };

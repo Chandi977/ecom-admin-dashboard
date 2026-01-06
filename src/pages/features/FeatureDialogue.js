@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useFormik } from "formik";
 import classNames from "classnames";
 import { Button } from "primereact/button";
@@ -8,7 +8,6 @@ import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 
 function FeatureDialogue({ onHidefeatureDialog, onsuccess }) {
-    const [loading, setLoading] = useState();
     const [images, setImages] = useState();
     const [urls, setUrls] = useState();
     const dispatch = useDispatch();
@@ -30,7 +29,6 @@ function FeatureDialogue({ onHidefeatureDialog, onsuccess }) {
 
         onSubmit: async (data) => {
             data["image"] = images;
-            setLoading(true);
             const res = await dispatch(handlePostRequest(data, "/Addfeature", true, true));
             if (res?.success === true) {
                 onsuccess();
@@ -51,7 +49,7 @@ function FeatureDialogue({ onHidefeatureDialog, onsuccess }) {
         setUrls(res?.data?.url);
     };
 
-    const handleRemvoe = (index) => {
+    const handleRemvoe = () => {
         setImages();
         setUrls();
     };
@@ -112,8 +110,8 @@ function FeatureDialogue({ onHidefeatureDialog, onsuccess }) {
                             <InputText type="file" id="image" name="image" onChange={(e) => handleUpload(e.target.files[0])} className={classNames({ "p-invalid": isFormFieldValid("image") }, "Input__RoundFile")} />
                             {images && (
                                 <div style={{ position: "relative" }}>
-                                    <img style={{ width: "50px", height: "50px", border: "1px solid #cecece", borderRadius: "6px" }} src={urls}></img>
-                                    <i class="pi pi-times-circle" style={{ position: "absolute", zIndex: "2", color: "red", marginLeft: "-15px", cursor: "pointer" }} onClick={() => handleRemvoe()}></i>
+                                    <img style={{ width: "50px", height: "50px", border: "1px solid #cecece", borderRadius: "6px" }} src={urls} alt="Feature preview"></img>
+                                    <i className="pi pi-times-circle" style={{ position: "absolute", zIndex: "2", color: "red", marginLeft: "-15px", cursor: "pointer" }} onClick={() => handleRemvoe()}></i>
                                 </div>
                             )}
                             {getFormErrorMessage("image")}

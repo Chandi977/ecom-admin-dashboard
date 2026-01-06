@@ -15,6 +15,7 @@ import { handlePostRequest } from "../../services/PostTemplate";
 import { toast } from "react-toastify";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function TyreBrands() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -100,17 +101,8 @@ function TyreBrands() {
         title: "",
     });
 
-    const temporary = ["id", "title"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/searchBrand", {
             params: {
                 [names]: value,
@@ -119,8 +111,10 @@ function TyreBrands() {
         setBrands(result?.data?.data);
     };
 
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+
     const handleFilter = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => handleApplyFilter(e.target.value, name)}></input>;
+        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => debouncedApplyFilter(e.target.value, name)}></input>;
     };
 
     const onsuccess = () => {

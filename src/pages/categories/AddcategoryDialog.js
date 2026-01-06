@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useFormik } from "formik";
 import classNames from "classnames";
 import { Button } from "primereact/button";
@@ -7,9 +7,7 @@ import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 
 function AddcategoryDialog({ onsuccess }) {
-    const [loading, setLoading] = useState();
     const dispatch = useDispatch();
-    const [image, setImage] = useState();
 
     const formik = useFormik({
         initialValues: {
@@ -20,14 +18,13 @@ function AddcategoryDialog({ onsuccess }) {
         },
 
         onSubmit: async (data) => {
-            setLoading(true);
             const dat = {
                 name: data.name,
                 category_id: data.category_id,
                 meta_title: data.meta_title,
                 meta_description: data.meta_description,
             };
-            const res = await dispatch(handlePostRequest(dat, "/category/create", true, true));
+            await dispatch(handlePostRequest(dat, "/category/create", true, true));
             onsuccess();
         },
     });

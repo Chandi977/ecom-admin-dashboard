@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useFormik } from "formik";
@@ -17,12 +17,11 @@ function SubCategory() {
     const [slug, setSlug] = useState();
     const [meta_title, setMetaTitle] = useState();
     const [meta_description, setMetaDescription] = useState();
-    const [category_id, setCategoryId] = useState();
     const [sub_category_id, setSubCategoryId] = useState();
     const [categories, setCategories] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState("");
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const res = await handleGetRequest(`/subcategory/get/${id}`);
         setName(res?.data?.name);
         setSlug(res?.data?.slug);
@@ -34,10 +33,10 @@ function SubCategory() {
         setSelectedCategory(res?.data?.category?._id);
 
         setManufacturers(res?.data);
-    };
+    }, [id]);
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
     const breadItems = [{ label: "Home" }, { label: "SubCategories", url: "/subcategories" }];
     const home = { icon: "pi pi-home", url: "/" };
@@ -85,7 +84,7 @@ function SubCategory() {
             </div>
             <div className="customer_details_section">
                 <div className="left_section">
-                    <img src="" />
+                    <img src="" alt="Subcategory" />
                     <div className="id_section">
                         <div
                             style={{
@@ -145,11 +144,13 @@ function SubCategory() {
                                         Category
                                     </label>
                                     <select style={{ marginTop: "10px", height: "30px", border: "1px solid #cecece", borderRadius: "6px" }} value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                                        <option selected disabled>
+                                        <option value="" disabled>
                                             Please select category
                                         </option>
                                         {categories?.map((item) => (
-                                            <option value={item._id}>{item.name}</option>
+                                            <option key={item._id} value={item._id}>
+                                                {item.name}
+                                            </option>
                                         ))}
                                     </select>
                                     {getFormErrorMessage("name")}

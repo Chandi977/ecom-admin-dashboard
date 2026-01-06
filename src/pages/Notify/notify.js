@@ -3,12 +3,10 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
-import { Paginator } from "primereact/paginator";
 import moment from "moment";
 
 function NotifyData() {
     const [manufacturers, setManufacturers] = useState([]);
-    const [productName, setProductName] = useState("");
 
     useEffect(() => {
         async function fetchData() {
@@ -32,13 +30,6 @@ function NotifyData() {
                     {moment(rowdata?.createdAt).format("hh:mm a")}
                 </p>
             </div>
-        );
-    };
-
-    const serialNumberTemplate = (rowData, index) => {
-        // Correcting the serial number to start from 1
-        return (
-            <span>{index + 1}</span>
         );
     };
 

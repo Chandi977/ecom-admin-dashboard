@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { Menu } from "primereact/menu";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
 import { toast } from "react-toastify";
@@ -13,10 +12,9 @@ import { useDispatch } from "react-redux";
 import Paginator from "../../components/Paginator";
 import { DEV } from "../../services/constants";
 import Axios from "axios";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function Enquirey() {
-    const [loading, setloading] = useState();
-    const [editable, setEditable] = useState(false);
     const [selectedRow, setselectedRow] = useState([]);
     const [skip, setSkip] = useState(0);
     const [total, setTotal] = useState(0);
@@ -25,7 +23,7 @@ function Enquirey() {
     const history = useHistory();
     const [enquirey, setEnquirey] = useState([]);
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const params = {
             skip: skip,
         };
@@ -33,11 +31,11 @@ function Enquirey() {
         const result = await handleGetRequest("/countEnquiry");
         setTotal(result?.data);
         setEnquirey(res?.data);
-    };
+    }, [skip]);
 
     useEffect(() => {
         getData();
-    }, [skip]);
+    }, [getData]);
 
     const [values, setValues] = useState({
         name: "",
@@ -46,17 +44,8 @@ function Enquirey() {
         quantity: "",
     });
 
-    const temporary = ["name", "email", "phone", "quantity"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/searchEnquiry", {
             params: {
                 [names]: value,
@@ -64,6 +53,8 @@ function Enquirey() {
         });
         setEnquirey(result?.data?.data);
     };
+
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
 
     const handleFilter = (name) => {
         return (
@@ -75,7 +66,7 @@ function Enquirey() {
                     border: "1px solid #cecece",
                 }}
                 value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
+                onChange={(e) => debouncedApplyFilter(e.target.value, name)}
             ></input>
         );
     };
@@ -105,7 +96,7 @@ function Enquirey() {
             id: selectedId,
         };
         if (selectedId?.length > 0) {
-            const res = dispatch(handlePostRequest(data, "/deleteEnquiry", true, true));
+            dispatch(handlePostRequest(data, "/deleteEnquiry", true, true));
             getData();
             toast.success("enquiry deleted.");
         } else {

@@ -7,7 +7,6 @@ import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 
 function AddbrandDialog({ onsuccess }) {
-    const [loading, setLoading] = useState();
     const dispatch = useDispatch();
     const [images, setImages] = useState();
     const [urls, setUrls] = useState();
@@ -22,7 +21,6 @@ function AddbrandDialog({ onsuccess }) {
         },
 
         onSubmit: async (data) => {
-            setLoading(true);
             data["image"] = images;
             const dat = {
                 name: data.name,
@@ -30,7 +28,7 @@ function AddbrandDialog({ onsuccess }) {
                 meta_title: data.meta_title,
                 meta_description: data.meta_description,
             };
-            const res = await dispatch(handlePostRequest(dat, "/brand/create", true, true));
+            await dispatch(handlePostRequest(dat, "/brand/create", true, true));
             onsuccess();
         },
     });
@@ -47,7 +45,7 @@ function AddbrandDialog({ onsuccess }) {
         setUrls(res?.data?.url);
     };
 
-    const handleRemvoe = (index) => {
+    const handleRemvoe = () => {
         setImages();
         setUrls();
     };
@@ -86,8 +84,8 @@ function AddbrandDialog({ onsuccess }) {
                         </div>
                         {images && (
                             <div style={{ position: "relative" }}>
-                                <img style={{ width: "50px", height: "50px", border: "1px solid #cecece", borderRadius: "6px" }} src={urls}></img>
-                                <i class="pi pi-times-circle" style={{ position: "absolute", zIndex: "2", color: "red", marginLeft: "-15px", cursor: "pointer" }} onClick={() => handleRemvoe()}></i>
+                                <img style={{ width: "50px", height: "50px", border: "1px solid #cecece", borderRadius: "6px" }} src={urls} alt="Brand preview"></img>
+                                <i className="pi pi-times-circle" style={{ position: "absolute", zIndex: "2", color: "red", marginLeft: "-15px", cursor: "pointer" }} onClick={() => handleRemvoe()}></i>
                             </div>
                         )}
                     </div>

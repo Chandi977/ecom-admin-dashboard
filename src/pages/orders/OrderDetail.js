@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
-import { BreadCrumb } from "primereact/breadcrumb";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { useHistory, useParams } from "react-router-dom";
 import { handleGetRequest } from "../../services/GetTemplate";
@@ -11,8 +10,6 @@ import Axios from "axios";
 
 function OrderDetail() {
     const [displayModal, setDisplayModal] = useState(false);
-    const [paymentVerified, setPaymentVerified] = useState(false);
-
     const [resData, setResData] = useState([]);
     const [orderList, setOrderList] = useState([]);
 
@@ -22,22 +19,19 @@ function OrderDetail() {
     const [deliveryPartner, setDeliveryPartner] = useState("");
     const [deliveredDate, setDeliveredDate] = useState("");
 
-    const breadItems = [{ label: "Home" }, { label: `Order ${resData?.orderId}` }];
-    const home = { icon: "pi pi-home", url: "/" };
-
     const history = useHistory();
     const { id } = useParams();
     const orderId = resData?._id;
 
-    const getDatabyId = async () => {
+    const getDatabyId = useCallback(async () => {
         const res = await handleGetRequest(`/order/get/${id}`);
         setResData(res?.data);
         setOrderList(res?.data?.items);
-    };
+    }, [id]);
 
     useEffect(() => {
         getDatabyId();
-    }, []);
+    }, [getDatabyId]);
 
     /* ---------- Update handlers (unchanged logic) ----------- */
     const handleShippingDateUpdate = async () => {
@@ -102,7 +96,6 @@ function OrderDetail() {
             const response = await Axios.put("https://server.prempackaging.com/premind/api/order/update/payment/status", { _id: orderId, paymentStatus: "Payment Verified", status: "Payment Verified" });
             if (response.data.success) {
                 toast.success("UTR verified successfully");
-                setPaymentVerified(true);
                 setDisplayModal(false);
                 setTimeout(() => history.push("/orders"), 500);
             } else {

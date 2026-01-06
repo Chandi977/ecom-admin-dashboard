@@ -1,14 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import Warranty from "./AllStaticPages/warranty/Warranty";
 import { useParams } from "react-router-dom";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
 import { Editor } from "react-draft-wysiwyg";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
-import { EditorState, convertToRaw, ContentState } from "draft-js";
+import { EditorState, ContentState } from "draft-js";
 import draftToHtml from "draftjs-to-html";
 import htmlToDraft from "html-to-draftjs";
 import { handlePutRequest } from "../../services/PutTemplate";
@@ -26,11 +25,8 @@ function Pagedata() {
         updatedAt: "",
         description: "",
     });
-    const handledClicked = () => {
-        return null;
-    };
     const { id } = useParams();
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const result = await handleGetRequest(`/page/${id}`);
         setPage({
             title: result?.data?.title,
@@ -46,7 +42,7 @@ function Pagedata() {
             const editorState = EditorState.createWithContent(contentState);
             setText1(editorState);
         }
-    };
+    }, [id]);
 
     const handleState = (editorState) => {
         setText1(editorState);
@@ -59,7 +55,7 @@ function Pagedata() {
 
     useEffect(() => {
         getData();
-    }, [id]);
+    }, [getData]);
 
     const handleEdit = async () => {
         const result = await handlePutRequest(page, "/editPage");

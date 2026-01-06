@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { BreadCrumb } from "primereact/breadcrumb";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
 import { Dialog } from "primereact/dialog";
@@ -8,72 +7,38 @@ import moment from "moment";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
-import Axios from "axios";
-import { DEV } from "../../services/constants";
-import Paginator from "../../components/Paginator";
 import AddbrandDialog from "./AddbrandDialog";
 import { FaSort } from "react-icons/fa";
 
 function Brands() {
-    const [selectedRow, setselectedRow] = useState([]);
     const [showDialog, setShowDialog] = useState(false);
     const [manufacturers, setManufacturers] = useState([]);
-    const [total, setTotal] = useState(0);
-    const [skip, setSkip] = useState(0);
     const [sortOrder, setSortOrder] = useState("latest"); // latest or oldest
     const [showSortDropdown, setShowSortDropdown] = useState(false);
     const dispatch = useDispatch();
     const history = useHistory();
     const [role, setRole] = useState("");
 
-    const breadItems = [{ label: "Home" }, { label: "Brands" }];
-    const home = { icon: "pi pi-home", url: "/" };
     const handledClicked = () => {
         setShowDialog(true);
     };
-    const getBrands = async () => {
-        const params = {
-            skip: skip,
-        };
-        const res = await handleGetRequest("/brand/get", params);
-        const total = await handleGetRequest("/brand/count");
+    const getBrands = useCallback(async () => {
+        const res = await handleGetRequest("/brand/get");
         setManufacturers(res?.data);
-        setTotal(total?.data);
-    };
+    }, []);
     useEffect(() => {
         getBrands();
-    }, [skip]);
-    const handleActionButton = (e, rowData) => {
-        e.preventDefault();
-        history.push(`/brand/${rowData?._id}`);
-    };
-    const actionBodyTemplate = (rowData) => {
-        return (
-            <div>
-                <Button icon="pi pi-ellipsis-v" className="p-button-rounded mr-2 Elipse_Icon" onClick={(e) => handleActionButton(e, rowData)} aria-controls="popup_menu" aria-haspopup />
-            </div>
-        );
-    };
-
-    const dateTemplate = (rowdata) => {
-        return (
-            <div>
-                <p>
-                    {moment(rowdata?.createdAt).format("DD-MM-YY")} &nbsp; | &nbsp;
-                    {moment(rowdata?.createdAt).format("hh:mm a")}
-                </p>
-            </div>
-        );
-    };
-
-    const handleDelete = () => {
-        const selectedId = selectedRow.map((val, index) => {
-            return val?._id;
-        });
+    }, [getBrands]);
+    const handleDelete = (brandId) => {
+        const selectedId = brandId ? [brandId] : [];
         const data = {
             id: selectedId,
         };
-        const res = dispatch(handlePostRequest(data, "/brand/delete", true, true));
+        if (selectedId.length === 0) {
+            toast.info("Select a brand to delete.");
+            return;
+        }
+        dispatch(handlePostRequest(data, "/brand/delete", true, true));
         getBrands();
         toast.success("brand deleted.");
         window.location.reload();
@@ -86,49 +51,6 @@ function Brands() {
         window.location.reload();
     };
 
-    const [values, setValues] = useState({
-        brand_id: "",
-        name: "",
-        slug: "",
-    });
-
-    const temporary = ["brand_id", "name", "slug"];
-
-    const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
-        const result = await Axios.get(DEV + "/brand/search", {
-            params: {
-                [names]: value,
-            },
-        });
-        setManufacturers(result?.data?.data);
-    };
-
-    const handleFilter = (name) => {
-        return (
-            <input
-                style={{
-                    width: "100%",
-                    height: "37px",
-                    borderRadius: "5px",
-                    border: "1px solid #cecece",
-                }}
-                value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
-            ></input>
-        );
-    };
-
-    const handleskip = (num) => {
-        setSkip(num);
-    };
     const onHideFaq = () => {
         setShowDialog(false);
     };
@@ -318,7 +240,7 @@ function Brands() {
                                 <i className="pi pi-pencil" style={{ color: "#1976d2", fontSize: "1.3rem" }}></i>
                                 <span className="tooltip">Edit Brand</span>
                             </button>
-                            <button className="brand-action-btn" onClick={() => handleDelete(brand)}>
+                            <button className="brand-action-btn" onClick={() => handleDelete(brand._id)}>
                                 <i className="pi pi-trash" style={{ color: "red", fontSize: "1.3rem" }}></i>
                                 <span className="tooltip">Delete Brand</span>
                             </button>

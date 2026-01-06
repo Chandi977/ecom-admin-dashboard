@@ -1,11 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { InputText } from "primereact/inputtext";
-import { Menu } from "primereact/menu";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
-import { BreadCrumb } from "primereact/breadcrumb";
 import { Dialog } from "primereact/dialog";
 import CustomerDialog from "../Admin/CustomerDialog";
 import { handleGetRequest } from "../../services/GetTemplate";
@@ -18,7 +15,8 @@ import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { AiTwotoneDelete } from "react-icons/ai";
 import { FaPen } from "react-icons/fa";
-import { JsonToExcel } from "react-json-to-excel";
+import { exportJsonToExcel } from "../../utils/exportToExcel";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function Customers() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -28,9 +26,6 @@ function Customers() {
     const dispatch = useDispatch();
     const [users, setUsers] = useState([]);
     const [customers, setCustomers] = useState([]);
-    const breadItems = [{ label: "Home" }, { label: "Users" }];
-    const temporary = ["name", "email", "number", "role", "city", "zipcode", "createdAt"];
-    const home = { icon: "pi pi-home", url: "/" };
     const history = useHistory();
     const [values, setValues] = useState({
         name: "",
@@ -42,7 +37,7 @@ function Customers() {
         createdAt: "",
     });
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const params = {
             skip: skip,
         };
@@ -52,18 +47,18 @@ function Customers() {
         setUsers(users?.data);
         setTotal(total?.data);
         setCustomers(res?.data);
-    };
+    }, [skip]);
 
     useEffect(() => {
         getData();
-    }, [skip]);
+    }, [getData]);
 
     const handleDelete = async (value) => {
         const data = {
             id: [value?._id],
         };
         console.log(data);
-        const res = dispatch(handlePostRequest(data, "/deleteUser", true, true));
+        dispatch(handlePostRequest(data, "/deleteUser", true, true));
         getData();
         toast.success("users deleted.");
         window.location.reload();
@@ -130,7 +125,7 @@ function Customers() {
             id: selectedId,
         };
         if (selectedId?.length > 0) {
-            const res = dispatch(handlePostRequest(data, "/deleteUser", true, true));
+            dispatch(handlePostRequest(data, "/deleteUser", true, true));
             getData();
             toast.success("users deleted.");
         } else {
@@ -138,31 +133,12 @@ function Customers() {
         }
     };
 
-    const handleAddress = (rowData) => {
-        return <p>{rowData?.role}</p>;
-    };
-
-    const handleCity = (rowData) => {
-        return <p>{rowData?.contact_address?.length > 0 ? rowData?.contact_address?.[0]?.town : "not found"}</p>;
-    };
-
-    const handleZipcode = (rowData) => {
-        return <p>{rowData?.contact_address?.length > 0 ? rowData?.contact_address?.[0]?.pincode : "not found"}</p>;
-    };
-
     const handleDate = (rowData) => {
         return <p>{moment(rowData?.createdAt).format("DD/MM/YYYY")}</p>;
     };
 
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/searchusers", {
             params: {
                 [names]: value,
@@ -171,8 +147,10 @@ function Customers() {
         setCustomers(result?.data?.data);
     };
 
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+
     const handleFilter = (name) => {
-        return <input className="custom-filter-input" value={values[name]} onChange={(e) => handleApplyFilter(e.target.value, name)} />;
+        return <input className="custom-filter-input" value={values[name]} onChange={(e) => debouncedApplyFilter(e.target.value, name)} />;
     };
 
     const handleskip = (num) => {
@@ -293,7 +271,11 @@ function Customers() {
                 <div className="Top__Btn">
                     <Button label="Add New User" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "140px" }} />
                     <Button icon="pi pi-trash" iconPos="right" onClick={handledDelete} className="Btn__DarkDelete" style={{ width: "140px" }} />
-                    <JsonToExcel title="Download Users List" data={users} fileName="users" btnClassName="buttonsaaa" />
+                    <Button
+                        label="Download Users List"
+                        className="buttonsaaa"
+                        onClick={() => exportJsonToExcel({ data: users, fileName: "users" })}
+                    />
                 </div>
             </div>
 

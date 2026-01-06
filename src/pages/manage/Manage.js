@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
-import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -9,9 +8,6 @@ function Manage() {
     const breadItems = [{ label: "Home" }, { label: "Manage" }];
     const [role, setRole] = useState();
     const history = useHistory();
-    const handledClicked = () => {
-        history.push("");
-    };
     const handleLogs = () => {
         if (role === "admin") {
             history.push("/logs");

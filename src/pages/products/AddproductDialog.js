@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useFormik } from "formik";
 import classNames from "classnames";
 import { Button } from "primereact/button";
@@ -14,29 +14,27 @@ import { toast } from "react-toastify";
 
 function AddproductDialog({ onsuccess }) {
     const [text1, setText1] = useState(EditorState.createEmpty());
-    const [description, setDescription] = useState();
-    const [loading, setLoading] = useState();
+    const [description, setDescription] = useState("");
     const dispatch = useDispatch();
-    const [image, setImage] = useState();
     const [categories, setCategories] = useState([]);
     const [subCategories, setSubCategories] = useState([]);
     const [brands, setBrands] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState();
-    const [selectedSubCategory, setSelectedSubCategory] = useState();
+    const [selectedCategory, setSelectedCategory] = useState("");
+    const [selectedSubCategory, setSelectedSubCategory] = useState("");
     const [filteredSubCategories, setFilteredSubCategories] = useState([]);
-    const [selectedBrand, setSelectedBrand] = useState();
+    const [selectedBrand, setSelectedBrand] = useState("");
     const [price, setPrice] = useState([]);
     const [images, setImages] = useState([]);
     const [urls, setUrls] = useState([]);
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const cat = await handleGetRequest("/category/all");
         const subcat = await handleGetRequest("/subcategory/all");
         const brand = await handleGetRequest("/brand/all");
         setCategories(cat?.data);
         setSubCategories(subcat?.data);
         setBrands(brand?.data);
-    };
+    }, []);
 
     const addPrice = () => {
         setPrice([
@@ -52,25 +50,28 @@ function AddproductDialog({ onsuccess }) {
     };
 
     const handlePrice = (value, names, index) => {
-        const temp = price;
+        const temp = [...price];
         temp[index][names] = value;
         setPrice(temp);
     };
 
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
-    const handleSubCategory = async (id) => {
-        const temp = subCategories?.filter((item) => item.category === id);
-        setFilteredSubCategories(temp);
-    };
+    const handleSubCategory = useCallback(
+        async (id) => {
+            const temp = subCategories?.filter((item) => item.category === id);
+            setFilteredSubCategories(temp);
+        },
+        [subCategories]
+    );
 
     useEffect(() => {
         if (selectedCategory) {
             handleSubCategory(selectedCategory);
         }
-    }, [selectedCategory]);
+    }, [selectedCategory, handleSubCategory]);
 
     const formik = useFormik({
         initialValues: {
@@ -99,8 +100,6 @@ function AddproductDialog({ onsuccess }) {
             breadth_mm: "",
             height_inch: "",
             height_mm: "",
-            meta_title: "",
-            meta_description: "",
             category: "",
             sub_category: "",
             model: "",
@@ -120,7 +119,6 @@ function AddproductDialog({ onsuccess }) {
                 return;
             }
 
-            setLoading(true);
             const imu = images?.map((ima) => {
                 return {
                     image: ima,
@@ -152,8 +150,6 @@ function AddproductDialog({ onsuccess }) {
                 breadth_mm: data?.breadth_mm,
                 height_inch: data?.height_inch,
                 height_mm: data?.height_mm,
-                meta_title: data?.meta_title,
-                meta_description: data?.meta_description,
                 category: selectedCategory,
                 sub_category: selectedSubCategory,
                 price: data?.price,
@@ -162,7 +158,7 @@ function AddproductDialog({ onsuccess }) {
                 description: description,
                 length_inch: data?.length_inch,
                 length_mm: data?.length_mm,
-                aboutItem: data?.about_item,
+                aboutItem: data?.aboutItem,
                 images: imu,
             };
             console.log(dat);
@@ -214,11 +210,15 @@ function AddproductDialog({ onsuccess }) {
                                 Brand*
                             </label>
                             <select style={{ marginTop: "10px", height: "35px", borderRadius: "6px", border: "1px solid #cecece" }} required value={selectedBrand} onChange={(e) => setSelectedBrand(e.target.value)}>
-                                <option selected disabled>
+                                <option value="" disabled>
                                     Please select the brand
                                 </option>
                                 {brands?.map((item) => {
-                                    return <option value={item._id}>{item.name}</option>;
+                                    return (
+                                        <option key={item._id} value={item._id}>
+                                            {item.name}
+                                        </option>
+                                    );
                                 })}
                             </select>
                             {getFormErrorMessage("name")}
@@ -232,11 +232,15 @@ function AddproductDialog({ onsuccess }) {
                                 Category*
                             </label>
                             <select style={{ marginTop: "10px", height: "35px", borderRadius: "6px", border: "1px solid #cecece" }} required value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                                <option selected disabled>
+                                <option value="" disabled>
                                     Please select the category
                                 </option>
                                 {categories?.map((item) => {
-                                    return <option value={item._id}>{item.name}</option>;
+                                    return (
+                                        <option key={item._id} value={item._id}>
+                                            {item.name}
+                                        </option>
+                                    );
                                 })}
                             </select>
                             {getFormErrorMessage("name")}
@@ -250,11 +254,15 @@ function AddproductDialog({ onsuccess }) {
                                     Sub Category*
                                 </label>
                                 <select style={{ marginTop: "10px", height: "35px", borderRadius: "6px", border: "1px solid #cecece" }} required value={selectedSubCategory} onChange={(e) => setSelectedSubCategory(e.target.value)}>
-                                    <option selected disabled>
+                                    <option value="" disabled>
                                         Please select the sub-category
                                     </option>
                                     {filteredSubCategories?.map((item) => {
-                                        return <option value={item._id}>{item.name}</option>;
+                                        return (
+                                            <option key={item._id} value={item._id}>
+                                                {item.name}
+                                            </option>
+                                        );
                                     })}
                                 </select>
                                 {getFormErrorMessage("name")}
@@ -292,7 +300,7 @@ function AddproductDialog({ onsuccess }) {
                             <label htmlFor="product_id" className={classNames({ "p-error": isFormFieldValid("product_id") }, "Label__Text")}>
                                 Product ID*
                             </label>
-                            <InputText placeholder="PI-01" id="product_id" name="product_id" value={formik.values.product} required onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("product_id") }, "Input__Round")} />
+                            <InputText placeholder="PI-01" id="product_id" name="product_id" value={formik.values.product_id} required onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("product_id") }, "Input__Round")} />
 
                             {getFormErrorMessage("product_id")}
                         </div>
@@ -316,7 +324,7 @@ function AddproductDialog({ onsuccess }) {
                             <label htmlFor="images" className={classNames({ "p-error": isFormFieldValid("images") }, "Label__Text")}>
                                 Image*
                             </label>
-                            <InputText type="file" id="images" name="images" value={formik.values.images} required onChange={(e) => handleUpload(e.target.files[0])} className={classNames({ "p-invalid": isFormFieldValid("images") }, "Input__RoundFile")} />
+                            <InputText type="file" id="images" name="images" required onChange={(e) => handleUpload(e.target.files[0])} className={classNames({ "p-invalid": isFormFieldValid("images") }, "Input__RoundFile")} />
 
                             {getFormErrorMessage("images")}
                         </div>
@@ -324,8 +332,8 @@ function AddproductDialog({ onsuccess }) {
                             {urls?.map((url, index) => {
                                 return (
                                     <div style={{ position: "relative" }} key={index}>
-                                        <img style={{ width: "50px", height: "50px", border: "1px solid #cecece", borderRadius: "6px" }} src={url}></img>
-                                        <i class="pi pi-times-circle" style={{ position: "absolute", zIndex: "2", color: "red", marginLeft: "-15px", cursor: "pointer" }} onClick={() => handleRemvoe(index)}></i>
+                                        <img style={{ width: "50px", height: "50px", border: "1px solid #cecece", borderRadius: "6px" }} src={url} alt="Product preview"></img>
+                                        <i className="pi pi-times-circle" style={{ position: "absolute", zIndex: "2", color: "red", marginLeft: "-15px", cursor: "pointer" }} onClick={() => handleRemvoe(index)}></i>
                                     </div>
                                 );
                             })}
@@ -404,6 +412,7 @@ function AddproductDialog({ onsuccess }) {
                             {price?.map((fa, index) => {
                                 return (
                                     <div
+                                        key={`price-${index}`}
                                         style={{
                                             display: "flex",
                                             flexDirection: "column",
@@ -463,10 +472,10 @@ function AddproductDialog({ onsuccess }) {
                     {/* ABOUT THE ITEM */}
                     <div className="p-field col-12 md:col-12">
                         <div className="p-field">
-                            <label htmlFor="model" className={classNames({ "p-error": isFormFieldValid("model") }, "Label__Text")}>
+                            <label htmlFor="aboutItem" className={classNames({ "p-error": isFormFieldValid("aboutItem") }, "Label__Text")}>
                                 About the Item*
                             </label>
-                            <InputText placeholder="About the product" id="about_item" name="about_item" value={formik.values.about_item} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("aboutItem") }, "Input__Round")} />
+                            <InputText placeholder="About the product" id="aboutItem" name="aboutItem" value={formik.values.aboutItem} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("aboutItem") }, "Input__Round")} />
 
                             {getFormErrorMessage("aboutItem")}
                         </div>

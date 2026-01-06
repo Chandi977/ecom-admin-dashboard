@@ -2,7 +2,6 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { loadingAction } from "../redux/loadingAction";
 import { DEV } from "./constants";
-import { isJwtExpired } from "jwt-check-expiration";
 
 export const handlePostRequest =
     (data, url, isShowLoad = false, isShowToast = true) =>
@@ -11,13 +10,14 @@ export const handlePostRequest =
         try {
             if (isShowLoad) dispatch(loadingAction(true));
             console.log("POST request URL:", `${DEV + url}`); // Debug: log the URL
+            const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
             const response = await axios({
                 method: "post",
                 url: `${DEV + url}`,
                 data: data,
                 headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
+                    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 },
             });
             if (isShowLoad) dispatch(loadingAction(false));

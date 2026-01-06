@@ -1,66 +1,28 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { Menu } from "primereact/menu";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
 
 function StaticPages() {
-    const [loading, setloading] = useState();
-    const [editable, setEditable] = useState(false);
     const [selectedRow, setselectedRow] = useState([]);
     const breadItems = [{ label: "Home" }, { label: "Pages" }];
     const [pages, setPages] = useState([]);
 
     const home = { icon: "pi pi-home", url: "/" };
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const result = await handleGetRequest("/allpages");
         setPages(result?.data);
-    };
+    }, []);
 
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
-    const menu = useRef(null);
-    const pagesList = [
-        {
-            id: 1,
-            type: "Order and Refunds",
-            createdOnDate: "2022-12-12",
-            createdOnTime: "01:12:01 AM",
-            createUser: "Admin",
-            url: "/orderandrefunds",
-        },
-        {
-            id: 2,
-            type: "Terms and Conditions",
-            createdOnDate: "2022-12-12",
-            createdOnTime: "01:12:01 AM",
-            createUser: "Admin",
-            url: "/termsandconditions",
-        },
-        {
-            id: 3,
-            type: "Privacy",
-            createdOnDate: "2022-12-12",
-            createdOnTime: "01:12:01 AM",
-            createUser: "Admin",
-            url: "/privacypolicy",
-        },
-        {
-            id: 4,
-            type: "About Us",
-            createdOnDate: "2022-12-12",
-            createdOnTime: "01:12:01 AM",
-            createUser: "Admin",
-            url: "/aboutus",
-        },
-    ];
     const history = useHistory();
     const handledClicked = () => {
         history.push("");
@@ -74,9 +36,6 @@ function StaticPages() {
                 <Button icon="pi pi-eye" tooltip="view details" className="p-button-rounded mr-2 Elipse_Icon" onClick={() => handledDetailClicked(rowData)} />
             </div>
         );
-    };
-    const buttonTemplate = (rowData) => {
-        return <Button label="Active" onClick={handledClicked} className="status_button" style={{ width: "240px" }} />;
     };
     const dateTemplate = (rowdata) => {
         return <p>{moment(rowdata?.createdAt).format("DD/MM/YYYY")}</p>;

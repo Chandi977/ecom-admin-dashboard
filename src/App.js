@@ -14,7 +14,6 @@ import { Tooltip } from "primereact/tooltip";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import LoadingOverlay from "react-loading-overlay";
 
 import "primereact/resources/primereact.css";
 import "primeicons/primeicons.css";
@@ -63,7 +62,7 @@ import Coupons from "./pages/Coupon/coupon";
 import CouponUpdate from "./pages/Coupon/CouonUpdate";
 
 const App = () => {
-    const naviagte = useHistory();
+    const history = useHistory();
     const [layoutMode, setLayoutMode] = useState("static");
     const [layoutColorMode, setLayoutColorMode] = useState("light");
     const [inputStyle, setInputStyle] = useState("outlined");
@@ -75,9 +74,7 @@ const App = () => {
     const copyTooltipRef = useRef();
     const location = useLocation();
     const [role, setRole] = useState();
-    require("dotenv").config();
     PrimeReact.ripple = true;
-    let key = localStorage.getItem("token");
     let menuClick = false;
     let mobileTopbarMenuClick = false;
 
@@ -92,9 +89,9 @@ const App = () => {
     useEffect(() => {
         let token = localStorage.getItem("token");
         if (!token) {
-            naviagte.push("/auth");
+            history.push("/auth");
         }
-    }, []);
+    }, [history]);
 
     useEffect(() => {
         copyTooltipRef && copyTooltipRef.current && copyTooltipRef.current.updateTargetEvents();
@@ -206,7 +203,7 @@ const App = () => {
     }, []);
 
     const getCustomer = () => {
-        if (role == "manager" || role === "admin") {
+        if (role === "manager" || role === "admin") {
             return [{ label: "Users", icon: "pi pi-users", to: "/customers" }];
         }
     };

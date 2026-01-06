@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
-import { Link, useHistory } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { handleGetRequest } from "../../services/GetTemplate";
@@ -12,6 +12,7 @@ import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function Logs() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -20,7 +21,7 @@ function Logs() {
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const params = {
             skip: skip,
         };
@@ -28,16 +29,15 @@ function Logs() {
         const total = await handleGetRequest("/countlogss");
         setTotal(total?.data);
         setLogs(result?.data);
-    };
+    }, [skip]);
 
     useEffect(() => {
         getData();
-    }, [skip]);
+    }, [getData]);
 
     const dispatch = useDispatch();
 
     const home = { icon: "pi pi-home", url: "https://www.primefaces.org/primereact/showcase" };
-    const history = useHistory();
     const handledClicked = () => {
         const selectedId = selectedRow.map((val, index) => {
             return val?._id;
@@ -45,7 +45,7 @@ function Logs() {
         const data = {
             id: selectedId,
         };
-        const res = dispatch(handlePostRequest(data, "/deleteLogs", true, true));
+        dispatch(handlePostRequest(data, "/deleteLogs", true, true));
         getData();
         toast.success("logs deleted.");
         window.location.reload();
@@ -73,17 +73,8 @@ function Logs() {
         link: "",
     });
 
-    const temporary = ["id", "title", "link"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/searchLogs", {
             params: {
                 [names]: value,
@@ -91,6 +82,8 @@ function Logs() {
         });
         setLogs(result?.data?.data);
     };
+
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
 
     const handleFilter = (name) => {
         return (
@@ -102,7 +95,7 @@ function Logs() {
                     border: "1px solid #cecece",
                 }}
                 value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
+                onChange={(e) => debouncedApplyFilter(e.target.value, name)}
             ></input>
         );
     };

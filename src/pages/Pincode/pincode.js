@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { BreadCrumb } from "primereact/breadcrumb";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
 import { DataTable } from "primereact/datatable";
@@ -12,41 +11,28 @@ import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
-import Paginator from "../../components/Paginator";
 import AddPincodeDialog from "./AddPincodeDialog";
 import { FaPen } from "react-icons/fa";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function PinCodes() {
     const [selectedRow, setselectedRow] = useState([]);
     const [showDialog, setShowDialog] = useState(false);
     const [manufacturers, setManufacturers] = useState([]);
-    const [total, setTotal] = useState(0);
-    const [skip, setSkip] = useState(0);
     const dispatch = useDispatch();
     const history = useHistory();
     const [role, setRole] = useState("");
 
-    const breadItems = [{ label: "Home" }, { label: "Pincode" }];
-    const home = { icon: "pi pi-home", url: "/" };
     const handledClicked = () => {
         setShowDialog(true);
     };
-    const getBrands = async () => {
-        const params = {
-            skip: skip,
-        };
-        const res = await handleGetRequest("/pinCode/get/all", params);
-        const total = await handleGetRequest("/pinCode/count");
+    const getBrands = useCallback(async () => {
+        const res = await handleGetRequest("/pinCode/get/all");
         setManufacturers(res?.data);
-        setTotal(total?.data);
-    };
+    }, []);
     useEffect(() => {
         getBrands();
-    }, [skip]);
-    const handleActionButton = (e, rowData) => {
-        e.preventDefault();
-        history.push(`/pincode/${rowData?._id}`);
-    };
+    }, [getBrands]);
     const actionBodyTemplate = (rowData) => {
         return (
             <div>
@@ -75,7 +61,7 @@ function PinCodes() {
         const data = {
             id: selectedId,
         };
-        const res = dispatch(handlePostRequest(data, "/brand/delete", true, true));
+        dispatch(handlePostRequest(data, "/brand/delete", true, true));
         getBrands();
         toast.success("brand deleted.");
         window.location.reload();
@@ -89,22 +75,13 @@ function PinCodes() {
     };
 
     const [values, setValues] = useState({
-        brand_id: "",
-        name: "",
-        slug: "",
+        pincode: "",
+        city: "",
+        state: "",
     });
 
-    const temporary = ["brand_id", "name", "slug"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/pinCode/search", {
             params: {
                 [names]: value,
@@ -112,6 +89,8 @@ function PinCodes() {
         });
         setManufacturers(result?.data?.data);
     };
+
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
 
     const handleFilter = (name) => {
         return (
@@ -123,14 +102,11 @@ function PinCodes() {
                     border: "1px solid #cecece",
                 }}
                 value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
+                onChange={(e) => debouncedApplyFilter(e.target.value, name)}
             ></input>
         );
     };
 
-    const handleskip = (num) => {
-        setSkip(num);
-    };
     const onHideFaq = () => {
         setShowDialog(false);
     };

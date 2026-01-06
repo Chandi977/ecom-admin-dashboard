@@ -1,28 +1,25 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useFormik } from "formik";
 import classNames from "classnames";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
-import { useEffect } from "react";
 import { handleGetRequest } from "../../services/GetTemplate";
 
 function AdddealDialog({ onsuccess }) {
-    const [loading, setLoading] = useState();
     const dispatch = useDispatch();
-    const [image, setImage] = useState();
     const [products, setProducts] = useState([]);
-    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [selectedProduct, setSelectedProduct] = useState("");
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const dat = await handleGetRequest("/product/all");
         setProducts(dat?.data);
-    };
+    }, []);
 
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
     const formik = useFormik({
         initialValues: {
@@ -34,7 +31,6 @@ function AdddealDialog({ onsuccess }) {
         },
 
         onSubmit: async (data) => {
-            setLoading(true);
             const dat = {
                 meta_title: data.meta_title,
                 meta_description: data.meta_description,
@@ -43,7 +39,7 @@ function AdddealDialog({ onsuccess }) {
                 discount: data.discount,
                 product: selectedProduct,
             };
-            const res = await dispatch(handlePostRequest(dat, "/deal/create", true, true));
+            await dispatch(handlePostRequest(dat, "/deal/create", true, true));
             onsuccess();
         },
     });
@@ -71,11 +67,13 @@ function AdddealDialog({ onsuccess }) {
                                 Product
                             </label>
                             <select style={{ marginTop: "10px", height: "30px", border: "1px solid #cecece", borderRadius: "6px" }} value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)}>
-                                <option selected disabled>
+                                <option value="" disabled>
                                     Please select product
                                 </option>
                                 {products?.map((item) => (
-                                    <option value={item._id}>{item.name}</option>
+                                    <option key={item._id} value={item._id}>
+                                        {item.name}
+                                    </option>
                                 ))}
                             </select>
                             {getFormErrorMessage("name")}

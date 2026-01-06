@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
-import { Button } from "primereact/button";
-import { useHistory, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
 
@@ -10,17 +9,13 @@ function EnquireyDetails() {
     const home = { icon: "pi pi-home", url: "https://www.primefaces.org/primereact/showcase" };
     const breadItems = [{ label: "Home" }, { label: "Enquirey #123456" }];
     const [enquiry, setEnquiry] = useState();
-    const history = useHistory();
-    const handledClicked = () => {
-        history.push("");
-    };
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const result = await handleGetRequest(`/getEnquiryById/${id}`);
         setEnquiry(result?.data);
-    };
+    }, [id]);
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
     return (
         <>
             <div className="Page__Header" style={{ marginTop: "40px" }}>

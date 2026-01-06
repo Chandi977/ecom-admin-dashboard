@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useFormik } from "formik";
 import classNames from "classnames";
 import { Button } from "primereact/button";
@@ -8,20 +8,18 @@ import { handlePostRequest } from "../../services/PostTemplate";
 import { handleGetRequest } from "../../services/GetTemplate";
 
 function AddsubcategoryDialog({ onsuccess }) {
-    const [loading, setLoading] = useState();
     const dispatch = useDispatch();
-    const [image, setImage] = useState();
     const [categories, setCategories] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState("");
 
-    const getCategories = async () => {
+    const getCategories = useCallback(async () => {
         const res = await handleGetRequest("/category/all");
         setCategories(res?.data);
-    };
+    }, []);
 
     useEffect(() => {
         getCategories();
-    }, []);
+    }, [getCategories]);
 
     const formik = useFormik({
         initialValues: {
@@ -32,7 +30,6 @@ function AddsubcategoryDialog({ onsuccess }) {
         },
 
         onSubmit: async (data) => {
-            setLoading(true);
             const dat = {
                 name: data.name,
                 sub_category_id: data.sub_category_id,
@@ -40,7 +37,7 @@ function AddsubcategoryDialog({ onsuccess }) {
                 meta_description: data.meta_description,
                 category: selectedCategory,
             };
-            const res = await dispatch(handlePostRequest(dat, "/subcategory/create", true, true));
+            await dispatch(handlePostRequest(dat, "/subcategory/create", true, true));
             onsuccess();
         },
     });
@@ -78,11 +75,13 @@ function AddsubcategoryDialog({ onsuccess }) {
                                 Category
                             </label>
                             <select style={{ marginTop: "10px", height: "30px", border: "1px solid #cecece", borderRadius: "6px" }} value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                                <option selected disabled>
+                                <option value="" disabled>
                                     Please select category
                                 </option>
                                 {categories?.map((item) => (
-                                    <option value={item._id}>{item.name}</option>
+                                    <option key={item._id} value={item._id}>
+                                        {item.name}
+                                    </option>
                                 ))}
                             </select>
                             {getFormErrorMessage("name")}

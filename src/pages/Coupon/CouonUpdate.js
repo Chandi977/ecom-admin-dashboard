@@ -1,6 +1,5 @@
 // src/pages/CouponUpdate.jsx
-import React, { useEffect, useState } from "react";
-import { BreadCrumb } from "primereact/breadcrumb";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { useFormik } from "formik";
 import classNames from "classnames";
@@ -11,7 +10,6 @@ import { handleGetRequest } from "../../services/GetTemplate";
 import { toast } from "react-toastify";
 import { Dropdown } from "primereact/dropdown";
 import { Calendar } from "primereact/calendar";
-import { useDispatch } from "react-redux";
 
 function CouponUpdate() {
     const [manufacturer, setManufacturers] = useState();
@@ -32,13 +30,9 @@ function CouponUpdate() {
     const [maxDiscountCap, setMaxDiscountCap] = useState(null);
     const [couponDescription, setCouponDescription] = useState("");
     const [categories, setCategories] = useState([]);
-    const [brands, setBrands] = useState([]);
-    const dispatch = useDispatch();
-
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const res = await handleGetRequest(`/coupon/get/${id}`);
         const cat = await handleGetRequest("/category/all");
-        const brandRes = await handleGetRequest("/brand/all");
 
         setType(res?.data?.type);
         setName(res?.data?.name);
@@ -56,13 +50,11 @@ function CouponUpdate() {
         setCouponDescription(res?.data?.couponDescription);
         setManufacturers(res?.data);
         setCategories(cat?.data);
-        setBrands(brandRes?.data);
-    };
+    }, [id]);
 
     useEffect(() => {
         getData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [getData]);
 
     const typeOptions = [
         { label: "Product", value: "product" },
@@ -79,9 +71,6 @@ function CouponUpdate() {
         { label: "Single", value: "single" },
         { label: "Multiple", value: "multiple" },
     ];
-
-    const breadItems = [{ label: "Home" }, { label: "Coupon", url: "/coupon" }];
-    const home = { icon: "pi pi-home", url: "/" };
 
     const formik = useFormik({
         initialValues: {

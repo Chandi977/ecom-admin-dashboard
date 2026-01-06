@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useFormik } from "formik";
@@ -10,17 +10,25 @@ import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
 import { Editor } from "react-draft-wysiwyg";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
-import { EditorState, convertToRaw, ContentState } from "draft-js";
+import { EditorState, ContentState } from "draft-js";
 import draftToHtml from "draftjs-to-html";
 import htmlToDraft from "html-to-draftjs";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 
+const normalizeId = (value) => {
+    if (!value) return "";
+    if (typeof value === "object" && value._id) return value._id;
+    return value;
+};
+
+const normalizeIdList = (values) => (Array.isArray(values) ? values.map(normalizeId).filter(Boolean) : []);
+
 function Product() {
     const [manufacturer, setManufacturers] = useState();
     const history = useHistory();
     const { id } = useParams();
-    const [category_id, setCategoryId] = useState();
+    const [category_id, setCategoryId] = useState("");
     const [categories, setCategories] = useState([]);
     const [subCategories, setSubCategories] = useState([]);
     const [products, setProducts] = useState([]);
@@ -28,119 +36,117 @@ function Product() {
     const [buyItWith, setBuyItWith] = useState([]);
     const [updatedBuyItWith, setUpdatedBuyItWith] = useState([]);
     const [updatedRelatedProducts, setUpdatedRelatedProduct] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState();
-    const [selectedSubCategory, setSelectedSubCategory] = useState();
+    const [selectedCategory, setSelectedCategory] = useState("");
+    const [selectedSubCategory, setSelectedSubCategory] = useState("");
     const [filteredSubCategories, setFilteredSubCategories] = useState([]);
-    const [selectedBrand, setSelectedBrand] = useState();
+    const [selectedBrand, setSelectedBrand] = useState("");
     const [price, setPrice] = useState([]);
     const [text1, setText1] = useState(EditorState.createEmpty());
-    const [description, setDescription] = useState();
+    const [description, setDescription] = useState("");
     const [images, setImages] = useState([]);
     const [Url, setUrl] = useState([]);
-    const [selectedProducts, setSelectedProducts] = useState([]);
+    const [selectedProducts, setSelectedProducts] = useState("");
     const [selectedProductIds, setSelectedProductIds] = useState([]);
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     const [relatedProducts, setRelatedProducts] = useState([]);
-    const [selectedProductsRP, setSelectedProductsRP] = useState([]);
+    const [selectedProductsRP, setSelectedProductsRP] = useState("");
     const [selectedProductIdsRP, setSelectedProductIdsRP] = useState([]);
 
     const dispatch = useDispatch();
 
-    const makecall = async (image) => {
-        const result = await handleGetRequest(`/getImage?image=${image}`);
-        return result?.data?.url;
-    };
-
-    const processimages = async (images) => {
-        let result;
-        let temp = images;
-        for (let i = 0; i < images?.length; i++) {
-            result = await makecall(images[i]);
-            temp[i] = result;
-        }
-        return temp;
-    };
-
-    const getData = async () => {
-        const res = await handleGetRequest(`/product/single/${id}`);
-        setSelectedBrand(res?.data?.brand);
-        setSelectedCategory(res?.data?.category);
-        setSelectedSubCategory(res?.data?.subcategory);
-        setBuyItWith(res?.data?.buyItWith);
-        setRelatedProducts(res?.data?.relatedProducts);
-        console.log("65", buyItWith);
-        setPrice(res?.data?.priceList);
-        setSelectedProductIds(res?.data?.buyItWith);
-        setSelectedProductIdsRP(res?.data?.relatedProducts);
-        if (res?.data?.description) {
-            const contentBlock = htmlToDraft(res?.data?.description);
-            if (contentBlock) {
-                const contentState = ContentState.createFromBlockArray(contentBlock.contentBlocks);
-                const editorState = EditorState.createWithContent(contentState);
-                setText1(editorState);
-            }
-        }
-
-        setManufacturers(res?.data);
-
-        const cat = await handleGetRequest("/category/all");
-        const subcat = await handleGetRequest("/subcategory/all");
-        const brand = await handleGetRequest("/brand/all");
-        const products = await handleGetRequest("/product/all");
-
-        setProducts(products?.data);
-        console.log("Product Details: ", products);
-        setCategories(cat?.data);
-        setSubCategories(subcat?.data);
-        setBrands(brand?.data);
-        const ima = res?.data?.images?.map((im) => {
-            return im?.image;
-        });
-        const t = await processimages(ima);
-        setImages(t);
-        const temp1 = res?.data?.images?.map((item) => {
-            return item?.image;
-        });
-        setUrl(temp1);
-    };
     useEffect(() => {
+        const getData = async () => {
+            const res = await handleGetRequest(`/product/single/${id}`);
+            setSelectedBrand(normalizeId(res?.data?.brand));
+            setSelectedCategory(normalizeId(res?.data?.category));
+            setSelectedSubCategory(normalizeId(res?.data?.sub_category));
+            setCategoryId(normalizeId(res?.data?.category));
+            console.log("Category ID: ", normalizeId(res?.data.category));
+            setBuyItWith(res?.data?.buyItWith);
+            setRelatedProducts(res?.data?.relatedProducts);
+            setPrice(res?.data?.priceList);
+            setSelectedProductIds(res?.data?.buyItWith || []);
+            setSelectedProductIdsRP(res?.data?.relatedProducts || []);
+            if (res?.data?.description) {
+                const contentBlock = htmlToDraft(res?.data?.description);
+                if (contentBlock) {
+                    const contentState = ContentState.createFromBlockArray(contentBlock.contentBlocks);
+                    const editorState = EditorState.createWithContent(contentState);
+                    setText1(editorState);
+                }
+            }
+            setDescription(res?.data?.description || "");
+
+            setManufacturers(res?.data);
+
+            const cat = await handleGetRequest("/category/all");
+            const subcat = await handleGetRequest("/subcategory/all");
+            const brand = await handleGetRequest("/brand/all");
+            const products = await handleGetRequest("/product/all");
+
+            setProducts(products?.data);
+            setCategories(cat?.data);
+            setSubCategories(subcat?.data);
+            setBrands(brand?.data);
+            const imageNames = res?.data?.images?.map((im) => im?.image) || [];
+            const imageUrls = await Promise.all(
+                imageNames.map(async (image) => {
+                    const result = await handleGetRequest(`/getImage?image=${image}`);
+                    return result?.data?.url;
+                })
+            );
+            setImages(imageUrls);
+            setUrl(imageNames);
+        };
+
         getData();
+    }, [id]);
+
+    const fetchProductDetails = useCallback(async (productId) => {
+        const res = await handleGetRequest(`/product/single/${productId}`);
+        return res?.data;
     }, []);
+
+    const fetchBuyItWithDetails = useCallback(
+        async (productIds) => {
+            const productDetails = await Promise.all(productIds.map(fetchProductDetails));
+            setBuyItWith(productDetails);
+        },
+        [fetchProductDetails]
+    );
+
+    const fetchBuyItWithDetailsRP = useCallback(
+        async (productIds) => {
+            const productDetails = await Promise.all(productIds.map(fetchProductDetails));
+            setRelatedProducts(productDetails);
+        },
+        [fetchProductDetails]
+    );
 
     useEffect(() => {
         if (buyItWith && buyItWith.length > 0) {
-            const productIds = buyItWith.map((product) => product._id);
-            fetchBuyItWithDetails(productIds);
+            const hasObject = buyItWith.some((product) => product && typeof product === "object");
+            if (hasObject) return;
+            const productIds = buyItWith.map((product) => normalizeId(product)).filter(Boolean);
+            if (productIds.length > 0) {
+                fetchBuyItWithDetails(productIds);
+            }
         }
-    }, [buyItWith]);
+    }, [buyItWith, fetchBuyItWithDetails]);
 
     useEffect(() => {
         if (relatedProducts && relatedProducts.length > 0) {
-            const productIds = relatedProducts.map((product) => product._id);
-            fetchBuyItWithDetailsRP(productIds);
+            const hasObject = relatedProducts.some((product) => product && typeof product === "object");
+            if (hasObject) return;
+            const productIds = relatedProducts.map((product) => normalizeId(product)).filter(Boolean);
+            if (productIds.length > 0) {
+                fetchBuyItWithDetailsRP(productIds);
+            }
         }
-    }, [relatedProducts]);
-
-    // Function to fetch details of a single product
-    const fetchProductDetails = async (productId) => {
-        const res = await handleGetRequest(`/product/single/${productId}`);
-        return res?.data;
-    };
-
-    // Function to fetch details of Buy It With products
-    const fetchBuyItWithDetails = async (productIds) => {
-        const productDetails = await Promise.all(productIds.map(fetchProductDetails));
-        setBuyItWith(productDetails);
-    };
-
-    const fetchBuyItWithDetailsRP = async (productIds) => {
-        const productDetails = await Promise.all(productIds.map(fetchProductDetails));
-        setRelatedProducts(productDetails);
-    };
+    }, [relatedProducts, fetchBuyItWithDetailsRP]);
 
     const handleSelection = (selectedProduct) => {
-        if (selectedProductIds.length < 3 && !selectedProductIds.some((item) => item._id === selectedProduct._id)) {
+        if (selectedProductIds.length < 3 && !selectedProductIds.some((item) => normalizeId(item) === selectedProduct._id)) {
             const updatedSelectedProductIds = [...selectedProductIds, selectedProduct];
             setSelectedProductIds(updatedSelectedProductIds);
             setUpdatedBuyItWith([...updatedBuyItWith, selectedProduct]);
@@ -150,7 +156,7 @@ function Product() {
     };
 
     const handleSelectionRP = (selectedProductRP) => {
-        if (selectedProductIdsRP.length < 10 && !selectedProductIdsRP.some((item) => item._id === selectedProductRP._id)) {
+        if (selectedProductIdsRP.length < 10 && !selectedProductIdsRP.some((item) => normalizeId(item) === selectedProductRP._id)) {
             const updatedSelectedProductIdsRP = [...selectedProductIdsRP, selectedProductRP];
             setSelectedProductIdsRP(updatedSelectedProductIdsRP);
             setUpdatedRelatedProduct([...updatedRelatedProducts, selectedProductRP]);
@@ -191,16 +197,6 @@ function Product() {
         toast.success("All products have been removed. Please click on Update below to confirm changes.");
     };
 
-    const onSubmit = async (values) => {
-        const data = { ...values };
-        data.buyItWith = selectedProductIds; // Update 'buyItWith' field in form data with selectedProductIds
-
-        const res = await handlePutRequest(data, "/product/update");
-        if (res?.success === true) {
-            toast.success("Product Details Edited");
-        }
-    };
-
     const breadItems = [
         { label: "Home", url: "/" },
         { label: "Products", url: "/products" },
@@ -210,7 +206,7 @@ function Product() {
     const formik = useFormik({
         enableReinitialize: true,
         initialValues: {
-            name: manufacturer?.name,
+            name: manufacturer?.name || "",
             brand: "",
             product_id: manufacturer?.product_id ? manufacturer?.product_id : "",
             meta_title: manufacturer?.meta_title ? manufacturer?.meta_title : "",
@@ -250,8 +246,6 @@ function Product() {
             buyItWith: manufacturer?.buyItWith ? manufacturer?.buyItWith : [],
             relatedProducts: manufacturer?.relatedProducts ? manufacturer?.relatedProducts : [],
         },
-        onsubmit,
-
         onSubmit: async (data) => {
             console.log("DATA SEND: ", data);
             const imu = Url?.map((im) => {
@@ -262,7 +256,7 @@ function Product() {
             const dat = {
                 id: id,
                 name: data?.name,
-                brand: selectedBrand,
+                brand: normalizeId(selectedBrand || manufacturer?.brand),
                 product_id: data?.product_id,
                 meta_title: data?.meta_title,
                 meta_description: data?.meta_description,
@@ -289,18 +283,18 @@ function Product() {
                 breadth_mm: data?.breadth_mm,
                 height_inch: data?.height_inch,
                 height_mm: data?.height_mm,
-                category: selectedCategory,
-                sub_category: selectedSubCategory,
+                category: normalizeId(selectedCategory || manufacturer?.category),
+                sub_category: normalizeId(selectedSubCategory || manufacturer?.sub_category),
                 aboutItem: data?.aboutItem,
                 model: data?.model,
                 slug: data?.slug,
-                description: description,
+                description: description || manufacturer?.description || "",
                 priceList: price,
                 images: imu,
                 top_product: data?.top_product,
                 deal_product: data?.deal_product,
-                buyItWith: selectedProductIds,
-                relatedProducts: selectedProductIdsRP,
+                buyItWith: normalizeIdList(selectedProductIds),
+                relatedProducts: normalizeIdList(selectedProductIdsRP),
             };
             const res = await handlePutRequest(dat, "/product/update");
             if (res?.success === true) {
@@ -342,19 +336,13 @@ function Product() {
     };
 
     useEffect(() => {
-        getData();
-    }, []);
-
-    const handleSubCategory = async (id) => {
-        const temp = subCategories?.filter((item) => item.category === id);
-        setFilteredSubCategories(temp);
-    };
-
-    useEffect(() => {
-        if (selectedCategory) {
-            handleSubCategory(selectedCategory);
+        if (!selectedCategory) {
+            setFilteredSubCategories([]);
+            return;
         }
-    }, [selectedCategory]);
+        const temp = subCategories?.filter((item) => item.category === selectedCategory);
+        setFilteredSubCategories(temp);
+    }, [selectedCategory, subCategories]);
 
     const handleStateD = (editorState) => {
         setText1(editorState);
@@ -402,7 +390,7 @@ function Product() {
             </div>
             <div className="customer_details_section">
                 <div className="left_section">
-                    <img src={images?.[0]} />
+                    <img src={images?.[0]} alt="Product" />
                     <div className="id_section">
                         <div
                             style={{
@@ -457,11 +445,15 @@ function Product() {
                                             Brand
                                         </label>
                                         <select style={{ marginTop: "10px", height: "35px", borderRadius: "6px", border: "1px solid #cecece" }} value={selectedBrand} onChange={(e) => setSelectedBrand(e.target.value)}>
-                                            <option selected disabled>
+                                            <option value="" disabled>
                                                 Please select the brand
                                             </option>
                                             {brands?.map((item) => {
-                                                return <option value={item._id}>{item.name}</option>;
+                                                return (
+                                                    <option key={item._id} value={item._id}>
+                                                        {item.name}
+                                                    </option>
+                                                );
                                             })}
                                         </select>
                                         {getFormErrorMessage("name")}
@@ -475,11 +467,15 @@ function Product() {
                                             Category
                                         </label>
                                         <select style={{ marginTop: "10px", height: "35px", borderRadius: "6px", border: "1px solid #cecece" }} value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                                            <option selected disabled>
+                                            <option value="" disabled>
                                                 Please select the category
                                             </option>
                                             {categories?.map((item) => {
-                                                return <option value={item._id}>{item.name}</option>;
+                                                return (
+                                                    <option key={item._id} value={item._id}>
+                                                        {item.name}
+                                                    </option>
+                                                );
                                             })}
                                         </select>
                                         {getFormErrorMessage("name")}
@@ -493,11 +489,15 @@ function Product() {
                                                 Sub Category
                                             </label>
                                             <select style={{ marginTop: "10px", height: "35px", borderRadius: "6px", border: "1px solid #cecece" }} value={selectedSubCategory} onChange={(e) => setSelectedSubCategory(e.target.value)}>
-                                                <option selected disabled>
+                                                <option value="" disabled>
                                                     Please select the sub-category
                                                 </option>
                                                 {filteredSubCategories?.map((item) => {
-                                                    return <option value={item._id}>{item.name}</option>;
+                                                    return (
+                                                        <option key={item._id} value={item._id}>
+                                                            {item.name}
+                                                        </option>
+                                                    );
                                                 })}
                                             </select>
                                             {getFormErrorMessage("name")}
@@ -667,7 +667,7 @@ function Product() {
                                         <label htmlFor="images" className={classNames({ "p-error": isFormFieldValid("images") }, "Label__Text")}>
                                             Images
                                         </label>
-                                        <InputText type="file" id="images" name="images" value={formik.values.images} onChange={(e) => handleUpload(e.target.files[0])} className={classNames({ "p-invalid": isFormFieldValid("images") }, "Input__RoundFile")} />
+                                        <InputText type="file" id="images" name="images" onChange={(e) => handleUpload(e.target.files[0])} className={classNames({ "p-invalid": isFormFieldValid("images") }, "Input__RoundFile")} />
                                         <div
                                             style={{
                                                 display: "flex",
@@ -678,9 +678,9 @@ function Product() {
                                         >
                                             {images?.map((img, index) => {
                                                 return (
-                                                    <div style={{ position: "relative" }} key={index}>
-                                                        <img style={{ width: "50px", height: "50px", border: "1px solid #cecece", borderRadius: "6px" }} src={img}></img>
-                                                        <i class="pi pi-times-circle" style={{ position: "absolute", zIndex: "2", color: "red", marginLeft: "-15px", cursor: "pointer" }} onClick={() => handleRemvoe(index)}></i>
+                                                    <div style={{ position: "relative" }} key={`${img || "image"}-${index}`}>
+                                                        <img style={{ width: "50px", height: "50px", border: "1px solid #cecece", borderRadius: "6px" }} src={img} alt="Product preview"></img>
+                                                        <i className="pi pi-times-circle" style={{ position: "absolute", zIndex: "2", color: "red", marginLeft: "-15px", cursor: "pointer" }} onClick={() => handleRemvoe(index)}></i>
                                                     </div>
                                                 );
                                             })}
@@ -705,8 +705,8 @@ function Product() {
                                                     <span style={{ fontWeight: "600" }}>Selected Products:</span>
                                                     <ol style={{ marginLeft: "20px", marginTop: "10px" }}>
                                                         {buyItWith.map((selectedProduct, index) => (
-                                                            <li style={{ marginBottom: "5px" }}>
-                                                                <div key={index}>
+                                                            <li key={selectedProduct?._id || index} style={{ marginBottom: "5px" }}>
+                                                                <div>
                                                                     {selectedProduct.brand?.name} {selectedProduct.name} {selectedProduct.model}{" "}
                                                                     <button type="button" onClick={() => handleRemoveSelectedProduct(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
                                                                         <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
@@ -719,7 +719,7 @@ function Product() {
                                                     <ol style={{ marginLeft: "20px", marginTop: "10px", marginBottom: "10px" }}>
                                                         {Array.isArray(updatedBuyItWith) &&
                                                             updatedBuyItWith.map((selectedProduct1, index) => (
-                                                                <li key={index}>
+                                                                <li key={selectedProduct1?._id || index}>
                                                                     <div>
                                                                         {selectedProduct1?.brand?.name} {selectedProduct1.name} {selectedProduct1.model}{" "}
                                                                         <button type="button" onClick={() => handleRemoveSelectedProduct(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
@@ -739,9 +739,15 @@ function Product() {
                                                         id="product-dropdown"
                                                         style={{ marginTop: "10px", height: "35px", borderRadius: "6px", border: "1px solid #cecece" }}
                                                         disabled={selectedProductIds.length >= 3}
-                                                        onChange={(e) => handleSelection(products.find((product) => product._id === e.target.value))}
+                                                        value={selectedProducts}
+                                                        onChange={(e) => {
+                                                            setSelectedProducts(e.target.value);
+                                                            handleSelection(products.find((product) => product._id === e.target.value));
+                                                        }}
                                                     >
-                                                        <option value="">Select a product</option>
+                                                        <option value="" disabled>
+                                                            Select a product
+                                                        </option>
                                                         {products.map((product) => (
                                                             <option key={product._id} value={product._id}>
                                                                 {product?.brand?.name} {product.name} {product.model}
@@ -755,8 +761,8 @@ function Product() {
                                                 <label style={{ marginLeft: "20px" }}>Selected Products:</label>
                                                 <ol style={{ marginLeft: "20px", marginTop: "5px" }}>
                                                     {buyItWith.map((selectedProduct, index) => (
-                                                        <li key={index} style={{ marginBottom: "5px" }}>
-                                                            <div key={index} className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
+                                                        <li key={selectedProduct?._id || index} style={{ marginBottom: "5px" }}>
+                                                            <div className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
                                                                 {selectedProduct?.brand?.name} {selectedProduct.name} {selectedProduct.model}
                                                                 <button type="button" onClick={() => handleRemoveSelectedProduct(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
                                                                     <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
@@ -773,25 +779,30 @@ function Product() {
                                             <>
                                                 <div className="selected-products">
                                                     <ol style={{ marginLeft: "20px", marginTop: "10px" }}>
-                                                        {selectedProductIds.map((selectedProduct, index) => (
-                                                            <li key={index}>
-                                                                <div className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
-                                                                    {selectedProduct?.brand?.name} {selectedProduct.name} {selectedProduct.model}
-                                                                    <button type="button" onClick={() => handleRemoveSelectedProduct(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
-                                                                        <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
-                                                                    </button>
-                                                                </div>
-                                                            </li>
-                                                        ))}
+                                                    {selectedProductIds.map((selectedProduct, index) => (
+                                                        <li key={selectedProduct?._id || index}>
+                                                            <div className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
+                                                                {selectedProduct?.brand?.name} {selectedProduct.name} {selectedProduct.model}
+                                                                <button type="button" onClick={() => handleRemoveSelectedProduct(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
+                                                                    <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
+                                                                </button>
+                                                            </div>
+                                                        </li>
+                                                    ))}
                                                     </ol>
                                                 </div>
                                                 <select
                                                     style={{ marginTop: "10px", height: "35px", borderRadius: "6px", border: "1px solid #cecece" }}
                                                     disabled={selectedProductIds.length >= 3}
                                                     value={selectedProducts}
-                                                    onChange={(e) => handleSelection(products.find((item) => item._id === e.target.value))}
+                                                    onChange={(e) => {
+                                                        setSelectedProducts(e.target.value);
+                                                        handleSelection(products.find((item) => item._id === e.target.value));
+                                                    }}
                                                 >
-                                                    <option selected>Please select the products</option>
+                                                    <option value="" disabled>
+                                                        Please select the products
+                                                    </option>
                                                     {products?.map((item) => (
                                                         <option key={item._id} value={item._id} style={{ textTransform: "capitalize" }}>
                                                             {item?.brand?.name} {item.name} {item.model}
@@ -1021,8 +1032,8 @@ function Product() {
                                                     <span style={{ fontWeight: "600" }}>Selected Products:</span>
                                                     <ol style={{ marginLeft: "20px", marginTop: "10px" }}>
                                                         {relatedProducts.map((selectedProduct, index) => (
-                                                            <li style={{ marginBottom: "5px" }}>
-                                                                <div key={index}>
+                                                            <li key={selectedProduct?._id || index} style={{ marginBottom: "5px" }}>
+                                                                <div>
                                                                     {selectedProduct.brand?.name} {selectedProduct.name} {selectedProduct.model}{" "}
                                                                     <button type="button" onClick={() => handleRemoveSelectedProductRP(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
                                                                         <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
@@ -1035,7 +1046,7 @@ function Product() {
                                                     <ol style={{ marginLeft: "20px", marginTop: "10px", marginBottom: "10px" }}>
                                                         {Array.isArray(updatedRelatedProducts) &&
                                                             updatedRelatedProducts.map((selectedProduct1, index) => (
-                                                                <li key={index}>
+                                                                <li key={selectedProduct1?._id || index}>
                                                                     <div>
                                                                         {selectedProduct1?.brand?.name} {selectedProduct1.name} {selectedProduct1.model}{" "}
                                                                         <button type="button" onClick={() => handleRemoveSelectedProductRP(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
@@ -1055,9 +1066,15 @@ function Product() {
                                                         id="product-dropdown"
                                                         style={{ marginTop: "10px", height: "35px", borderRadius: "6px", border: "1px solid #cecece" }}
                                                         disabled={selectedProductIdsRP.length >= 10}
-                                                        onChange={(e) => handleSelectionRP(products.find((product) => product._id === e.target.value))}
+                                                        value={selectedProductsRP}
+                                                        onChange={(e) => {
+                                                            setSelectedProductsRP(e.target.value);
+                                                            handleSelectionRP(products.find((product) => product._id === e.target.value));
+                                                        }}
                                                     >
-                                                        <option value="">Select a product</option>
+                                                        <option value="" disabled>
+                                                            Select a product
+                                                        </option>
                                                         {products.map((product) => (
                                                             <option key={product._id} value={product._id}>
                                                                 {product?.brand?.name} {product.name} {product.model}
@@ -1073,8 +1090,8 @@ function Product() {
                                                 </label>
                                                 <ol style={{ marginLeft: "20px", marginTop: "5px" }}>
                                                     {relatedProducts.map((selectedProduct, index) => (
-                                                        <li key={index} style={{ marginBottom: "5px" }}>
-                                                            <div key={index} className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
+                                                        <li key={selectedProduct?._id || index} style={{ marginBottom: "5px" }}>
+                                                            <div className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
                                                                 {selectedProduct?.brand?.name} {selectedProduct?.name} {selectedProduct?.model}
                                                                 <button type="button" onClick={() => handleRemoveSelectedProductRP(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
                                                                     <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
@@ -1092,16 +1109,16 @@ function Product() {
                                             <>
                                                 <div className="selected-products">
                                                     <ol style={{ marginLeft: "20px", marginTop: "10px" }}>
-                                                        {selectedProductIdsRP.map((selectedProduct, index) => (
-                                                            <li>
-                                                                <div key={index} className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
-                                                                    {selectedProduct?.brand?.name} {selectedProduct.name} {selectedProduct.model}
-                                                                    <button type="button" onClick={() => handleRemoveSelectedProductRP(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
-                                                                        <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
-                                                                    </button>
-                                                                </div>
-                                                            </li>
-                                                        ))}
+                                                    {selectedProductIdsRP.map((selectedProduct, index) => (
+                                                        <li key={selectedProduct?._id || index}>
+                                                            <div className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
+                                                                {selectedProduct?.brand?.name} {selectedProduct.name} {selectedProduct.model}
+                                                                <button type="button" onClick={() => handleRemoveSelectedProductRP(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
+                                                                    <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
+                                                                </button>
+                                                            </div>
+                                                        </li>
+                                                    ))}
                                                     </ol>
                                                 </div>
 
@@ -1109,9 +1126,14 @@ function Product() {
                                                     style={{ marginTop: "10px", height: "35px", borderRadius: "6px", border: "1px solid #cecece" }}
                                                     disabled={selectedProductIdsRP.length >= 10}
                                                     value={selectedProductsRP}
-                                                    onChange={(e) => handleSelectionRP(products.find((item) => item._id === e.target.value))}
+                                                    onChange={(e) => {
+                                                        setSelectedProductsRP(e.target.value);
+                                                        handleSelectionRP(products.find((item) => item._id === e.target.value));
+                                                    }}
                                                 >
-                                                    <option selected>Please select the products</option>
+                                                    <option value="" disabled>
+                                                        Please select the products
+                                                    </option>
                                                     {products?.map((item) => (
                                                         <option key={item._id} value={item._id} style={{ textTransform: "capitalize" }}>
                                                             {item?.brand?.name} {item.name} {item.model}
@@ -1163,6 +1185,7 @@ function Product() {
                                 {price?.map((fa, index) => {
                                     return (
                                         <div
+                                            key={`price-${index}`}
                                             style={{
                                                 display: "flex",
                                                 flexDirection: "column",
@@ -1203,8 +1226,8 @@ function Product() {
                         </div>
 
                         <div className="Down__Btn">
-                            <Button label="Cancel" className="Btn__Transparent" onClick={handleCancel} />
-                            <Button label="Update" className="Btn__Dark" />
+                            <Button type="button" label="Cancel" className="Btn__Transparent" onClick={handleCancel} />
+                            <Button type="submit" label="Update" className="Btn__Dark" />
                         </div>
                     </form>
                 </div>

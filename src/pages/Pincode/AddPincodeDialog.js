@@ -18,7 +18,6 @@ import { handlePostRequest } from "../../services/PostTemplate";
 //     b2bZone,
 
 function AddPincodeDialog({ onsuccess }) {
-    const [loading, setLoading] = useState();
     const dispatch = useDispatch();
     
 
@@ -37,7 +36,6 @@ function AddPincodeDialog({ onsuccess }) {
         },
 
         onSubmit: async (data) => {
-            setLoading(true);
             const dat = {
                 pincode: parseInt(data.pincode),
                 city: data.city,
@@ -50,7 +48,7 @@ function AddPincodeDialog({ onsuccess }) {
                 b2cZone: data.b2cZone,
                 b2bZone: data.b2bZone,
             };
-            const res = await dispatch(handlePostRequest(dat, "/freight/create", true, true));
+            await dispatch(handlePostRequest(dat, "/freight/create", true, true));
             onsuccess();
         },
     });

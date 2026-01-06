@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useFormik } from "formik";
@@ -20,16 +20,14 @@ function Customer() {
     const [passwordDaialog, setPasswordDialog] = useState(false);
     const [user, setUser] = useState();
     const { id } = useParams();
-    const [editable, setEditable] = useState(false);
-
-    const getData = async (id) => {
-        const result = await handleGetRequest(`/getuser/${id}`);
+    const getData = useCallback(async (userId) => {
+        const result = await handleGetRequest(`/getuser/${userId}`);
         setUser(result?.data);
-    };
+    }, []);
 
     useEffect(() => {
         getData(id);
-    }, [id]);
+    }, [getData, id]);
 
     const breadItems = [{ label: "Home" }, { label: "Customers" }];
     const home = { icon: "pi pi-home", url: "https://www.primefaces.org/primereact/showcase" };
@@ -52,7 +50,7 @@ function Customer() {
                 role: data?.role,
                 id: user?._id,
             };
-            const result = dispatch(handlePostRequest(dat, "/edituser", true, true));
+            await dispatch(handlePostRequest(dat, "/edituser", true, true));
             toast.success("user edited");
             getData(user?._id);
         },
@@ -94,7 +92,7 @@ function Customer() {
             </div>
             <div className="customer_details_section">
                 <div className="left_section">
-                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQe4urDLOvXZ4vt6tMghlzqrsf-pyHsj8yGhrb-dgTvX2SiUfBonWjOKr0j716CLao-5DI&usqp=CAU" />
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQe4urDLOvXZ4vt6tMghlzqrsf-pyHsj8yGhrb-dgTvX2SiUfBonWjOKr0j716CLao-5DI&usqp=CAU" alt="Customer profile" />
                     <div className="id_section">
                         <div>
                             <p>User ID</p>

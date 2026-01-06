@@ -138,7 +138,7 @@ const ModalDialog = ({ onsuccess, onHideVehicleManufacturer }) => {
                         {image && (
                             <div style={{ position: "relative" }}>
                                 <img style={{ width: "50px", height: "50px", border: "1px solid #cecece", borderRadius: "6px" }} src={url}></img>
-                                <i class="pi pi-times-circle" style={{ position: "absolute", zIndex: "2", color: "red", marginLeft: "-15px", cursor: "pointer" }} onClick={() => handleRemvoe()}></i>
+                                <i className="pi pi-times-circle" style={{ position: "absolute", zIndex: "2", color: "red", marginLeft: "-15px", cursor: "pointer" }} onClick={() => handleRemvoe()}></i>
                             </div>
                         )}
                     </div>

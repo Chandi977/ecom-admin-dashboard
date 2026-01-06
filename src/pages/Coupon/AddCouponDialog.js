@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useFormik } from "formik";
 import classNames from "classnames";
 import * as Yup from 'yup';
@@ -14,17 +14,13 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 function AddCoupon({ onsuccess }) {
-    const [loading, setLoading] = useState();
     const dispatch = useDispatch();
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [selectedBrand, setSelectedBrand] = useState();
     const [selectedCategory, setSelectedCategory] = useState();
     const [selectedStartDate, setSelectedStartDate] = useState(null); // State for start date
-    const [selectedEndDate, setSelectedEndDate] = useState(null); // State for end date
-    const [showBrandField, setShowBrandField] = useState(false);
     const [showProductFields, setShowProductFields] = useState(false);
-    const [showCategoryField, setShowCategoryField] = useState(false);
 
     const validationSchema = Yup.object({
         discountPercentage: Yup.number()
@@ -45,16 +41,16 @@ function AddCoupon({ onsuccess }) {
         { label: "All", value: "all" },
     ];
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const cat = await handleGetRequest("/category/all");
         const brand = await handleGetRequest("/brand/all");
         setCategories(cat?.data);
         setBrands(brand?.data);
-    };
+    }, []);
 
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
     const handleProductTypeChange = (e) => {
         const selectedType = e.value;
@@ -62,11 +58,7 @@ function AddCoupon({ onsuccess }) {
 
         // Determine which field(s) to show based on product type
         if (selectedType === "brand") {
-            setShowBrandField(true);
-            setShowCategoryField(false);
         } else if (selectedType === "category") {
-            setShowBrandField(false);
-            setShowCategoryField(true);
         }
     };
 
@@ -94,8 +86,6 @@ function AddCoupon({ onsuccess }) {
         },
         validationSchema,
         onSubmit: async (data) => {
-            setLoading(true);
-
             const dat = {
                 type: data.type,
                 name: data.name,
@@ -111,7 +101,7 @@ function AddCoupon({ onsuccess }) {
                 startDate: data.startDate,
                 endDate: data.endDate,
             };
-            const res = await dispatch(handlePostRequest(dat, "/coupon/create", true, true));
+            await dispatch(handlePostRequest(dat, "/coupon/create", true, true));
             // console.log("coupon code",dat)
             onsuccess();
         },
@@ -274,7 +264,7 @@ function AddCoupon({ onsuccess }) {
                             <Calendar
                                 id="endDate"
                                 name="endDate"
-                                value={selectedEndDate}
+                                value={formik.values.endDate}
                                 onChange={(e) => formik.setFieldValue("endDate", e.value)}
                                 minDate={selectedStartDate} // Setting minDate to selected start date
                                 className={classNames({ "p-invalid": isFormFieldValid("endDate") }, "Input__Round")}

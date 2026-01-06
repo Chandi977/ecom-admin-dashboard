@@ -17,6 +17,7 @@ import { handlePostRequest } from "../../services/PostTemplate";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
 import Paginator from "../../components/Paginator";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function AddVehicleVariant() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -119,17 +120,8 @@ function AddVehicleVariant() {
         createdAt: "",
     });
 
-    const temporary = ["name", "email", "number", "role", "city", "zipcode", "createdAt"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/searchVarient", {
             params: {
                 [names]: value,
@@ -137,6 +129,8 @@ function AddVehicleVariant() {
         });
         setManufacturers(result?.data?.data);
     };
+
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
 
     const handleFilter = (name) => {
         return (
@@ -148,7 +142,7 @@ function AddVehicleVariant() {
                     border: "1px solid #cecece",
                 }}
                 value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
+                onChange={(e) => debouncedApplyFilter(e.target.value, name)}
             ></input>
         );
     };

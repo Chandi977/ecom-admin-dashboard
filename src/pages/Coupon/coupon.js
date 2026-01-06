@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { BreadCrumb } from "primereact/breadcrumb";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
 import { DataTable } from "primereact/datatable";
@@ -10,8 +9,6 @@ import moment from "moment";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
-import Axios from "axios";
-import { DEV } from "../../services/constants";
 import Paginator from "../../components/Paginator";
 import AddCoupon from "./AddCouponDialog";
 
@@ -25,12 +22,10 @@ function Coupons() {
     const history = useHistory();
     const [role, setRole] = useState("");
 
-    const breadItems = [{ label: "Home" }, { label: "Coupon Code" }];
-    const home = { icon: "pi pi-home", url: "/" };
     const handledClicked = () => {
         setShowDialog(true);
     };
-    const getBrands = async () => {
+    const getBrands = useCallback(async () => {
         const params = {
             skip: skip,
         };
@@ -39,10 +34,10 @@ function Coupons() {
         // console.log("res", res);
         setManufacturers(res?.data);
         setTotal(total?.data);
-    };
+    }, [skip]);
     useEffect(() => {
         getBrands();
-    }, [skip]);
+    }, [getBrands]);
     const handleActionButton = (e, rowData) => {
         e.preventDefault();
         history.push(`/coupon/${rowData?._id}`);
@@ -73,7 +68,7 @@ function Coupons() {
         const data = {
             id: selectedId,
         };
-        const res = dispatch(handlePostRequest(data, "/coupon/delete", true, true));
+        dispatch(handlePostRequest(data, "/coupon/delete", true, true));
         getBrands();
         toast.success("Coupon Deleted.");
         window.location.reload();
@@ -84,46 +79,6 @@ function Coupons() {
         toast.success("Coupon Added Successfully");
         setShowDialog(false);
         window.location.reload();
-    };
-
-    const [values, setValues] = useState({
-        brand_id: "",
-        name: "",
-        slug: "",
-    });
-
-    const temporary = ["brand_id", "name", "slug"];
-
-    const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
-        const result = await Axios.get(DEV + "/brand/search", {
-            params: {
-                [names]: value,
-            },
-        });
-        setManufacturers(result?.data?.data);
-    };
-
-    const handleFilter = (name) => {
-        return (
-            <input
-                style={{
-                    width: "100%",
-                    height: "37px",
-                    borderRadius: "5px",
-                    border: "1px solid #cecece",
-                }}
-                value={values[name]}
-                onChange={(e) => handleApplyFilter(e.target.value, name)}
-            ></input>
-        );
     };
 
     const handleskip = (num) => {

@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { Menu } from "primereact/menu";
 import FeatureDialogue from "./FeatureDialogue";
 import { Dialog } from "primereact/dialog";
 import { handleGetRequest } from "../../services/GetTemplate";
@@ -15,10 +14,9 @@ import { handlePostRequest } from "../../services/PostTemplate";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
 import Paginator from "../../components/Paginator";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function Features() {
-    const [loading, setloading] = useState();
-    const [editable, setEditable] = useState(false);
     const [selectedRow, setselectedRow] = useState([]);
     const [showDialog, setShowDialog] = useState(false);
     const [features, setFeatures] = useState([]);
@@ -38,13 +36,13 @@ function Features() {
         const data = {
             id: selectedId,
         };
-        const res = dispatch(handlePostRequest(data, "/deleteFeature", true, true));
+        dispatch(handlePostRequest(data, "/deleteFeature", true, true));
         getData();
         toast.success("feature deleted.");
         window.location.reload();
     };
 
-    const getData = async () => {
+    const getData = useCallback(async () => {
         const params = {
             skip: skip,
         };
@@ -52,7 +50,7 @@ function Features() {
         const total = await handleGetRequest("/countFeature");
         setFeatures(res?.data);
         setTotal(total?.data);
-    };
+    }, [skip]);
 
     const handleskip = (num) => {
         setSkip(num);
@@ -60,8 +58,7 @@ function Features() {
 
     useEffect(() => {
         getData();
-    }, []);
-    const menu = useRef(null);
+    }, [getData]);
 
     const handleRoute = (id) => {
         history.push(`feature/${id}`);
@@ -75,9 +72,6 @@ function Features() {
     };
     const createdTemplate = (rowData) => {
         return <p>{moment(rowData?.createdAt).format("DD/MM/YYYY")}</p>;
-    };
-    const buttonTemplate = (rowData) => {
-        return <img src={rowData?.image} style={{ width: "50px" }}></img>;
     };
     const handledAdd = () => {
         setShowDialog(true);
@@ -95,17 +89,8 @@ function Features() {
         title: "",
     });
 
-    const temporary = ["id", "title"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/searchFeature", {
             params: {
                 [names]: value,
@@ -114,8 +99,10 @@ function Features() {
         setFeatures(result?.data?.data);
     };
 
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+
     const handleFilter = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "1px solid #cecece" }} value={values[name]} onChange={(e) => handleApplyFilter(e.target.value, name)}></input>;
+        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "1px solid #cecece" }} value={values[name]} onChange={(e) => debouncedApplyFilter(e.target.value, name)}></input>;
     };
 
     return (

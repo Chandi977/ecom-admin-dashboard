@@ -15,6 +15,7 @@ import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { AiTwotoneDelete, AiFillEye } from "react-icons/ai";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function Tyres() {
     const [showDialog, setShowDialog] = useState(false);
@@ -123,17 +124,8 @@ function Tyres() {
         rimDiameter: "",
     });
 
-    const temporary = ["id", "title", "manufacturer", "price", "pattern", "ratio", "width", "rimDiameter"];
-
     const handleApplyFilter = async (value, names) => {
-        const temp = values;
-        temporary.forEach((item) => {
-            if (item !== names) {
-                temp[item] = "";
-            }
-        });
-        setValues(temp);
-        setValues({ ...values, [names]: value });
+        setValues((prev) => ({ ...prev, [names]: value }));
         const result = await Axios.get(DEV + "/adminSearch", {
             params: {
                 [names]: value,
@@ -142,8 +134,10 @@ function Tyres() {
         setAllTyres(result?.data?.data);
     };
 
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+
     const handleFilter = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => handleApplyFilter(e.target.value, name)}></input>;
+        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => debouncedApplyFilter(e.target.value, name)}></input>;
     };
 
     const apllyManufacturer = async (value, name) => {
@@ -152,16 +146,7 @@ function Tyres() {
         let search = brands.filter((option) => {
             return option.title.match(searchPattern);
         });
-        setValues({
-            id: "",
-            title: "",
-            manufacturer: value,
-            price: "",
-            pattern: "",
-            ratio: "",
-            width: "",
-            rimDiameter: "",
-        });
+        setValues((prev) => ({ ...prev, manufacturer: value }));
         const result = await Axios.get(DEV + "/adminSearch", {
             params: {
                 manufacturer: search?.[0]?._id,
@@ -170,8 +155,10 @@ function Tyres() {
         setAllTyres(result?.data?.data);
     };
 
+    const debouncedApplyManufacturer = useDebouncedCallback(apllyManufacturer, 600);
+
     const handleManufacturer = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => apllyManufacturer(e.target.value, name)}></input>;
+        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => debouncedApplyManufacturer(e.target.value, name)}></input>;
     };
 
     const apllyPattern = async (value, name) => {
@@ -180,16 +167,7 @@ function Tyres() {
         let search = patterns.filter((option) => {
             return option.title.match(searchPattern);
         });
-        setValues({
-            id: "",
-            title: "",
-            manufacturer: "",
-            price: "",
-            pattern: value,
-            ratio: "",
-            width: "",
-            rimDiameter: "",
-        });
+        setValues((prev) => ({ ...prev, pattern: value }));
         const result = await Axios.get(DEV + "/adminSearch", {
             params: {
                 pattern: search?.[0]?._id,
@@ -198,8 +176,10 @@ function Tyres() {
         setAllTyres(result?.data?.data);
     };
 
+    const debouncedApplyPattern = useDebouncedCallback(apllyPattern, 600);
+
     const handlePattern = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => apllyPattern(e.target.value, name)}></input>;
+        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => debouncedApplyPattern(e.target.value, name)}></input>;
     };
 
     const handleskip = (num) => {
