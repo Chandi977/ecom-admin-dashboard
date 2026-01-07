@@ -173,7 +173,7 @@ function OrderDetail() {
                             </div>
                             <div>
                                 <div className="label">Phone</div>
-                                <div className="value">{resData?.user?.mobile_number}</div>
+                                <div className="value">{resData?.phone || resData?.user?.mobile_number}</div>
                             </div>
                             <div>
                                 <div className="label">GSTIN</div>
