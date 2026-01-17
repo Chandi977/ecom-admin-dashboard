@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
+import "./ProductsTableFix.css";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
@@ -175,6 +176,18 @@ function Products() {
     }, 300);
 
     // Optimized filter input for instant typing
+    const filterLabels = {
+        product_id: "Product ID",
+        name: "Name",
+        model: "Model",
+        slug: "Slug",
+    };
+    const filterPlaceholders = {
+        product_id: "Search by ID",
+        name: "Search by name",
+        model: "Search by model",
+        slug: "Search by slug",
+    };
     const FilterInput = React.memo(({ name }) => {
         const [inputValue, setInputValue] = useState(values[name] || "");
         const lastUserInput = useRef("");
@@ -195,16 +208,24 @@ function Products() {
         }, [values[name], name]);
 
         return (
-            <input
-                style={{
-                    width: "100%",
-                    height: "37px",
-                    borderRadius: "5px",
-                    border: "1px solid #cecece",
-                }}
-                value={inputValue}
-                onChange={onInputChange}
-            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <label style={{ fontSize: 12, color: "#888", marginBottom: 2 }}>{filterLabels[name]}</label>
+                <input
+                    style={{
+                        width: "100%",
+                        height: "37px",
+                        borderRadius: "5px",
+                        border: "1px solid #cecece",
+                        position: "relative",
+                        zIndex: 1,
+                        background: "#fff",
+                        paddingLeft: 8,
+                    }}
+                    value={inputValue}
+                    onChange={onInputChange}
+                    placeholder={filterPlaceholders[name]}
+                />
+            </div>
         );
     });
 
@@ -249,31 +270,54 @@ function Products() {
             </div>
             <div className="grid">
                 <div className="col-12">
-                    <div className="card">
-                        <DataTable
-                            ref={tableRef}
-                            filterDisplay="row"
-                            className="datatable-responsive"
-                            emptyMessage="No List found."
-                            responsiveLayout="scroll"
-                            scrollable
-                            scrollHeight="calc(100vh - 300px)"
-                            value={products}
-                            selection={selectedRow}
-                            onSelectionChange={(e) => setselectedRow(e.value)}
-                            loading={loading}
-                            footer={hasMore && products.length > 0 ? <div style={{ textAlign: "center", padding: "10px" }}>{loading ? "Loading more..." : `Showing ${products.length} of ${total} products`}</div> : null}
+                    <div className="card" style={{ paddingTop: 16 }}>
+                        {/* Filter/Search Bar as Navbar */}
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: 12,
+                                alignItems: "center",
+                                background: "#fff",
+                                borderRadius: 8,
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                                padding: "16px 24px",
+                                marginBottom: 32,
+                                position: "relative",
+                                zIndex: 2,
+                            }}
                         >
-                            <Column selectionMode="multiple" style={{ width: "2em" }} />
-                            <Column filter field="product_id" header="ID" filterElement={() => handleFilter("product_id")} />
-                            <Column filter field="name" header="Name" style={{ textTransform: "capitalize" }} filterElement={() => handleFilter("name")} />
-                            <Column filter field="model" header="Model" style={{ textTransform: "capitalize" }} filterElement={() => handleFilter("model")} />
-                            <Column filter header="Slug" field="slug" filterElement={() => handleFilter("slug")} />
-                            <Column header="Brand" body={brandTemplate} />
-                            <Column header="Category" body={categoryTemplate} />
-                            <Column header="Created On" body={dateTemplate} />
-                            <Column header="Action" body={actionBodyTemplate} />
-                        </DataTable>
+                            <div style={{ flex: 1 }}>{handleFilter("product_id")}</div>
+                            <div style={{ flex: 2 }}>{handleFilter("name")}</div>
+                            <div style={{ flex: 2 }}>{handleFilter("model")}</div>
+                            <div style={{ flex: 2 }}>{handleFilter("slug")}</div>
+                            {/* Add more filter fields if needed */}
+                        </div>
+                        {/* Product Table with margin to clear filter bar */}
+                        <div style={{ marginTop: 0 }}>
+                            <DataTable
+                                ref={tableRef}
+                                className="datatable-responsive"
+                                emptyMessage="No List found."
+                                responsiveLayout="scroll"
+                                scrollable
+                                scrollHeight="calc(100vh - 300px)"
+                                value={products}
+                                selection={selectedRow}
+                                onSelectionChange={(e) => setselectedRow(e.value)}
+                                loading={loading}
+                                footer={hasMore && products.length > 0 ? <div style={{ textAlign: "center", padding: "10px" }}>{loading ? "Loading more..." : `Showing ${products.length} of ${total} products`}</div> : null}
+                            >
+                                <Column selectionMode="multiple" style={{ width: "2em" }} />
+                                <Column field="product_id" header="ID" />
+                                <Column field="name" header="Name" style={{ textTransform: "capitalize" }} />
+                                <Column field="model" header="Model" style={{ textTransform: "capitalize" }} />
+                                <Column header="Slug" field="slug" />
+                                <Column header="Brand" body={brandTemplate} />
+                                <Column header="Category" body={categoryTemplate} />
+                                <Column header="Created On" body={dateTemplate} />
+                                <Column header="Action" body={actionBodyTemplate} />
+                            </DataTable>
+                        </div>
                     </div>
                 </div>
             </div>

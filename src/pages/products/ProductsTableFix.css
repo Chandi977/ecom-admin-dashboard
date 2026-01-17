@@ -1,0 +1,10 @@
+.datatable-responsive .p-datatable-thead>tr.p-filter-row {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fff;
+}
+
+.datatable-responsive .p-datatable-tbody>tr {
+    z-index: 1;
+}
