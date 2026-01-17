@@ -7,6 +7,7 @@ import { AppTopbar } from "./AppTopbar";
 import { AppFooter } from "./AppFooter";
 import { AppMenu } from "./AppMenu";
 import { AppConfig } from "./AppConfig";
+import ProtectedRoute from "./components/ProtectedRoute";
 // import Login from "./pages/login/Login";
 
 import PrimeReact from "primereact/api";
@@ -335,43 +336,60 @@ const App = () => {
                         </div>
                         <div className="layout-main-container" style={{ backgroundColor: "#F6F8FA" }}>
                             <div className="layout-main">
-                                {<Route exact path="/customers" component={Customers} />}
-                                {<Route exact path="/" component={Dashboard} />}
-                                {<Route exact path="/manage" component={Manage} />}
-                                {<Route exact path="/logs" component={Logs} />}
-                                {<Route exact path="/notices" component={Notices} />}
-                                {<Route exact path="/loginhistory" component={LoginHistory} />}
-                                {<Route exact path="/pages" component={StaticPages} />}
-                                {<Route exact path="/features" component={Features} />}
-                                {<Route exact path="/feature/:id" component={Feature} />}
-                                {<Route exact path="/customer/:id" component={Customer} />}
-                                {<Route exact path="/enquiry" component={Enquirey} />}
-                                {<Route exact path="/enquireydetails/:id" component={EnquireyDetails} />}
-                                {<Route exact path="/orders" component={Orders} />}
-                                {<Route exact path="/orderdetail/:id" component={OrderDetail} />}
-                                {<Route exact path="/allStaticPages/:id" component={Pagedata} />}
-                                {<Route exact path="/data" component={Warranty} />}
-                                {<Route exact path="/privacypolicy" component={Pagedata} />}
-                                {<Route exact path="/aboutus" component={Pagedata} />}
-                                {<Route exact path="/brands" component={Brands} />}
-                                {<Route exact path="/categories" component={Categories} />}
-                                {<Route exact path="/subcategories" component={SubCategories} />}
-                                {<Route exact path="/products" component={Products} />}
-                                {<Route exact path="/deals" component={Deals} />}
-                                {<Route exact path="/brand/:id" component={Brand} />}
-                                {<Route exact path="/deal/:id" component={Deal} />}
-                                {<Route exact path="/category/:id" component={Category} />}
-                                {<Route exact path="/subcategory/:id" component={SubCategory} />}
-                                {<Route exact path="/product/:id" component={Product} />}
-                                {<Route exact path="/custom-packaging" component={CustomPackaging} />}
-                                {<Route exact path="/data/customer" component={CustomersData} />}
-                                {<Route exact path="/data/contact" component={ContactData} />}
-                                {<Route exact path="/notify" component={NotifyData} />}
-                                {<Route exact path="/admin" component={AllAdmin} />}
-                                {<Route exact path="/pincode" component={PinCodes} />}
-                                {<Route exact path="/pincode/:id" component={PinCodeUpdate} />}
-                                {<Route exact path="/coupon" component={Coupons} />}
-                                {<Route exact path="/coupon/:id" component={CouponUpdate} />}
+                                {/* Dashboard - Admin only */}
+                                <ProtectedRoute exact path="/" component={Dashboard} allowedRoles={["admin"]} />
+
+                                {/* Customer Management - Admin and Manager */}
+                                <ProtectedRoute exact path="/customers" component={Customers} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/customer/:id" component={Customer} allowedRoles={["admin", "manager"]} />
+
+                                {/* Admin Management - Admin and Manager */}
+                                <ProtectedRoute exact path="/admin" component={AllAdmin} allowedRoles={["admin", "manager"]} />
+
+                                {/* Content Management - Admin and Digital Marketing */}
+                                <ProtectedRoute exact path="/brands" component={Brands} allowedRoles={["admin", "digital marketing"]} />
+                                <ProtectedRoute exact path="/brand/:id" component={Brand} allowedRoles={["admin", "digital marketing"]} />
+                                <ProtectedRoute exact path="/categories" component={Categories} allowedRoles={["admin", "digital marketing"]} />
+                                <ProtectedRoute exact path="/category/:id" component={Category} allowedRoles={["admin", "digital marketing"]} />
+
+                                {/* Product Management - Admin and Manager */}
+                                <ProtectedRoute exact path="/subcategories" component={SubCategories} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/subcategory/:id" component={SubCategory} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/products" component={Products} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/product/:id" component={Product} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/deals" component={Deals} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/deal/:id" component={Deal} allowedRoles={["admin", "manager"]} />
+
+                                {/* Orders - All authenticated users */}
+                                <ProtectedRoute exact path="/orders" component={Orders} allowedRoles={[]} />
+                                <ProtectedRoute exact path="/orderdetail/:id" component={OrderDetail} allowedRoles={[]} />
+
+                                {/* Customer Data & Queries - Admin and Manager */}
+                                <ProtectedRoute exact path="/data/customer" component={CustomersData} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/data/contact" component={ContactData} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/custom-packaging" component={CustomPackaging} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/notify" component={NotifyData} allowedRoles={["admin", "manager"]} />
+
+                                {/* Configuration - Admin and Manager */}
+                                <ProtectedRoute exact path="/pincode" component={PinCodes} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/pincode/:id" component={PinCodeUpdate} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/coupon" component={Coupons} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/coupon/:id" component={CouponUpdate} allowedRoles={["admin", "manager"]} />
+
+                                {/* Legacy/Misc pages - Admin only */}
+                                <ProtectedRoute exact path="/manage" component={Manage} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/logs" component={Logs} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/notices" component={Notices} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/loginhistory" component={LoginHistory} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/pages" component={StaticPages} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/features" component={Features} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/feature/:id" component={Feature} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/enquiry" component={Enquirey} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/enquireydetails/:id" component={EnquireyDetails} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/allStaticPages/:id" component={Pagedata} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/data" component={Warranty} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/privacypolicy" component={Pagedata} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/aboutus" component={Pagedata} allowedRoles={["admin"]} />
                             </div>
                             <AppFooter layoutColorMode={layoutColorMode} />
                         </div>

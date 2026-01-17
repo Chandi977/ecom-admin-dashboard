@@ -14,7 +14,6 @@ import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
-import Paginator from "../../components/Paginator";
 import AddFaqDialog from "./AddFaqDialog";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
@@ -183,7 +182,6 @@ function Faqs() {
                             <Column header="Created On" body={dateTemplate} />
                             <Column header="Action" body={actionBodyTemplate} />
                         </DataTable>
-                        <Paginator data={manufacturers} total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>

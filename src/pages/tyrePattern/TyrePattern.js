@@ -8,7 +8,6 @@ import { Menu } from "primereact/menu";
 import AddTyrePatternDialog from "./AddTyrePatternDialog";
 import { Dialog } from "primereact/dialog";
 import { handleGetRequest } from "../../services/GetTemplate";
-import Paginator from "../../components/Paginator";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
@@ -153,7 +152,6 @@ function TyrePattern() {
                             <Column body={handleManufacturer} header="Manufacturer" />
                             <Column header="Action" body={actionBodyTemplate} />
                         </DataTable>
-                        <Paginator data={patterns} total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>

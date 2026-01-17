@@ -12,7 +12,6 @@ import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
-import Paginator from "../../components/Paginator";
 import AdddealDialog from "./AdddealDialog";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
@@ -102,7 +101,7 @@ function Deals() {
         setManufacturers(result?.data?.data);
     };
 
-    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 300);
 
     const handleFilter = (name) => {
         return (
@@ -178,7 +177,6 @@ function Deals() {
                             <Column header="Created On" body={dateTemplate} />
                             <Column header="Action" body={actionBodyTemplate} />
                         </DataTable>
-                        <Paginator data={manufacturers} total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>

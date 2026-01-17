@@ -6,9 +6,6 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment/moment";
-import Paginator from "../../components/Paginator";
-import Axios from "axios";
-import { DEV } from "../../services/constants";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 function Orders() {
@@ -33,7 +30,6 @@ function Orders() {
         setTotal(total?.data);
         // console.log("response", sortedData);
     }, [skip]);
-    
 
     useEffect(() => {
         getData();
@@ -86,12 +82,9 @@ function Orders() {
 
     const handleApplyFilter = async (value, names) => {
         setValues((prev) => ({ ...prev, [names]: value }));
-        const result = await Axios.get(DEV + "/order/search", {
-            params: {
-                [names]: value,
-            },
-        });
-        setResData(result?.data?.data);
+        const params = { [names]: value };
+        const result = await handleGetRequest("/order/search", params);
+        setResData(result?.data);
     };
 
     const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
@@ -111,13 +104,12 @@ function Orders() {
         );
     };
 
-
     return (
         <>
             <div className="Page__Header">
                 <div>
                     <h2>Orders</h2>
-                    <BreadCrumb model={breadItems} home={home}  />
+                    <BreadCrumb model={breadItems} home={home} />
                 </div>
                 {/* {role === "admin" && (
                     <div className="Top__Btn">
@@ -152,7 +144,6 @@ function Orders() {
                             <Column header="Created On" body={timeTemplateCreated} />
                             <Column header="Action" body={actionBodyTemplate} />
                         </DataTable>
-                        <Paginator data={resData} total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>

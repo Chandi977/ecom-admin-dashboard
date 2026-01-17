@@ -9,7 +9,6 @@ import moment from "moment";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { useDispatch } from "react-redux";
-import Paginator from "../../components/Paginator";
 import { DEV } from "../../services/constants";
 import Axios from "axios";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
@@ -54,7 +53,7 @@ function Enquirey() {
         setEnquirey(result?.data?.data);
     };
 
-    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 300);
 
     const handleFilter = (name) => {
         return (
@@ -155,7 +154,6 @@ function Enquirey() {
                             <Column header="Created On" body={dateTemplate} />
                             <Column header="Action" body={actionBodyTemplate} />
                         </DataTable>
-                        <Paginator data={enquirey} total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>

@@ -9,7 +9,6 @@ import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
-import Paginator from "../../components/Paginator";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
@@ -271,11 +270,7 @@ function Customers() {
                 <div className="Top__Btn">
                     <Button label="Add New User" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "140px" }} />
                     <Button icon="pi pi-trash" iconPos="right" onClick={handledDelete} className="Btn__DarkDelete" style={{ width: "140px" }} />
-                    <Button
-                        label="Download Users List"
-                        className="buttonsaaa"
-                        onClick={() => exportJsonToExcel({ data: users, fileName: "users" })}
-                    />
+                    <Button label="Download Users List" className="buttonsaaa" onClick={() => exportJsonToExcel({ data: users, fileName: "users" })} />
                 </div>
             </div>
 
@@ -303,9 +298,6 @@ function Customers() {
                             <Column body={handleDate} header="Account Created" />
                             <Column header="Edit/Delete User" body={actionBodyTemplate} />
                         </DataTable>
-                        <div className="custom-paginator">
-                            <Paginator data={customers} total={total} skip={skip} handleskip={handleskip} />
-                        </div>
                     </div>
                 </div>
             </div>

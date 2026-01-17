@@ -10,7 +10,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <!-- <link rel="icon" type="image/x-icon" href="../public/favicon.ico" /> -->
     <link id="theme-link" rel="stylesheet" href="/assets/themes/lara-light-indigo/theme.css" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
@@ -26,6 +25,13 @@
             </div>
         </div>
     </div>
+    <script>
+        // Polyfill for Node.js globals required by draft-js
+        window.global = window;
+        window.process = { env: {} };
+        window.Buffer = window.Buffer || [];
+    </script>
+    <script type="module" src="/src/index.jsx"></script>
 </body>
 
 </html>

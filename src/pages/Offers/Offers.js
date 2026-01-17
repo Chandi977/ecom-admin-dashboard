@@ -16,7 +16,6 @@ import { handlePostRequest } from "../../services/PostTemplate";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
-import Paginator from "../../components/Paginator";
 
 function Offers() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -168,7 +167,6 @@ function Offers() {
                             <Column header="Created On" body={dateTemplate} />
                             <Column header="Action" body={actionBodyTemplate} />
                         </DataTable>
-                        <Paginator data={manufacturers} total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>

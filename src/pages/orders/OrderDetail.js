@@ -6,7 +6,6 @@ import moment from "moment";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
 import { Dialog } from "primereact/dialog";
-import Axios from "axios";
 
 function OrderDetail() {
     const [displayModal, setDisplayModal] = useState(false);
@@ -93,8 +92,9 @@ function OrderDetail() {
 
     const handleVerifyClick = async () => {
         try {
-            const response = await Axios.put("https://server.prempackaging.com/premind/api/order/update/payment/status", { _id: orderId, paymentStatus: "Payment Verified", status: "Payment Verified" });
-            if (response.data.success) {
+            const data = { _id: orderId, paymentStatus: "Payment Verified", status: "Payment Verified" };
+            const response = await handlePutRequest(data, "/order/update/payment/status");
+            if (response?.success) {
                 toast.success("UTR verified successfully");
                 setDisplayModal(false);
                 setTimeout(() => history.push("/orders"), 500);
@@ -103,6 +103,7 @@ function OrderDetail() {
             }
         } catch (error) {
             console.error("Error while updating payment status:", error);
+            toast.error("Error verifying payment");
         }
     };
 

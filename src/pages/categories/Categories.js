@@ -11,7 +11,6 @@ import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
-import Paginator from "../../components/Paginator";
 import AddcategoryDialog from "./AddcategoryDialog";
 import { FaPen } from "react-icons/fa";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
@@ -226,9 +225,6 @@ function Categories() {
                             <Column header="Created On" body={dateTemplate} />
                             <Column header="Edit Category" body={actionBodyTemplate} />
                         </DataTable>
-                        <div className="custom-paginator">
-                            <Paginator data={manufacturers} total={total} skip={skip} handleskip={handleskip} />
-                        </div>
                     </div>
                 </div>
             </div>

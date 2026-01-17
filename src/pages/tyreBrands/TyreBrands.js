@@ -9,7 +9,6 @@ import AddTyreBrandsDialog from "./AddTyreBrandsDialog";
 import { Dialog } from "primereact/dialog";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
-import Paginator from "../../components/Paginator";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { toast } from "react-toastify";
@@ -167,7 +166,6 @@ function TyreBrands() {
                             <Column header="Created On" body={dateTemplate} />
                             <Column header="Action" body={actionBodyTemplate} />
                         </DataTable>
-                        <Paginator data={brands} total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>

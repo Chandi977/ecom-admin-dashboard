@@ -90,7 +90,7 @@ function PinCodes() {
         setManufacturers(result?.data?.data);
     };
 
-    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 300);
 
     const handleFilter = (name) => {
         return (

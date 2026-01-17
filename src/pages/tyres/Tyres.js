@@ -10,7 +10,6 @@ import { Dialog } from "primereact/dialog";
 import { handleGetRequest } from "../../services/GetTemplate";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
-import Paginator from "../../components/Paginator";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
@@ -254,7 +253,6 @@ function Tyres() {
                             <Column filter field="rim_diameter" header="Rim Diameter (In)" filterElement={() => handleFilter("rimDiameter")} />
                             <Column header="Action" body={actionBodyTemplate} />
                         </DataTable>
-                        <Paginator data={allTyres} total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>

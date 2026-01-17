@@ -6,7 +6,6 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
-import Paginator from "../../components/Paginator";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
@@ -83,7 +82,7 @@ function Logs() {
         setLogs(result?.data?.data);
     };
 
-    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 300);
 
     const handleFilter = (name) => {
         return (
@@ -130,7 +129,6 @@ function Logs() {
                             <Column filter body={linktmeplate} header="Links" filterElement={() => handleFilter("link")} />
                             <Column filter header="Created On" body={dateTemplate} />
                         </DataTable>
-                        <Paginator data={logs} total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>

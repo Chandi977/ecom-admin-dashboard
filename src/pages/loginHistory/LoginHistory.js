@@ -6,7 +6,6 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
-import Paginator from "../../components/Paginator";
 
 function LoginHistory() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -80,7 +79,6 @@ function LoginHistory() {
                             <Column filter field="type" header="Type" />
                             <Column filter header="Created On" body={dateTemplate} />
                         </DataTable>
-                        <Paginator data={Logs} url="/countlogs" total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>

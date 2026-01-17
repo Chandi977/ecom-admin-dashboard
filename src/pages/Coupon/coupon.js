@@ -9,7 +9,6 @@ import moment from "moment";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
-import Paginator from "../../components/Paginator";
 import AddCoupon from "./AddCouponDialog";
 
 function Coupons() {
@@ -136,7 +135,6 @@ function Coupons() {
                             <Column header="Created On" body={dateTemplate} />
                             <Column className="text-center" header="Update / Delete Coupon" body={actionBodyTemplate} />
                         </DataTable>
-                        <Paginator data={manufacturers} total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>

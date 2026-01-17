@@ -16,7 +16,6 @@ import { DEV } from "../../services/constants";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
-import Paginator from "../../components/Paginator";
 
 function GlobalOffers() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -170,7 +169,6 @@ function GlobalOffers() {
                             <Column header="Expire On" body={dateTemplate2} />
                             <Column header="Action" body={actionBodyTemplate} />
                         </DataTable>
-                        <Paginator data={manufacturers} total={total} skip={skip} handleskip={handleskip} />
                     </div>
                 </div>
             </div>
