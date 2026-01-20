@@ -107,6 +107,19 @@ function OrderDetail() {
         }
     };
 
+    const formatPaymentDate = () => {
+        const status = (resData?.paymentStatus || "").toLowerCase();
+        if (status === "not paid") return "Payment Awaited";
+
+        // Prefer the actual paymentDate, otherwise fall back to known expiry timestamps or last update time.
+        const paymentDate = resData?.paymentDate;
+        const expiredDate = resData?.paymentExpiredAt || resData?.paymentExpiryDate || resData?.expiredAt || resData?.updatedAt;
+        const dateToShow = status.includes("expired") ? paymentDate || expiredDate : paymentDate;
+
+        if (!dateToShow || !moment(dateToShow).isValid()) return "-";
+        return `${moment(dateToShow).format("DD-MM-YYYY")} | ${moment(dateToShow).format("hh:mm a")}`;
+    };
+
     return (
         <>
             {/* ================== Styles (UI only) ================== */}
@@ -284,7 +297,7 @@ function OrderDetail() {
 
                             <div>
                                 <div className="label">Payment Date</div>
-                                <div className="value">{resData?.paymentStatus === "Not Paid" ? "Payment Awaited" : `${moment(resData?.paymentDate).format("DD-MM-YYYY")} | ${moment(resData?.paymentDate).format("hh:mm a")}`}</div>
+                                <div className="value">{formatPaymentDate()}</div>
                             </div>
 
                             {/* Tracking: show inputs if not filled */}

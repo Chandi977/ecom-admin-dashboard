@@ -99,6 +99,18 @@ function OrderDetail() {
         }
     };
 
+    const formatPaymentDate = () => {
+        const status = (resData?.paymentStatus || "").toLowerCase();
+        if (status === "not paid") return "Payment Awaited";
+
+        const paymentDate = resData?.paymentDate;
+        const expiredDate = resData?.paymentExpiredAt || resData?.paymentExpiryDate || resData?.expiredAt || resData?.updatedAt;
+        const dateToShow = status.includes("expired") ? paymentDate || expiredDate : paymentDate;
+
+        if (!dateToShow || !moment(dateToShow).isValid()) return "-";
+        return `${moment(dateToShow).format("DD-MM-YYYY")} | ${moment(dateToShow).format("hh:mm a")}`;
+    };
+
     return (
         <>
             <style>{`
@@ -249,7 +261,7 @@ function OrderDetail() {
                     </div>
                     <div>
                         <div className="bill-label">Payment Date</div>
-                        <div className="bill-value">{resData?.paymentStatus === "Not Paid" ? "Payment Awaited" : `${moment(resData?.paymentDate).format("DD-MM-YYYY")} | ${moment(resData?.paymentDate).format("hh:mm a")}`}</div>
+                        <div className="bill-value">{formatPaymentDate()}</div>
                     </div>
                     <div>
                         <div className="bill-label">Shipped Date</div>
