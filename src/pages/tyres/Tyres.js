@@ -16,6 +16,9 @@ import { handlePostRequest } from "../../services/PostTemplate";
 import { AiTwotoneDelete, AiFillEye } from "react-icons/ai";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
+const MIN_FILTER_LENGTH = 2;
+const FILTER_DEBOUNCE_MS = 300;
+
 function Tyres() {
     const [showDialog, setShowDialog] = useState(false);
     const [selectedRow, setselectedRow] = useState([]);
@@ -124,61 +127,109 @@ function Tyres() {
     });
 
     const handleApplyFilter = async (value, names) => {
-        setValues((prev) => ({ ...prev, [names]: value }));
+        const trimmed = (value || "").trim();
+        if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
+            getAllTyres();
+            return;
+        }
         const result = await Axios.get(DEV + "/adminSearch", {
             params: {
-                [names]: value,
+                [names]: trimmed,
             },
         });
         setAllTyres(result?.data?.data);
     };
 
-    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
 
     const handleFilter = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => debouncedApplyFilter(e.target.value, name)}></input>;
+        return (
+            <input
+                style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }}
+                value={values[name]}
+                onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setValues((prev) => ({ ...prev, [name]: nextValue }));
+                    debouncedApplyFilter(nextValue, name);
+                }}
+            ></input>
+        );
     };
 
-    const apllyManufacturer = async (value, name) => {
-        const query = value.toLowerCase().split("");
+    const apllyManufacturer = async (value) => {
+        const trimmed = (value || "").trim();
+        if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
+            getAllTyres();
+            return;
+        }
+        const query = trimmed.toLowerCase().split("");
         const searchPattern = new RegExp(query.map((term) => `(?=.*${term})`).join(""), "i");
-        let search = brands.filter((option) => {
-            return option.title.match(searchPattern);
-        });
-        setValues((prev) => ({ ...prev, manufacturer: value }));
+        const search = brands.filter((option) => option.title.match(searchPattern));
+        const manufacturerId = search?.[0]?._id;
+        if (!manufacturerId) {
+            setAllTyres([]);
+            return;
+        }
         const result = await Axios.get(DEV + "/adminSearch", {
             params: {
-                manufacturer: search?.[0]?._id,
+                manufacturer: manufacturerId,
             },
         });
         setAllTyres(result?.data?.data);
     };
 
-    const debouncedApplyManufacturer = useDebouncedCallback(apllyManufacturer, 600);
+    const debouncedApplyManufacturer = useDebouncedCallback(apllyManufacturer, FILTER_DEBOUNCE_MS);
 
     const handleManufacturer = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => debouncedApplyManufacturer(e.target.value, name)}></input>;
+        return (
+            <input
+                style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }}
+                value={values[name]}
+                onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setValues((prev) => ({ ...prev, [name]: nextValue }));
+                    debouncedApplyManufacturer(nextValue);
+                }}
+            ></input>
+        );
     };
 
-    const apllyPattern = async (value, name) => {
-        const query = value.toLowerCase().split("");
+    const apllyPattern = async (value) => {
+        const trimmed = (value || "").trim();
+        if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
+            getAllTyres();
+            return;
+        }
+        const query = trimmed.toLowerCase().split("");
         const searchPattern = new RegExp(query.map((term) => `(?=.*${term})`).join(""), "i");
-        let search = patterns.filter((option) => {
-            return option.title.match(searchPattern);
-        });
-        setValues((prev) => ({ ...prev, pattern: value }));
+        const search = patterns.filter((option) => option.title.match(searchPattern));
+        const patternId = search?.[0]?._id;
+        if (!patternId) {
+            setAllTyres([]);
+            return;
+        }
         const result = await Axios.get(DEV + "/adminSearch", {
             params: {
-                pattern: search?.[0]?._id,
+                pattern: patternId,
             },
         });
         setAllTyres(result?.data?.data);
     };
 
-    const debouncedApplyPattern = useDebouncedCallback(apllyPattern, 600);
+    const debouncedApplyPattern = useDebouncedCallback(apllyPattern, FILTER_DEBOUNCE_MS);
 
     const handlePattern = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => debouncedApplyPattern(e.target.value, name)}></input>;
+        return (
+            <input
+                style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }}
+                value={values[name]}
+                onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setValues((prev) => ({ ...prev, [name]: nextValue }));
+                    debouncedApplyPattern(nextValue);
+                }}
+            ></input>
+        );
     };
 
     const handleskip = (num) => {
@@ -234,6 +285,10 @@ function Tyres() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            paginator
+                            rows={10}
+                            rowsPerPageOptions={[10, 20, 50]}
+                            totalRecords={total}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

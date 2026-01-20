@@ -17,6 +17,9 @@ import { FaPen } from "react-icons/fa";
 import { exportJsonToExcel } from "../../utils/exportToExcel";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
+const MIN_FILTER_LENGTH = 2;
+const FILTER_DEBOUNCE_MS = 300;
+
 function Customers() {
     const [selectedRow, setselectedRow] = useState([]);
     const [showDialog, setShowDialog] = useState(false);
@@ -137,19 +140,31 @@ function Customers() {
     };
 
     const handleApplyFilter = async (value, names) => {
-        setValues((prev) => ({ ...prev, [names]: value }));
+        const trimmed = (value || "").trim();
+        if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
+            getData();
+            return;
+        }
         const result = await Axios.get(DEV + "/searchusers", {
             params: {
-                [names]: value,
+                [names]: trimmed,
             },
         });
         setCustomers(result?.data?.data);
     };
 
-    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
+
+    const handleFilterChange = useCallback(
+        (value, name) => {
+            setValues((prev) => ({ ...prev, [name]: value }));
+            debouncedApplyFilter(value, name);
+        },
+        [debouncedApplyFilter],
+    );
 
     const handleFilter = (name) => {
-        return <input className="custom-filter-input" value={values[name]} onChange={(e) => debouncedApplyFilter(e.target.value, name)} />;
+        return <input className="custom-filter-input" value={values[name]} onChange={(e) => handleFilterChange(e.target.value, name)} />;
     };
 
     const handleskip = (num) => {
@@ -280,6 +295,10 @@ function Customers() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive custom-table"
+                            paginator
+                            rows={10}
+                            rowsPerPageOptions={[10, 20, 50]}
+                            totalRecords={total}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

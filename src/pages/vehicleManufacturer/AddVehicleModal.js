@@ -18,6 +18,9 @@ import { DEV } from "../../services/constants";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 import { handlePostRequest } from "../../services/PostTemplate";
 
+const MIN_FILTER_LENGTH = 2;
+const FILTER_DEBOUNCE_MS = 300;
+
 function AddVehicleModal() {
     const [selectedRow, setselectedRow] = useState([]);
     const [showDialog, setShowDialog] = useState(false);
@@ -114,19 +117,33 @@ function AddVehicleModal() {
     });
 
     const handleApplyFilter = async (value, names) => {
-        setValues((prev) => ({ ...prev, [names]: value }));
+        const trimmed = (value || "").trim();
+        if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
+            getVehicleManufacturers();
+            return;
+        }
         const result = await Axios.get(DEV + "/searchModels", {
             params: {
-                [names]: value,
+                [names]: trimmed,
             },
         });
         setManufacturers(result?.data?.data);
     };
 
-    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 300);
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
 
     const handleFilter = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "1px solid #cecece" }} value={values[name]} onChange={(e) => debouncedApplyFilter(e.target.value, name)}></input>;
+        return (
+            <input
+                style={{ width: "100%", height: "37px", borderRadius: "5px", border: "1px solid #cecece" }}
+                value={values[name]}
+                onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setValues((prev) => ({ ...prev, [name]: nextValue }));
+                    debouncedApplyFilter(nextValue, name);
+                }}
+            ></input>
+        );
     };
 
     const handleskip = (num) => {
@@ -159,12 +176,16 @@ function AddVehicleModal() {
                 <div className="grid">
                     <div className="col-12">
                         <div className="card">
-                            <DataTable
-                                filterDisplay="row"
-                                className="datatable-responsive"
-                                paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                                currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
-                                emptyMessage="No List found."
+                        <DataTable
+                            filterDisplay="row"
+                            className="datatable-responsive"
+                            paginator
+                            rows={10}
+                            rowsPerPageOptions={[10, 20, 50]}
+                            totalRecords={total}
+                            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
+                            emptyMessage="No List found."
                                 responsiveLayout="scroll"
                                 value={manufacturers}
                                 selection={selectedRow}

@@ -16,6 +16,9 @@ import Axios from "axios";
 import { DEV } from "../../services/constants";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
+const MIN_FILTER_LENGTH = 2;
+const FILTER_DEBOUNCE_MS = 300;
+
 function TyreBrands() {
     const [selectedRow, setselectedRow] = useState([]);
     const [showDialog, setShowDialog] = useState(false);
@@ -101,19 +104,33 @@ function TyreBrands() {
     });
 
     const handleApplyFilter = async (value, names) => {
-        setValues((prev) => ({ ...prev, [names]: value }));
+        const trimmed = (value || "").trim();
+        if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
+            getBrands();
+            return;
+        }
         const result = await Axios.get(DEV + "/searchBrand", {
             params: {
-                [names]: value,
+                [names]: trimmed,
             },
         });
         setBrands(result?.data?.data);
     };
 
-    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 600);
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
 
     const handleFilter = (name) => {
-        return <input style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }} value={values[name]} onChange={(e) => debouncedApplyFilter(e.target.value, name)}></input>;
+        return (
+            <input
+                style={{ width: "100%", height: "37px", borderRadius: "5px", border: "none" }}
+                value={values[name]}
+                onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setValues((prev) => ({ ...prev, [name]: nextValue }));
+                    debouncedApplyFilter(nextValue, name);
+                }}
+            ></input>
+        );
     };
 
     const onsuccess = () => {
@@ -152,6 +169,10 @@ function TyreBrands() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            paginator
+                            rows={10}
+                            rowsPerPageOptions={[10, 20, 50]}
+                            totalRecords={total}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

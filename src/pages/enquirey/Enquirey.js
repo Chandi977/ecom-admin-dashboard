@@ -13,6 +13,9 @@ import { DEV } from "../../services/constants";
 import Axios from "axios";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
+const MIN_FILTER_LENGTH = 2;
+const FILTER_DEBOUNCE_MS = 300;
+
 function Enquirey() {
     const [selectedRow, setselectedRow] = useState([]);
     const [skip, setSkip] = useState(0);
@@ -44,16 +47,28 @@ function Enquirey() {
     });
 
     const handleApplyFilter = async (value, names) => {
-        setValues((prev) => ({ ...prev, [names]: value }));
+        const trimmed = (value || "").trim();
+        if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
+            getData();
+            return;
+        }
         const result = await Axios.get(DEV + "/searchEnquiry", {
             params: {
-                [names]: value,
+                [names]: trimmed,
             },
         });
         setEnquirey(result?.data?.data);
     };
 
-    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, 300);
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
+
+    const handleFilterChange = useCallback(
+        (value, name) => {
+            setValues((prev) => ({ ...prev, [name]: value }));
+            debouncedApplyFilter(value, name);
+        },
+        [debouncedApplyFilter],
+    );
 
     const handleFilter = (name) => {
         return (
@@ -65,7 +80,7 @@ function Enquirey() {
                     border: "1px solid #cecece",
                 }}
                 value={values[name]}
-                onChange={(e) => debouncedApplyFilter(e.target.value, name)}
+                onChange={(e) => handleFilterChange(e.target.value, name)}
             ></input>
         );
     };
@@ -136,6 +151,9 @@ function Enquirey() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            paginator
+                            rows={10}
+                            rowsPerPageOptions={[10, 20, 50]}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

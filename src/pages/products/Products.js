@@ -17,6 +17,7 @@ import AddproductDialog from "./AddproductDialog";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 const ITEMS_PER_PAGE = 10;
+const MIN_FILTER_LENGTH = 2;
 
 function Products() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -24,12 +25,22 @@ function Products() {
     const [products, setProducts] = useState([]);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(ITEMS_PER_PAGE);
     const [loading, setLoading] = useState(false);
-    const [hasMore, setHasMore] = useState(true);
+    const [filters, setFilters] = useState({
+        product_id: "",
+        name: "",
+        slug: "",
+        model: "",
+        brand: "",
+        category: "",
+    });
+    const [brandLookup, setBrandLookup] = useState({});
+    const [categoryLookup, setCategoryLookup] = useState({});
+    const appliedFiltersRef = useRef({});
     const dispatch = useDispatch();
     const history = useHistory();
     const [role, setRole] = useState("");
-    const tableRef = useRef(null);
 
     const breadItems = [{ label: "Home" }, { label: "Products" }];
     const home = { icon: "pi pi-home", url: "/" };
@@ -37,57 +48,116 @@ function Products() {
         setShowDialog(true);
     };
 
-    const getBrands = useCallback(
-        async (currentSkip = 0, append = false) => {
-            if (loading) return;
+    const buildActiveFilters = useCallback((nextFilters) => {
+        return Object.entries(nextFilters || {}).reduce((acc, [key, val]) => {
+            const trimmed = (val || "").trim();
+            if (trimmed && trimmed.length >= MIN_FILTER_LENGTH) acc[key] = trimmed;
+            return acc;
+        }, {});
+    }, []);
+
+    const fetchLookups = useCallback(async () => {
+        try {
+            const [brandRes, categoryRes] = await Promise.all([handleGetRequest("/brand/all"), handleGetRequest("/category/all")]);
+            const brandMap = (brandRes?.data || []).reduce((acc, item) => {
+                if (item?._id) acc[item._id] = item?.name;
+                return acc;
+            }, {});
+            const categoryMap = (categoryRes?.data || []).reduce((acc, item) => {
+                if (item?._id) acc[item._id] = item?.name;
+                return acc;
+            }, {});
+            setBrandLookup(brandMap);
+            setCategoryLookup(categoryMap);
+        } catch (error) {
+            console.error("Error fetching lookups:", error);
+        }
+    }, []);
+
+    const fetchProducts = useCallback(
+        async (currentSkip = 0, currentRows = rows, filtersArg) => {
+            const activeFilters = filtersArg !== undefined ? filtersArg : appliedFiltersRef.current;
+            appliedFiltersRef.current = activeFilters;
             setLoading(true);
+            const token = localStorage.getItem("token");
             try {
                 const params = {
                     skip: currentSkip,
-                    limit: ITEMS_PER_PAGE,
+                    limit: currentRows,
+                    ...activeFilters,
                 };
-                const res = await handleGetRequest("/product/get", params);
-                const totalRes = await handleGetRequest("/product/count");
 
-                const newData = res?.data || [];
-                setTotal(totalRes?.data || 0);
+                if (Object.keys(activeFilters).length) {
+                    const result = await Axios.get(DEV + "/product/search", {
+                        params,
+                        ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+                    });
+                    const newData = result?.data?.data || [];
+                    const totalCount = result?.data?.count ?? newData.length;
+                    setProducts(newData);
+                    setTotal(totalCount);
+                } else {
+                    const res = await handleGetRequest("/product/get", params);
+                    const totalRes = await handleGetRequest("/product/count");
 
-                setProducts((prev) => (append ? [...prev, ...newData] : newData));
-                setHasMore(newData.length === ITEMS_PER_PAGE);
+                    const newData = res?.data || [];
+                    const totalCount = totalRes?.data ?? newData.length;
+                    setProducts(newData);
+                    setTotal(totalCount);
+                }
             } catch (error) {
-                console.error("Error fetching products:", error);
+                if (error?.response?.status === 404) {
+                    setProducts([]);
+                    setTotal(0);
+                    return;
+                }
+                toast.warn(error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!");
             } finally {
                 setLoading(false);
             }
         },
-        [loading],
+        [rows],
     );
 
-    // Initial load
     useEffect(() => {
-        getBrands(0, false);
+        fetchLookups();
+    }, [fetchLookups]);
+
+    useEffect(() => {
+        fetchProducts(0, rows);
     }, []);
 
-    // Infinite scroll handler
-    const handleScroll = useCallback(() => {
-        const tableWrapper = document.querySelector(".p-datatable-wrapper");
-        if (!tableWrapper || loading || !hasMore) return;
+    const applyFilters = useCallback(
+        (nextFilters) => {
+            const activeFilters = buildActiveFilters(nextFilters);
+            setSkip(0);
+            fetchProducts(0, rows, activeFilters);
+        },
+        [buildActiveFilters, fetchProducts, rows],
+    );
 
-        const { scrollTop, scrollHeight, clientHeight } = tableWrapper;
-        if (scrollTop + clientHeight >= scrollHeight - 100) {
-            const newSkip = skip + ITEMS_PER_PAGE;
-            setSkip(newSkip);
-            getBrands(newSkip, true);
-        }
-    }, [skip, loading, hasMore, getBrands]);
+    const debouncedApplyFilters = useDebouncedCallback(applyFilters, 300);
 
-    useEffect(() => {
-        const tableWrapper = document.querySelector(".p-datatable-wrapper");
-        if (tableWrapper) {
-            tableWrapper.addEventListener("scroll", handleScroll);
-            return () => tableWrapper.removeEventListener("scroll", handleScroll);
-        }
-    }, [handleScroll]);
+    const handleFilterChange = useCallback(
+        (value, name) => {
+            setFilters((prev) => {
+                const updated = { ...prev, [name]: value };
+                debouncedApplyFilters(updated);
+                return updated;
+            });
+        },
+        [debouncedApplyFilters],
+    );
+
+    const onPageChange = useCallback(
+        (event) => {
+            const { first, rows: newRows } = event;
+            setSkip(first);
+            setRows(newRows);
+            fetchProducts(first, newRows);
+        },
+        [fetchProducts],
+    );
     const handleActionButton = (e, rowData) => {
         e.preventDefault();
         history.push(`/product/${rowData?._id}`);
@@ -121,8 +191,7 @@ function Products() {
         toast.success("Product deleted");
         setselectedRow([]);
         setSkip(0);
-        setHasMore(true);
-        getBrands(0, false);
+        fetchProducts(0, rows);
     };
 
     const onsuccess = () => {
@@ -130,50 +199,8 @@ function Products() {
         toast.success("Product added");
         setShowDialog(false);
         setSkip(0);
-        setHasMore(true);
-        getBrands(0, false);
+        fetchProducts(0, rows);
     };
-
-    const [values, setValues] = useState({
-        product_id: "",
-        name: "",
-        slug: "",
-        model: "",
-    });
-
-    const handleApplyFilter = async (value, names) => {
-        setValues((prev) => ({ ...prev, [names]: value }));
-        const token = localStorage.getItem("token");
-        try {
-            const result = await Axios.get(DEV + "/product/search", {
-                params: {
-                    [names]: value,
-                },
-                ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-            });
-            setProducts(result?.data?.data || []);
-            setHasMore(false);
-            setTotal(result?.data?.data?.length || 0);
-        } catch (error) {
-            if (error?.response?.status === 404) {
-                setProducts([]);
-                setHasMore(false);
-                setTotal(0);
-                return;
-            }
-            toast.warn(error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!");
-        }
-    };
-
-    const debouncedApplyFilter = useDebouncedCallback((value, name) => {
-        if (!value || value.length < 2) {
-            setSkip(0);
-            setHasMore(true);
-            getBrands(0, false);
-            return;
-        }
-        handleApplyFilter(value, name);
-    }, 300);
 
     // Optimized filter input for instant typing
     const filterLabels = {
@@ -181,31 +208,35 @@ function Products() {
         name: "Name",
         model: "Model",
         slug: "Slug",
+        brand: "Brand",
+        category: "Category",
     };
     const filterPlaceholders = {
         product_id: "Search by ID",
         name: "Search by name",
         model: "Search by model",
         slug: "Search by slug",
+        brand: "Search by brand",
+        category: "Search by category",
     };
     const FilterInput = React.memo(({ name }) => {
-        const [inputValue, setInputValue] = useState(values[name] || "");
+        const [inputValue, setInputValue] = useState(filters[name] || "");
         const lastUserInput = useRef("");
 
         const onInputChange = useCallback(
             (e) => {
                 setInputValue(e.target.value);
                 lastUserInput.current = e.target.value;
-                debouncedApplyFilter(e.target.value, name);
+                handleFilterChange(e.target.value, name);
             },
-            [debouncedApplyFilter, name],
+            [handleFilterChange, name],
         );
 
         useEffect(() => {
-            if (values[name] !== lastUserInput.current) {
-                setInputValue(values[name] || "");
+            if (filters[name] !== lastUserInput.current) {
+                setInputValue(filters[name] || "");
             }
-        }, [values[name], name]);
+        }, [filters[name], name]);
 
         return (
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -224,16 +255,13 @@ function Products() {
                     value={inputValue}
                     onChange={onInputChange}
                     placeholder={filterPlaceholders[name]}
+                    aria-label={filterLabels[name]}
                 />
             </div>
         );
     });
 
     const handleFilter = useCallback((name) => <FilterInput name={name} />, []);
-
-    const handleskip = (num) => {
-        setSkip(num);
-    };
     const onHideFaq = () => {
         setShowDialog(false);
     };
@@ -244,11 +272,15 @@ function Products() {
     }, []);
 
     const brandTemplate = (rowdata) => {
-        return <p>{rowdata?.brand?.name}</p>;
+        const brandValue = rowdata?.brand;
+        const brandName = typeof brandValue === "object" ? brandValue?.name : brandLookup[brandValue] || brandValue;
+        return <p>{brandName || "--"}</p>;
     };
 
     const categoryTemplate = (rowdata) => {
-        return <p>{rowdata?.category?.name}</p>;
+        const categoryValue = rowdata?.category;
+        const categoryName = typeof categoryValue === "object" ? categoryValue?.name : categoryLookup[categoryValue] || categoryValue;
+        return <p>{categoryName || "--"}</p>;
     };
     return (
         <>
@@ -290,22 +322,30 @@ function Products() {
                             <div style={{ flex: 2 }}>{handleFilter("name")}</div>
                             <div style={{ flex: 2 }}>{handleFilter("model")}</div>
                             <div style={{ flex: 2 }}>{handleFilter("slug")}</div>
-                            {/* Add more filter fields if needed */}
+                            <div style={{ flex: 2 }}>{handleFilter("brand")}</div>
+                            <div style={{ flex: 2 }}>{handleFilter("category")}</div>
                         </div>
                         {/* Product Table with margin to clear filter bar */}
                         <div style={{ marginTop: 0 }}>
                             <DataTable
-                                ref={tableRef}
                                 className="datatable-responsive"
                                 emptyMessage="No List found."
                                 responsiveLayout="scroll"
                                 scrollable
                                 scrollHeight="calc(100vh - 300px)"
+                                lazy
+                                paginator
+                                rows={rows}
+                                first={skip}
+                                totalRecords={total}
+                                onPage={onPageChange}
+                                paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                                currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
+                                rowsPerPageOptions={[10, 20, 50]}
                                 value={products}
                                 selection={selectedRow}
                                 onSelectionChange={(e) => setselectedRow(e.value)}
                                 loading={loading}
-                                footer={hasMore && products.length > 0 ? <div style={{ textAlign: "center", padding: "10px" }}>{loading ? "Loading more..." : `Showing ${products.length} of ${total} products`}</div> : null}
                             >
                                 <Column selectionMode="multiple" style={{ width: "2em" }} />
                                 <Column field="product_id" header="ID" />
