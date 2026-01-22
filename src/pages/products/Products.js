@@ -1,3 +1,5 @@
+// NOTE: This file uses classic pagination (skip/limit) for admin dashboard only.
+// Do NOT use this logic in the ecom-frontend, which uses infinite scroll.
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import "./ProductsTableFix.css";
 import { BreadCrumb } from "primereact/breadcrumb";
