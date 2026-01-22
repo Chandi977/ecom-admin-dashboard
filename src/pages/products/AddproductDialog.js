@@ -61,7 +61,7 @@ function AddproductDialog({ onsuccess }) {
 
     const handleSubCategory = useCallback(
         async (id) => {
-            const temp = subCategories?.filter((item) => item.category === id);
+            const temp = subCategories?.filter((item) => String(item.category) === String(id));
             setFilteredSubCategories(temp);
         },
         [subCategories]
@@ -72,6 +72,29 @@ function AddproductDialog({ onsuccess }) {
             handleSubCategory(selectedCategory);
         }
     }, [selectedCategory, handleSubCategory]);
+
+    const toNumber = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : undefined;
+    };
+
+    const normalizePriceList = () =>
+        price
+            .filter(
+                (p) =>
+                    p?.number ||
+                    p?.MRP ||
+                    p?.SP ||
+                    p?.pack_weight ||
+                    p?.stock_quantity
+            )
+            .map((p) => ({
+                number: toNumber(p.number),
+                MRP: toNumber(p.MRP),
+                SP: toNumber(p.SP),
+                pack_weight: toNumber(p.pack_weight),
+                stock_quantity: toNumber(p.stock_quantity),
+            }));
 
     const formik = useFormik({
         initialValues: {
@@ -118,15 +141,27 @@ function AddproductDialog({ onsuccess }) {
                 toast.error("Slug is required");
                 return;
             }
+            if (!selectedBrand) {
+                toast.error("Brand is required");
+                return;
+            }
+            if (!selectedCategory) {
+                toast.error("Category is required");
+                return;
+            }
 
             const imu = images?.map((ima) => {
                 return {
                     image: ima,
                 };
             });
+            const priceList = normalizePriceList();
+            const brandId = selectedBrand?._id || selectedBrand;
+            const categoryId = selectedCategory?._id || selectedCategory;
+            const subCategoryId = selectedSubCategory?._id || selectedSubCategory || "";
             const dat = {
                 name: data?.name,
-                brand: selectedBrand,
+                brand: brandId ? String(brandId) : "",
                 product_id: data?.product_id,
                 meta_title: data?.meta_title,
                 meta_description: data?.meta_description,
@@ -138,29 +173,31 @@ function AddproductDialog({ onsuccess }) {
                 material: data?.material,
                 delivery_time: data?.delivery_time,
                 hsn_code: data?.hsn_code,
-                priceList: price,
-                gst: data?.gst,
+                priceList,
+                gst: toNumber(data?.gst),
                 gusset: data?.gusset,
                 print: data?.print,
-                label_in_roll: data?.label_in_roll,
+                label_in_roll: toNumber(data?.label_in_roll),
                 color: data?.color,
-                length: data?.length,
-                width: data?.width,
-                breadth_inch: data?.breadth_inch,
-                breadth_mm: data?.breadth_mm,
-                height_inch: data?.height_inch,
-                height_mm: data?.height_mm,
-                category: selectedCategory,
-                sub_category: selectedSubCategory,
-                price: data?.price,
+                length: toNumber(data?.length),
+                width: toNumber(data?.width),
+                breadth_inch: toNumber(data?.breadth_inch),
+                breadth_mm: toNumber(data?.breadth_mm),
+                height_inch: toNumber(data?.height_inch),
+                height_mm: toNumber(data?.height_mm),
+                category: categoryId ? String(categoryId) : "",
+                price: toNumber(data?.price),
                 model: data?.model,
                 slug: data?.slug,
                 description: description,
-                length_inch: data?.length_inch,
-                length_mm: data?.length_mm,
+                length_inch: toNumber(data?.length_inch),
+                length_mm: toNumber(data?.length_mm),
                 aboutItem: data?.aboutItem,
                 images: imu,
             };
+            if (subCategoryId) {
+                dat.sub_category = String(subCategoryId);
+            }
             console.log(dat);
             const res = await dispatch(handlePostRequest(dat, "/product/create", true, true));
             onsuccess();

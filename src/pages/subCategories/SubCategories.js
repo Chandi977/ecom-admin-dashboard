@@ -8,7 +8,7 @@ import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
 import AddcategoryDialog from "./AddsubcategoryDialog";
-import { FaPen } from "react-icons/fa";
+import { FaPen, FaTrash } from "react-icons/fa";
 
 function SubCategories() {
     const [showDialog, setShowDialog] = useState(false);
@@ -33,13 +33,10 @@ function SubCategories() {
             toast.info("Select a subcategory to delete.");
             return;
         }
-        const data = {
-            id: [subcategoryId],
-        };
+        const data = { id: [subcategoryId] };
         dispatch(handlePostRequest(data, "/subcategory/delete", true, true));
         getBrands();
-        toast.success("subcategory deleted.");
-        window.location.reload();
+        toast.success("Subcategory deleted.");
     };
 
     const onsuccess = () => {
@@ -194,6 +191,12 @@ function SubCategories() {
                                 <FaPen style={{ color: "#1976d2", fontSize: "1.3rem" }} />
                                 <span className="tooltip">Edit SubCategory</span>
                             </button>
+                            {role === "admin" && (
+                                <button className="subcat-action-btn" onClick={() => handleDelete(subcat._id)}>
+                                    <FaTrash style={{ color: "red", fontSize: "1.3rem" }} />
+                                    <span className="tooltip">Delete SubCategory</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 ))}

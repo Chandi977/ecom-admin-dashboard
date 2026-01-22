@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useHistory } from "react-router-dom";
 import { Button } from "primereact/button";
 import { useDispatch } from "react-redux";
@@ -7,22 +7,10 @@ import classNames from "classnames";
 import * as Yup from "yup";
 import { useFormik } from "formik";
 import { handlePostRequest } from "../../services/PostTemplate";
-import { AuthSlice } from "../../redux/authSlice";
-import Axios from "axios";
+import { persistAuth } from "../../redux/authSlice";
+import { toast } from "react-toastify";
 
 function Login() {
-    const [ip, setIP] = useState("");
-
-    //creating function to load ip address from the API
-    const getData = async () => {
-        const res = await Axios.get("https://geolocation-db.com/json/");
-        console.log(res.data);
-        setIP(res.data.IPv4);
-    };
-
-    useEffect(() => {
-        getData();
-    }, []);
     const [loading] = useState(false);
     const [loadingIcon] = useState("");
     const dispatch = useDispatch();
@@ -41,18 +29,14 @@ function Login() {
         },
         onSubmit: async (data) => {
             const res = await dispatch(handlePostRequest(data, "/signin", true, true));
-            const userData = res?.data;
-            if (res?.data?.user) {
-                const dat = {
-                    userIp: ip,
-                    userAgent: window.navigator.userAgent,
-                    type: "web",
-                };
-                console.log(dat);
-                await dispatch(handlePostRequest(dat, "/addlog"));
+            if (res?.success && res?.data?.user) {
+                if (res?.data?.user?.role !== "admin") {
+                    toast.warn("Only admin users can sign in to the dashboard.");
+                    return;
+                }
+                persistAuth(res?.data);
                 history.push("/");
                 window.location.reload();
-                dispatch(AuthSlice(userData));
             }
         },
     });

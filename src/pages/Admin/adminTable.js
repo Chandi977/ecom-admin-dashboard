@@ -18,10 +18,16 @@ function AllAdmin() {
     const history = useHistory();
 
     const getData = useCallback(async () => {
-        const res = await handleGetRequest("/all/admin");
-        const users = await handleGetRequest("/all/admin/list");
-        setUsers(users?.data);
-        setCustomers(res?.data);
+        try {
+            const res = await handleGetRequest("/all/admin");
+            const usersResp = await handleGetRequest("/all/admin/list");
+            setUsers(usersResp?.data || []);
+            setCustomers(res?.data || []);
+        } catch (error) {
+            // Keep UI stable even if unauthorized
+            setUsers([]);
+            setCustomers([]);
+        }
     }, []);
 
     useEffect(() => {

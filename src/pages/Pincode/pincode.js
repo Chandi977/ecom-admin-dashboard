@@ -12,7 +12,7 @@ import { handlePostRequest } from "../../services/PostTemplate";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
 import AddPincodeDialog from "./AddPincodeDialog";
-import { FaPen } from "react-icons/fa";
+import { FaPen, FaTrash } from "react-icons/fa";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 const MIN_FILTER_LENGTH = 2;
@@ -38,10 +38,20 @@ function PinCodes() {
     }, [getBrands]);
     const actionBodyTemplate = (rowData) => {
         return (
-            <div>
-                <Button className="p-button-rounded mr-2 Elipse_Icon" onClick={() => history.push(`/pincode/${rowData?._id}`)}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <Button className="p-button-rounded mr-1 Elipse_Icon" onClick={() => history.push(`/pincode/${rowData?._id}`)}>
                     <FaPen />
                 </Button>
+                {role === "admin" && (
+                    <Button
+                        className="p-button-rounded p-button-text p-button-danger"
+                        onClick={() => handleDelete(rowData?._id)}
+                        tooltip="Delete Pincode"
+                        tooltipOptions={{ position: "left" }}
+                    >
+                        <FaTrash />
+                    </Button>
+                )}
             </div>
         );
     };
@@ -57,24 +67,30 @@ function PinCodes() {
         );
     };
 
-    const handleDelete = () => {
-        const selectedId = selectedRow.map((val, index) => {
-            return val?._id;
-        });
-        const data = {
-            id: selectedId,
-        };
-        dispatch(handlePostRequest(data, "/brand/delete", true, true));
+    const handleDelete = (pincodeId) => {
+        const selectedId = pincodeId
+            ? [pincodeId]
+            : selectedRow
+                  .map((val) => val?._id)
+                  .filter(Boolean);
+
+        if (!selectedId.length) {
+            toast.info("Select at least one pincode to delete.");
+            return;
+        }
+
+        const data = { id: selectedId };
+        dispatch(handlePostRequest(data, "/pinCode/delete", true, true));
         getBrands();
-        toast.success("brand deleted.");
-        window.location.reload();
+        setselectedRow([]);
+        toast.success(selectedId.length > 1 ? "Pincodes deleted." : "Pincode deleted.");
     };
 
     const onsuccess = () => {
         onHideFaq();
-        toast.success("brand added");
+        toast.success("Pincode added");
         setShowDialog(false);
-        window.location.reload();
+        getBrands();
     };
 
     const [values, setValues] = useState({
@@ -128,7 +144,7 @@ function PinCodes() {
     }, []);
     return (
         <>
-            <Dialog visible={showDialog} header="Brand" style={{ width: "750px" }} onHide={() => setShowDialog(false)}>
+            <Dialog visible={showDialog} header="Pincode" style={{ width: "750px" }} onHide={() => setShowDialog(false)}>
                 <AddPincodeDialog onsuccess={onsuccess} />
             </Dialog>
 

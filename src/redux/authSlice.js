@@ -1,12 +1,19 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-export const AuthSlice = async (userData) => {
-    const name = `${userData?.user?.first_name}  ${userData?.user?.last_name}`;
+// Persist auth payload returned by /signin or /auth/google
+export const persistAuth = (payload) => {
+    const user = payload?.data?.user || payload?.user;
+    const token = payload?.data?.Token || payload?.Token;
+    const refreshToken = payload?.data?.RefreshToken || payload?.RefreshToken;
+
+    if (!user || !token) return;
+
+    const name = `${user?.first_name || ""} ${user?.last_name || ""}`.trim();
     localStorage.setItem("user", name);
-    localStorage.setItem("token", userData?.Token);
-    localStorage.setItem("refreshToken", userData?.RefreshToken);
-    localStorage.setItem("role", userData?.user?.role);
-    localStorage.setItem("id", userData?.user?._id);
+    localStorage.setItem("token", token);
+    if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+    localStorage.setItem("role", user?.role || "");
+    localStorage.setItem("id", user?._id || "");
 };
 
 const AuthenticationSlice = createSlice({
