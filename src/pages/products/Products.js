@@ -335,11 +335,12 @@ function Products() {
                                 responsiveLayout="scroll"
                                 scrollable
                                 scrollHeight="calc(100vh - 300px)"
-                                lazy
-                                paginator
-                                rows={rows}
-                                first={skip}
-                                totalRecords={total}
+                            lazy
+                            paginator
+                            pageLinkSize={10}
+                            rows={rows}
+                            first={skip}
+                            totalRecords={total}
                                 onPage={onPageChange}
                                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                                 currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
