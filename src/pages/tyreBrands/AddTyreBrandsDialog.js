@@ -8,8 +8,7 @@ import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { handleGetRequest } from "../../services/GetTemplate";
 import Select from "react-select";
-import { Editor } from "react-draft-wysiwyg";
-import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import Editor from "../../components/SafeRichTextEditor";
 import { EditorState, convertToRaw, ContentState } from "draft-js";
 import draftToHtml from "draftjs-to-html";
 import htmlToDraft from "html-to-draftjs";
@@ -181,3 +180,4 @@ const AddTyreBrandsDialog = ({ onHideTyreBrandsDialog, onsuccess }) => {
 };
 
 export default AddTyreBrandsDialog;
+

@@ -12,17 +12,19 @@ function LoginHistory() {
     const breadItems = [{ label: "Home" }, { label: "Login History" }];
     const [Logs, setLogs] = useState([]);
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(10);
     const [total, setTotal] = useState(0);
 
     const getData = useCallback(async () => {
         const params = {
             skip: skip,
+            limit: rows,
         };
         const res = await handleGetRequest("/allLogs", params);
         const total = await handleGetRequest("/countlogs");
         setTotal(total?.data);
         setLogs(res?.data);
-    }, [skip]);
+    }, [rows, skip]);
 
     useEffect(() => {
         getData();
@@ -43,9 +45,10 @@ function LoginHistory() {
         );
     };
 
-    const handleskip = (num) => {
-        setSkip(num);
-    };
+    const onPageChange = useCallback((event) => {
+        setSkip(event.first);
+        setRows(event.rows);
+    }, []);
     return (
         <>
             <div className="Page__Header">
@@ -63,6 +66,13 @@ function LoginHistory() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            lazy
+                            paginator
+                            first={skip}
+                            rows={rows}
+                            rowsPerPageOptions={[10, 20, 50]}
+                            totalRecords={total}
+                            onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

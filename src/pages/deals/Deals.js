@@ -24,6 +24,8 @@ function Deals() {
     const [manufacturers, setManufacturers] = useState([]);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(10);
+    const [isFiltering, setIsFiltering] = useState(false);
     const dispatch = useDispatch();
     const history = useHistory();
     const [role, setRole] = useState("");
@@ -36,15 +38,18 @@ function Deals() {
     const getBrands = useCallback(async () => {
         const params = {
             skip: skip,
+            limit: rows,
         };
         const res = await handleGetRequest("/deal/get", params);
         const total = await handleGetRequest("/deal/count");
         setManufacturers(res?.data);
         setTotal(total?.data);
-    }, [skip]);
+    }, [rows, skip]);
     useEffect(() => {
-        getBrands();
-    }, [getBrands]);
+        if (!isFiltering) {
+            getBrands();
+        }
+    }, [getBrands, isFiltering]);
     const handleActionButton = (e, rowData) => {
         e.preventDefault();
         history.push(`/deal/${rowData?._id}`);
@@ -97,15 +102,20 @@ function Deals() {
     const handleApplyFilter = async (value, names) => {
         const trimmed = (value || "").trim();
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            getBrands();
+            setIsFiltering(false);
+            setSkip(0);
             return;
         }
+        setIsFiltering(true);
+        setSkip(0);
         const result = await Axios.get(DEV + "/deal/search", {
             params: {
                 [names]: trimmed,
             },
         });
-        setManufacturers(result?.data?.data);
+        const filteredDeals = result?.data?.data || [];
+        setManufacturers(filteredDeals);
+        setTotal(filteredDeals.length);
     };
 
     const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
@@ -137,9 +147,10 @@ function Deals() {
         );
     };
 
-    const handleskip = (num) => {
-        setSkip(num);
-    };
+    const onPageChange = useCallback((event) => {
+        setSkip(event.first);
+        setRows(event.rows);
+    }, []);
     const onHideFaq = () => {
         setShowDialog(false);
     };
@@ -172,10 +183,13 @@ function Deals() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            lazy={!isFiltering}
                             paginator
-                            rows={10}
+                            first={skip}
+                            rows={rows}
                             rowsPerPageOptions={[10, 20, 50]}
                             totalRecords={total}
+                            onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

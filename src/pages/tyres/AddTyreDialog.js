@@ -10,8 +10,7 @@ import { handlePostRequest } from "../../services/PostTemplate";
 import { handleGetRequest } from "../../services/GetTemplate";
 import Select from "react-select";
 import { cities } from "../../assets/data/cities";
-import { Editor } from "react-draft-wysiwyg";
-import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import Editor from "../../components/SafeRichTextEditor";
 import { EditorState } from "draft-js";
 import draftToHtml from "draftjs-to-html";
 
@@ -698,3 +697,4 @@ const AddTyreDialog = ({ onHideTyreDialog, handlesuccess }) => {
 };
 
 export default AddTyreDialog;
+

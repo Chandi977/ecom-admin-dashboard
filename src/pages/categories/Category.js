@@ -8,6 +8,7 @@ import { useHistory, useParams } from "react-router-dom";
 import { handleGetRequest } from "../../services/GetTemplate";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
+import { createOverviewField, normalizeOverviewFields, slugifyOverviewFieldKey } from "../../utils/overviewFields";
 
 function Category() {
     const [manufacturer, setManufacturers] = useState();
@@ -18,6 +19,7 @@ function Category() {
     const [meta_title, setMetaTitle] = useState();
     const [meta_description, setMetaDescription] = useState();
     const [category_id, setCategoryId] = useState();
+    const [overviewFields, setOverviewFields] = useState([]);
 
     const getData = useCallback(async () => {
         const res = await handleGetRequest(`/category/get/${id}`);
@@ -26,6 +28,7 @@ function Category() {
         setMetaTitle(res?.data?.meta_title);
         setMetaDescription(res?.data?.meta_description);
         setCategoryId(res?.data?.category_id);
+        setOverviewFields(Array.isArray(res?.data?.overview_fields) ? res.data.overview_fields : []);
 
         setManufacturers(res?.data);
     }, [id]);
@@ -53,6 +56,7 @@ function Category() {
                 meta_description: meta_description,
                 id: id,
                 category_id: category_id,
+                overview_fields: normalizeOverviewFields(overviewFields),
             };
             const res = await handlePutRequest(dat, "/category/update");
             if (res?.success === true) {
@@ -68,6 +72,38 @@ function Category() {
     const handleCancel = () => {
         history.push("/");
     };
+
+    const handleOverviewFieldChange = (index, field, value) => {
+        setOverviewFields((prev) =>
+            prev.map((item, itemIndex) => {
+                if (itemIndex !== index) {
+                    return item;
+                }
+
+                if (field === "label") {
+                    return {
+                        ...item,
+                        label: value,
+                        key: item.key || slugifyOverviewFieldKey(value),
+                    };
+                }
+
+                return {
+                    ...item,
+                    [field]: value,
+                };
+            }),
+        );
+    };
+
+    const handleAddOverviewField = () => {
+        setOverviewFields((prev) => [...prev, createOverviewField()]);
+    };
+
+    const handleRemoveOverviewField = (index) => {
+        setOverviewFields((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    };
+
     return (
         <>
             <div className="customer_header__">
@@ -140,6 +176,24 @@ function Category() {
                                     <InputText id="rim_diameter" name="title" value={meta_title} onChange={(e) => setMetaTitle(e.target.value)} className={classNames({ "p-invalid": isFormFieldValid("rim_diameter") }, "Input__Round")} />
 
                                     {getFormErrorMessage("rim_diameter")}
+                                </div>
+                                <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <label className="Label__Text">Quick Overview Fields</label>
+                                        <Button type="button" label="Add Field" onClick={handleAddOverviewField} style={{ width: "140px", height: "35px" }} />
+                                    </div>
+                                    <small>These fields define the quick overview rows for this category.</small>
+                                    {overviewFields.map((field, index) => (
+                                        <div key={field.key || `overview-field-${index}`} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                                            <InputText
+                                                placeholder="Field label"
+                                                value={field.label}
+                                                onChange={(e) => handleOverviewFieldChange(index, "label", e.target.value)}
+                                                className="Input__Round"
+                                            />
+                                            <Button type="button" label="Remove" className="p-button-danger" onClick={() => handleRemoveOverviewField(index)} />
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>

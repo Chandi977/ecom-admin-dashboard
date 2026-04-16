@@ -17,11 +17,14 @@ function Orders() {
     const home = { icon: "pi pi-home", url: "/" };
     const breadItems = [{ label: "Orders" }];
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(10);
+    const [isFiltering, setIsFiltering] = useState(false);
     const [total, setTotal] = useState(0);
     const history = useHistory();
     const getData = useCallback(async () => {
         const params = {
             skip: skip,
+            limit: rows,
         };
         const res = await handleGetRequest("/order/all/orders", params);
         const total = await handleGetRequest("/order/count");
@@ -32,11 +35,13 @@ function Orders() {
         setResData(res?.data);
         setTotal(total?.data);
         // console.log("response", sortedData);
-    }, [skip]);
+    }, [rows, skip]);
 
     useEffect(() => {
-        getData();
-    }, [getData]);
+        if (!isFiltering) {
+            getData();
+        }
+    }, [getData, isFiltering]);
 
     const handleActionButton = (e, rowData) => {
         e.preventDefault();
@@ -68,10 +73,6 @@ function Orders() {
         );
     };
 
-    const handleskip = (num) => {
-        setSkip(num);
-    };
-
     const [values, setValues] = useState({
         order_id: "",
         first_name: "",
@@ -86,12 +87,17 @@ function Orders() {
     const handleApplyFilter = async (value, names) => {
         const trimmed = (value || "").trim();
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            getData();
+            setIsFiltering(false);
+            setSkip(0);
             return;
         }
+        setIsFiltering(true);
+        setSkip(0);
         const params = { [names]: trimmed };
         const result = await handleGetRequest("/order/search", params);
-        setResData(result?.data);
+        const filteredOrders = result?.data || [];
+        setResData(filteredOrders);
+        setTotal(filteredOrders.length);
     };
 
     const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
@@ -115,6 +121,11 @@ function Orders() {
         );
     };
 
+    const onPageChange = useCallback((event) => {
+        setSkip(event.first);
+        setRows(event.rows);
+    }, []);
+
     return (
         <>
             <div className="Page__Header">
@@ -134,10 +145,13 @@ function Orders() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            lazy={!isFiltering}
                             paginator
-                            rows={10}
+                            first={skip}
+                            rows={rows}
                             rowsPerPageOptions={[10, 20, 50]}
                             totalRecords={total}
+                            onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

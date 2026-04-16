@@ -26,6 +26,8 @@ function TyrePattern() {
     const [patterns, setPatterns] = useState([]);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(10);
+    const [isFiltering, setIsFiltering] = useState(false);
     const dispatch = useDispatch();
     const [role, setRole] = useState();
     const home = { icon: "pi pi-home", url: "https://www.primefaces.org/primereact/showcase" };
@@ -37,6 +39,7 @@ function TyrePattern() {
     const getData = async () => {
         const params = {
             skip: skip,
+            limit: rows,
         };
         const result = await handleGetRequest("/all/Patterns", params);
         const Count = await handleGetRequest("/patternCount");
@@ -45,8 +48,10 @@ function TyrePattern() {
     };
 
     useEffect(() => {
-        getData();
-    }, []);
+        if (!isFiltering) {
+            getData();
+        }
+    }, [isFiltering, rows, skip]);
     const actionBodyTemplate = (rowData) => {
         return (
             <div>
@@ -74,10 +79,6 @@ function TyrePattern() {
         return <p>{rowData?.manufacturer?.id}</p>;
     };
 
-    const handleskip = (num) => {
-        setSkip(num);
-    };
-
     const handledDelete = () => {
         const selectedIds = selectedRow.map((val) => {
             return val?.id;
@@ -99,15 +100,20 @@ function TyrePattern() {
     const handleApplyFilter = async (value, names) => {
         const trimmed = (value || "").trim();
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            getData();
+            setIsFiltering(false);
+            setSkip(0);
             return;
         }
+        setIsFiltering(true);
+        setSkip(0);
         const result = await Axios.get(DEV + "/SearchPatterns", {
             params: {
                 [names]: trimmed,
             },
         });
-        setPatterns(result?.data?.data);
+        const filteredPatterns = result?.data?.data || [];
+        setPatterns(filteredPatterns);
+        setTotal(filteredPatterns.length);
     };
 
     const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
@@ -124,6 +130,11 @@ function TyrePattern() {
                 }}
             ></input>
         );
+    };
+
+    const onPageChange = (event) => {
+        setSkip(event.first);
+        setRows(event.rows);
     };
 
     useEffect(() => {
@@ -155,10 +166,13 @@ function TyrePattern() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            lazy={!isFiltering}
                             paginator
-                            rows={10}
+                            first={skip}
+                            rows={rows}
                             rowsPerPageOptions={[10, 20, 50]}
                             totalRecords={total}
+                            onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

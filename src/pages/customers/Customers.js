@@ -25,6 +25,8 @@ function Customers() {
     const [showDialog, setShowDialog] = useState(false);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(10);
+    const [isFiltering, setIsFiltering] = useState(false);
     const dispatch = useDispatch();
     const [users, setUsers] = useState([]);
     const [customers, setCustomers] = useState([]);
@@ -42,6 +44,7 @@ function Customers() {
     const getData = useCallback(async () => {
         const params = {
             skip: skip,
+            limit: rows,
         };
         const res = await handleGetRequest("/allCustomers", params);
         const total = await handleGetRequest("/countUsers");
@@ -49,11 +52,13 @@ function Customers() {
         setUsers(users?.data);
         setTotal(total?.data);
         setCustomers(res?.data);
-    }, [skip]);
+    }, [rows, skip]);
 
     useEffect(() => {
-        getData();
-    }, [getData]);
+        if (!isFiltering) {
+            getData();
+        }
+    }, [getData, isFiltering]);
 
     const handleDelete = async (value) => {
         const data = {
@@ -142,15 +147,20 @@ function Customers() {
     const handleApplyFilter = async (value, names) => {
         const trimmed = (value || "").trim();
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            getData();
+            setIsFiltering(false);
+            setSkip(0);
             return;
         }
+        setIsFiltering(true);
+        setSkip(0);
         const result = await Axios.get(DEV + "/searchusers", {
             params: {
                 [names]: trimmed,
             },
         });
-        setCustomers(result?.data?.data);
+        const filteredCustomers = result?.data?.data || [];
+        setCustomers(filteredCustomers);
+        setTotal(filteredCustomers.length);
     };
 
     const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
@@ -167,9 +177,10 @@ function Customers() {
         return <input className="custom-filter-input" value={values[name]} onChange={(e) => handleFilterChange(e.target.value, name)} />;
     };
 
-    const handleskip = (num) => {
-        setSkip(num);
-    };
+    const onPageChange = useCallback((event) => {
+        setSkip(event.first);
+        setRows(event.rows);
+    }, []);
 
     const handlesuccess = () => {
         onHideCustomerDialog();
@@ -295,10 +306,13 @@ function Customers() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive custom-table"
+                            lazy={!isFiltering}
                             paginator
-                            rows={10}
+                            first={skip}
+                            rows={rows}
                             rowsPerPageOptions={[10, 20, 50]}
                             totalRecords={total}
+                            onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

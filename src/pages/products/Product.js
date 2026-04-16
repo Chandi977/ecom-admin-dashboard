@@ -8,13 +8,13 @@ import { useHistory, useParams } from "react-router-dom";
 import { handleGetRequest } from "../../services/GetTemplate";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
-import { Editor } from "react-draft-wysiwyg";
-import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import Editor from "../../components/SafeRichTextEditor";
 import { EditorState, ContentState } from "draft-js";
 import draftToHtml from "draftjs-to-html";
 import htmlToDraft from "html-to-draftjs";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
+import { createOverviewField, mergeOverviewFieldsWithTemplate, normalizeOverviewFields, slugifyOverviewFieldKey } from "../../utils/overviewFields";
 
 const normalizeId = (value) => {
     if (!value) return "";
@@ -23,6 +23,14 @@ const normalizeId = (value) => {
 };
 
 const normalizeIdList = (values) => (Array.isArray(values) ? values.map(normalizeId).filter(Boolean) : []);
+
+const formatProductLabel = (product) => {
+    if (!product) return "";
+    const brandName = typeof product.brand === "object" ? product.brand?.name : "";
+    const name = product?.name || "";
+    const model = product?.model || "";
+    return [brandName, name, model].filter(Boolean).join(" ").trim();
+};
 
 function Product() {
     const [manufacturer, setManufacturers] = useState();
@@ -51,8 +59,43 @@ function Product() {
     const [relatedProducts, setRelatedProducts] = useState([]);
     const [selectedProductsRP, setSelectedProductsRP] = useState("");
     const [selectedProductIdsRP, setSelectedProductIdsRP] = useState([]);
+    const [overviewFields, setOverviewFields] = useState([]);
 
     const dispatch = useDispatch();
+
+    const fetchSelectableProducts = useCallback(async () => {
+        const pageSize = 100;
+        let skip = 0;
+        let hasMore = true;
+        const allProducts = [];
+
+        while (hasMore) {
+            const res = await handleGetRequest("/product/get", {
+                skip,
+                limit: pageSize,
+                includeMeta: true,
+                includeImages: false,
+                lite: true,
+                populate: true,
+            });
+
+            const batch = Array.isArray(res?.data) ? res.data : [];
+            if (!batch.length) {
+                break;
+            }
+
+            allProducts.push(...batch);
+
+            const returned = Number(res?.meta?.returned) || batch.length;
+            const nextHasMore = Boolean(res?.meta?.hasMore);
+            skip += returned;
+            hasMore = nextHasMore;
+        }
+
+        const uniqueProducts = Array.from(new Map(allProducts.map((item) => [item?._id, item])).values()).filter(Boolean);
+
+        setProducts(uniqueProducts);
+    }, []);
 
     useEffect(() => {
         const getData = async () => {
@@ -67,6 +110,7 @@ function Product() {
             setPrice(res?.data?.priceList);
             setSelectedProductIds(res?.data?.buyItWith || []);
             setSelectedProductIdsRP(res?.data?.relatedProducts || []);
+            setOverviewFields(Array.isArray(res?.data?.overview_fields) ? res.data.overview_fields : []);
             if (res?.data?.description) {
                 const contentBlock = htmlToDraft(res?.data?.description);
                 if (contentBlock) {
@@ -82,9 +126,7 @@ function Product() {
             const cat = await handleGetRequest("/category/all");
             const subcat = await handleGetRequest("/subcategory/all");
             const brand = await handleGetRequest("/brand/all");
-            const products = await handleGetRequest("/product/all");
-
-            setProducts(products?.data);
+            await fetchSelectableProducts();
             setCategories(cat?.data);
             setSubCategories(subcat?.data);
             setBrands(brand?.data);
@@ -93,14 +135,14 @@ function Product() {
                 imageNames.map(async (image) => {
                     const result = await handleGetRequest(`/getImage?image=${image}`);
                     return result?.data?.url;
-                })
+                }),
             );
             setImages(imageUrls);
             setUrl(imageNames);
         };
 
         getData();
-    }, [id]);
+    }, [id, fetchSelectableProducts]);
 
     const fetchProductDetails = useCallback(async (productId) => {
         const res = await handleGetRequest(`/product/single/${productId}`);
@@ -112,7 +154,7 @@ function Product() {
             const productDetails = await Promise.all(productIds.map(fetchProductDetails));
             setBuyItWith(productDetails);
         },
-        [fetchProductDetails]
+        [fetchProductDetails],
     );
 
     const fetchBuyItWithDetailsRP = useCallback(
@@ -120,7 +162,7 @@ function Product() {
             const productDetails = await Promise.all(productIds.map(fetchProductDetails));
             setRelatedProducts(productDetails);
         },
-        [fetchProductDetails]
+        [fetchProductDetails],
     );
 
     useEffect(() => {
@@ -146,6 +188,7 @@ function Product() {
     }, [relatedProducts, fetchBuyItWithDetailsRP]);
 
     const handleSelection = (selectedProduct) => {
+        if (!selectedProduct?._id) return;
         if (selectedProductIds.length < 3 && !selectedProductIds.some((item) => normalizeId(item) === selectedProduct._id)) {
             const updatedSelectedProductIds = [...selectedProductIds, selectedProduct];
             setSelectedProductIds(updatedSelectedProductIds);
@@ -156,6 +199,7 @@ function Product() {
     };
 
     const handleSelectionRP = (selectedProductRP) => {
+        if (!selectedProductRP?._id) return;
         if (selectedProductIdsRP.length < 10 && !selectedProductIdsRP.some((item) => normalizeId(item) === selectedProductRP._id)) {
             const updatedSelectedProductIdsRP = [...selectedProductIdsRP, selectedProductRP];
             setSelectedProductIdsRP(updatedSelectedProductIdsRP);
@@ -218,13 +262,13 @@ function Product() {
             thickness_micron: manufacturer?.thickness_micron ? manufacturer?.thickness_micron : "",
             pouch_weight: manufacturer?.pouch_weight ? manufacturer?.pouch_weight : "",
             material: manufacturer?.material ? manufacturer?.material : "",
-            delivery_time: manufacturer?.delivery_time ? manufacturer?.delivery_time : "",
             hsn_code: manufacturer?.hsn_code ? manufacturer?.hsn_code : "",
             price: manufacturer?.price ? manufacturer?.price : "",
             gst: manufacturer?.gst ? manufacturer?.gst : "",
             gusset: manufacturer?.gusset ? manufacturer?.gusset : "",
             print: manufacturer?.print ? manufacturer?.print : "",
             label_in_roll: manufacturer?.label_in_roll ? manufacturer?.label_in_roll : "",
+            core_size: manufacturer?.core_size ? manufacturer?.core_size : "",
             color: manufacturer?.color ? manufacturer?.color : "",
             aboutItem: manufacturer?.aboutItem ? manufacturer?.aboutItem : "",
             length: manufacturer?.length ? manufacturer?.length : "",
@@ -267,13 +311,13 @@ function Product() {
                 thickness_micron: data?.thickness_micron,
                 pouch_weight: data?.pouch_weight,
                 material: data?.material,
-                delivery_time: data?.delivery_time,
                 hsn_code: data?.hsn_code,
                 price: data?.price,
                 gst: data?.gst,
                 gusset: data?.gusset,
                 print: data?.print,
                 label_in_roll: data?.label_in_roll,
+                core_size: data?.core_size,
                 color: data?.color,
                 length: data?.length,
                 length_inch: data?.length_inch,
@@ -295,6 +339,7 @@ function Product() {
                 deal_product: data?.deal_product,
                 buyItWith: normalizeIdList(selectedProductIds),
                 relatedProducts: normalizeIdList(selectedProductIdsRP),
+                overview_fields: normalizeOverviewFields(overviewFields, { includeValue: true }),
             };
             const res = await handlePutRequest(dat, "/product/update");
             if (res?.success === true) {
@@ -344,6 +389,20 @@ function Product() {
         setFilteredSubCategories(temp);
     }, [selectedCategory, subCategories]);
 
+    useEffect(() => {
+        if (!selectedCategory) {
+            return;
+        }
+
+        const selectedCategoryData = categories.find((item) => normalizeId(item?._id) === normalizeId(selectedCategory));
+        const templateFields = selectedCategoryData?.overview_fields || [];
+
+        setOverviewFields((prev) => {
+            const mergedFields = mergeOverviewFieldsWithTemplate(templateFields, prev);
+            return JSON.stringify(prev) === JSON.stringify(mergedFields) ? prev : mergedFields;
+        });
+    }, [selectedCategory, categories]);
+
     const handleStateD = (editorState) => {
         setText1(editorState);
     };
@@ -378,6 +437,37 @@ function Product() {
         const newPrice = [...price];
         newPrice.splice(index, 1);
         setPrice(newPrice);
+    };
+
+    const handleOverviewFieldChange = (index, field, value) => {
+        setOverviewFields((prev) =>
+            prev.map((item, itemIndex) => {
+                if (itemIndex !== index) {
+                    return item;
+                }
+
+                if (field === "label") {
+                    return {
+                        ...item,
+                        label: value,
+                        key: item.key || slugifyOverviewFieldKey(value),
+                    };
+                }
+
+                return {
+                    ...item,
+                    [field]: value,
+                };
+            }),
+        );
+    };
+
+    const handleAddOverviewField = () => {
+        setOverviewFields((prev) => [...prev, createOverviewField()]);
+    };
+
+    const handleRemoveOverviewField = (index) => {
+        setOverviewFields((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
     };
 
     return (
@@ -637,6 +727,17 @@ function Product() {
                                     </div>
                                 </div>
 
+                                <div className="p-field col-12 md:col-12">
+                                    <div className="p-field">
+                                        <label htmlFor="core_size" className={classNames({ "p-error": isFormFieldValid("core_size") }, "Label__Text")}>
+                                            Core size in inch
+                                        </label>
+                                        <InputText placeholder="3" id="core_size" name="core_size" value={formik.values.core_size} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("core_size") }, "Input__Round")} />
+
+                                        {getFormErrorMessage("core_size")}
+                                    </div>
+                                </div>
+
                                 {/* COLOR */}
                                 <div className="p-field col-12 md:col-12">
                                     <div className="p-field">
@@ -707,7 +808,7 @@ function Product() {
                                                         {buyItWith.map((selectedProduct, index) => (
                                                             <li key={selectedProduct?._id || index} style={{ marginBottom: "5px" }}>
                                                                 <div>
-                                                                    {selectedProduct.brand?.name} {selectedProduct.name} {selectedProduct.model}{" "}
+                                                                    {formatProductLabel(selectedProduct)}{" "}
                                                                     <button type="button" onClick={() => handleRemoveSelectedProduct(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
                                                                         <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
                                                                     </button>
@@ -721,7 +822,7 @@ function Product() {
                                                             updatedBuyItWith.map((selectedProduct1, index) => (
                                                                 <li key={selectedProduct1?._id || index}>
                                                                     <div>
-                                                                        {selectedProduct1?.brand?.name} {selectedProduct1.name} {selectedProduct1.model}{" "}
+                                                                        {formatProductLabel(selectedProduct1)}{" "}
                                                                         <button type="button" onClick={() => handleRemoveSelectedProduct(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
                                                                             <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
                                                                         </button>
@@ -750,7 +851,7 @@ function Product() {
                                                         </option>
                                                         {products.map((product) => (
                                                             <option key={product._id} value={product._id}>
-                                                                {product?.brand?.name} {product.name} {product.model}
+                                                                {formatProductLabel(product) || product?._id}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -763,7 +864,7 @@ function Product() {
                                                     {buyItWith.map((selectedProduct, index) => (
                                                         <li key={selectedProduct?._id || index} style={{ marginBottom: "5px" }}>
                                                             <div className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
-                                                                {selectedProduct?.brand?.name} {selectedProduct.name} {selectedProduct.model}
+                                                                {formatProductLabel(selectedProduct)}
                                                                 <button type="button" onClick={() => handleRemoveSelectedProduct(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
                                                                     <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
                                                                 </button>
@@ -779,16 +880,16 @@ function Product() {
                                             <>
                                                 <div className="selected-products">
                                                     <ol style={{ marginLeft: "20px", marginTop: "10px" }}>
-                                                    {selectedProductIds.map((selectedProduct, index) => (
-                                                        <li key={selectedProduct?._id || index}>
-                                                            <div className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
-                                                                {selectedProduct?.brand?.name} {selectedProduct.name} {selectedProduct.model}
-                                                                <button type="button" onClick={() => handleRemoveSelectedProduct(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
-                                                                    <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
-                                                                </button>
-                                                            </div>
-                                                        </li>
-                                                    ))}
+                                                        {selectedProductIds.map((selectedProduct, index) => (
+                                                            <li key={selectedProduct?._id || index}>
+                                                                <div className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
+                                                                    {formatProductLabel(selectedProduct)}
+                                                                    <button type="button" onClick={() => handleRemoveSelectedProduct(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
+                                                                        <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
+                                                                    </button>
+                                                                </div>
+                                                            </li>
+                                                        ))}
                                                     </ol>
                                                 </div>
                                                 <select
@@ -805,7 +906,7 @@ function Product() {
                                                     </option>
                                                     {products?.map((item) => (
                                                         <option key={item._id} value={item._id} style={{ textTransform: "capitalize" }}>
-                                                            {item?.brand?.name} {item.name} {item.model}
+                                                            {formatProductLabel(item) || item?._id}
                                                         </option>
                                                     ))}
                                                 </select>
@@ -870,18 +971,6 @@ function Product() {
                                         <InputText placeholder="7.1x11.4" id="size_mm" name="size_mm" value={formik.values.size_mm} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("size_mm") }, "Input__Round")} />
 
                                         {getFormErrorMessage("size_mm")}
-                                    </div>
-                                </div>
-
-                                {/* DELIVERY TIME */}
-                                <div className="p-field col-12 md:col-12">
-                                    <div className="p-field">
-                                        <label htmlFor="delivery_time" className={classNames({ "p-error": isFormFieldValid("delivery_time") }, "Label__Text")}>
-                                            Delivery Time
-                                        </label>
-                                        <InputText placeholder="2-4 days" id="delivery_time" name="delivery_time" value={formik.values.delivery_time} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("delivery_time") }, "Input__Round")} />
-
-                                        {getFormErrorMessage("delivery_time")}
                                     </div>
                                 </div>
 
@@ -1034,7 +1123,7 @@ function Product() {
                                                         {relatedProducts.map((selectedProduct, index) => (
                                                             <li key={selectedProduct?._id || index} style={{ marginBottom: "5px" }}>
                                                                 <div>
-                                                                    {selectedProduct.brand?.name} {selectedProduct.name} {selectedProduct.model}{" "}
+                                                                    {formatProductLabel(selectedProduct)}{" "}
                                                                     <button type="button" onClick={() => handleRemoveSelectedProductRP(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
                                                                         <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
                                                                     </button>
@@ -1048,7 +1137,7 @@ function Product() {
                                                             updatedRelatedProducts.map((selectedProduct1, index) => (
                                                                 <li key={selectedProduct1?._id || index}>
                                                                     <div>
-                                                                        {selectedProduct1?.brand?.name} {selectedProduct1.name} {selectedProduct1.model}{" "}
+                                                                        {formatProductLabel(selectedProduct1)}{" "}
                                                                         <button type="button" onClick={() => handleRemoveSelectedProductRP(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
                                                                             <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
                                                                         </button>
@@ -1077,7 +1166,7 @@ function Product() {
                                                         </option>
                                                         {products.map((product) => (
                                                             <option key={product._id} value={product._id}>
-                                                                {product?.brand?.name} {product.name} {product.model}
+                                                                {formatProductLabel(product) || product?._id}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -1092,7 +1181,7 @@ function Product() {
                                                     {relatedProducts.map((selectedProduct, index) => (
                                                         <li key={selectedProduct?._id || index} style={{ marginBottom: "5px" }}>
                                                             <div className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
-                                                                {selectedProduct?.brand?.name} {selectedProduct?.name} {selectedProduct?.model}
+                                                                {formatProductLabel(selectedProduct)}
                                                                 <button type="button" onClick={() => handleRemoveSelectedProductRP(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
                                                                     <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
                                                                 </button>
@@ -1109,16 +1198,16 @@ function Product() {
                                             <>
                                                 <div className="selected-products">
                                                     <ol style={{ marginLeft: "20px", marginTop: "10px" }}>
-                                                    {selectedProductIdsRP.map((selectedProduct, index) => (
-                                                        <li key={selectedProduct?._id || index}>
-                                                            <div className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
-                                                                {selectedProduct?.brand?.name} {selectedProduct.name} {selectedProduct.model}
-                                                                <button type="button" onClick={() => handleRemoveSelectedProductRP(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
-                                                                    <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
-                                                                </button>
-                                                            </div>
-                                                        </li>
-                                                    ))}
+                                                        {selectedProductIdsRP.map((selectedProduct, index) => (
+                                                            <li key={selectedProduct?._id || index}>
+                                                                <div className="selected-product" style={{ display: "flex", gap: "10px", marginBottom: "5px" }}>
+                                                                    {formatProductLabel(selectedProduct)}
+                                                                    <button type="button" onClick={() => handleRemoveSelectedProductRP(index)} style={{ borderRadius: "100%", backgroundColor: "white" }}>
+                                                                        <i className="pi pi-times" style={{ padding: "3px", color: "black", fontSize: "10px" }}></i>
+                                                                    </button>
+                                                                </div>
+                                                            </li>
+                                                        ))}
                                                     </ol>
                                                 </div>
 
@@ -1136,7 +1225,7 @@ function Product() {
                                                     </option>
                                                     {products?.map((item) => (
                                                         <option key={item._id} value={item._id} style={{ textTransform: "capitalize" }}>
-                                                            {item?.brand?.name} {item.name} {item.model}
+                                                            {formatProductLabel(item) || item?._id}
                                                         </option>
                                                     ))}
                                                 </select>
@@ -1171,6 +1260,33 @@ function Product() {
                                 />
 
                                 {getFormErrorMessage("description")}
+                            </div>
+                        </div>
+
+                        <div className="p-field col-12 md:col-12">
+                            <div className="p-field" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <label className="Label__Text">Quick Overview Values</label>
+                                    <Button type="button" label="Add Row" onClick={handleAddOverviewField} style={{ width: "140px", height: "35px" }} />
+                                </div>
+                                <small>Category fields are merged automatically. Edit the values that should appear on the product page.</small>
+                                {overviewFields.map((field, index) => (
+                                    <div key={field.key || `overview-field-${index}`} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                                        <InputText
+                                            placeholder="Label"
+                                            value={field.label}
+                                            onChange={(e) => handleOverviewFieldChange(index, "label", e.target.value)}
+                                            className="Input__Round"
+                                        />
+                                        <InputText
+                                            placeholder="Value"
+                                            value={field.value || ""}
+                                            onChange={(e) => handleOverviewFieldChange(index, "value", e.target.value)}
+                                            className="Input__Round"
+                                        />
+                                        <Button type="button" label="Remove" className="p-button-danger" onClick={() => handleRemoveOverviewField(index)} />
+                                    </div>
+                                ))}
                             </div>
                         </div>
 

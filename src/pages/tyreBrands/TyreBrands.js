@@ -24,7 +24,9 @@ function TyreBrands() {
     const [showDialog, setShowDialog] = useState(false);
     const [brands, setBrands] = useState([]);
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(10);
     const [total, setTotal] = useState(0);
+    const [isFiltering, setIsFiltering] = useState(false);
     const dispatch = useDispatch();
     const [role, setRole] = useState();
 
@@ -40,15 +42,18 @@ function TyreBrands() {
     const getBrands = async () => {
         const params = {
             skip: skip,
+            limit: rows,
         };
         const res = await handleGetRequest("/getAll/Tyre/manufacturer", params);
         const total = await handleGetRequest("/countManufacturer");
         setTotal(total?.data);
         setBrands(res?.data);
     };
-    useMemo(() => {
-        getBrands();
-    }, [skip]);
+    useEffect(() => {
+        if (!isFiltering) {
+            getBrands();
+        }
+    }, [isFiltering, rows, skip]);
 
     const actionBodyTemplate = (rowData) => {
         return (
@@ -95,9 +100,6 @@ function TyreBrands() {
         window.location.reload();
     };
 
-    const handleskip = (num) => {
-        setSkip(num);
-    };
     const [values, setValues] = useState({
         id: "",
         title: "",
@@ -106,15 +108,20 @@ function TyreBrands() {
     const handleApplyFilter = async (value, names) => {
         const trimmed = (value || "").trim();
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            getBrands();
+            setIsFiltering(false);
+            setSkip(0);
             return;
         }
+        setIsFiltering(true);
+        setSkip(0);
         const result = await Axios.get(DEV + "/searchBrand", {
             params: {
                 [names]: trimmed,
             },
         });
-        setBrands(result?.data?.data);
+        const filteredBrands = result?.data?.data || [];
+        setBrands(filteredBrands);
+        setTotal(filteredBrands.length);
     };
 
     const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
@@ -131,6 +138,11 @@ function TyreBrands() {
                 }}
             ></input>
         );
+    };
+
+    const onPageChange = (event) => {
+        setSkip(event.first);
+        setRows(event.rows);
     };
 
     const onsuccess = () => {
@@ -169,10 +181,13 @@ function TyreBrands() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            lazy={!isFiltering}
                             paginator
-                            rows={10}
+                            first={skip}
+                            rows={rows}
                             rowsPerPageOptions={[10, 20, 50]}
                             totalRecords={total}
+                            onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

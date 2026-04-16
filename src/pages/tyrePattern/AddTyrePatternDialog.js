@@ -6,8 +6,7 @@ import { InputText } from "primereact/inputtext";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { handleGetRequest } from "../../services/GetTemplate";
-import { Editor } from "react-draft-wysiwyg";
-import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import Editor from "../../components/SafeRichTextEditor";
 import { EditorState, convertToRaw, ContentState } from "draft-js";
 import draftToHtml from "draftjs-to-html";
 import htmlToDraft from "html-to-draftjs";
@@ -211,3 +210,4 @@ const AddTyrePatternDialog = ({ onHideTyrePatternDialog, handleSuccess }) => {
 };
 
 export default AddTyrePatternDialog;
+

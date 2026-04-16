@@ -1,3 +1,6 @@
+@use "../variables";
+@use "mixins";
+
 .layout-sidebar {
     position: fixed;
     width: 300px;
@@ -7,7 +10,7 @@
     user-select: none;
     top: 7rem;
     left: 2rem;
-    transition: transform $transitionDuration, left $transitionDuration;
+    transition: transform variables.$transitionDuration, left variables.$transitionDuration;
     background: #f6f6f6;
     border-radius: 12px;
     padding: 1.5rem;
@@ -42,8 +45,8 @@
             display: flex;
             align-items: center;
             color: var(--text-color);
-            transition: color $transitionDuration;
-            border-radius: $borderRadius;
+            transition: color variables.$transitionDuration;
+            border-radius: variables.$borderRadius;
             padding: 0.75rem 1rem;
             transition: background-color 0.15s;
 
@@ -56,7 +59,7 @@
             }
 
             &:focus {
-                @include focused-inset();
+                @include mixins.focused-inset();
             }
 
             &:hover {

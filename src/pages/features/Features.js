@@ -24,6 +24,8 @@ function Features() {
     const [features, setFeatures] = useState([]);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(10);
+    const [isFiltering, setIsFiltering] = useState(false);
     const dispatch = useDispatch();
     const home = {
         icon: "pi pi-home",
@@ -47,20 +49,19 @@ function Features() {
     const getData = useCallback(async () => {
         const params = {
             skip: skip,
+            limit: rows,
         };
         const res = await handleGetRequest("/features", params);
         const total = await handleGetRequest("/countFeature");
         setFeatures(res?.data);
         setTotal(total?.data);
-    }, [skip]);
-
-    const handleskip = (num) => {
-        setSkip(num);
-    };
+    }, [rows, skip]);
 
     useEffect(() => {
-        getData();
-    }, [getData]);
+        if (!isFiltering) {
+            getData();
+        }
+    }, [getData, isFiltering]);
 
     const handleRoute = (id) => {
         history.push(`feature/${id}`);
@@ -94,15 +95,20 @@ function Features() {
     const handleApplyFilter = async (value, names) => {
         const trimmed = (value || "").trim();
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            getData();
+            setIsFiltering(false);
+            setSkip(0);
             return;
         }
+        setIsFiltering(true);
+        setSkip(0);
         const result = await Axios.get(DEV + "/searchFeature", {
             params: {
                 [names]: trimmed,
             },
         });
-        setFeatures(result?.data?.data);
+        const filteredFeatures = result?.data?.data || [];
+        setFeatures(filteredFeatures);
+        setTotal(filteredFeatures.length);
     };
 
     const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
@@ -120,6 +126,11 @@ function Features() {
             ></input>
         );
     };
+
+    const onPageChange = useCallback((event) => {
+        setSkip(event.first);
+        setRows(event.rows);
+    }, []);
 
     return (
         <>
@@ -142,10 +153,13 @@ function Features() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            lazy={!isFiltering}
                             paginator
-                            rows={10}
+                            first={skip}
+                            rows={rows}
                             rowsPerPageOptions={[10, 20, 50]}
                             totalRecords={total}
+                            onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

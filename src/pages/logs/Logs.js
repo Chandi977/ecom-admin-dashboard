@@ -22,20 +22,25 @@ function Logs() {
     const [logs, setLogs] = useState([]);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(10);
+    const [isFiltering, setIsFiltering] = useState(false);
 
     const getData = useCallback(async () => {
         const params = {
             skip: skip,
+            limit: rows,
         };
         const result = await handleGetRequest("/allLogss", params);
         const total = await handleGetRequest("/countlogss");
         setTotal(total?.data);
         setLogs(result?.data);
-    }, [skip]);
+    }, [rows, skip]);
 
     useEffect(() => {
-        getData();
-    }, [getData]);
+        if (!isFiltering) {
+            getData();
+        }
+    }, [getData, isFiltering]);
 
     const dispatch = useDispatch();
 
@@ -65,10 +70,6 @@ function Logs() {
         return <p>{rowData?._id.substring(1, 6)}</p>;
     };
 
-    const handleskip = (num) => {
-        setSkip(num);
-    };
-
     const [values, setValues] = useState({
         id: "",
         title: "",
@@ -78,15 +79,20 @@ function Logs() {
     const handleApplyFilter = async (value, names) => {
         const trimmed = (value || "").trim();
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            getData();
+            setIsFiltering(false);
+            setSkip(0);
             return;
         }
+        setIsFiltering(true);
+        setSkip(0);
         const result = await Axios.get(DEV + "/searchLogs", {
             params: {
                 [names]: trimmed,
             },
         });
-        setLogs(result?.data?.data);
+        const filteredLogs = result?.data?.data || [];
+        setLogs(filteredLogs);
+        setTotal(filteredLogs.length);
     };
 
     const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
@@ -109,6 +115,11 @@ function Logs() {
             ></input>
         );
     };
+
+    const onPageChange = useCallback((event) => {
+        setSkip(event.first);
+        setRows(event.rows);
+    }, []);
     return (
         <>
             <div className="Page__Header">
@@ -126,10 +137,13 @@ function Logs() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            lazy={!isFiltering}
                             paginator
-                            rows={10}
+                            first={skip}
+                            rows={rows}
                             rowsPerPageOptions={[10, 20, 50]}
                             totalRecords={total}
+                            onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

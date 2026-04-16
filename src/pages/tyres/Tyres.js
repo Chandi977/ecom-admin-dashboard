@@ -27,6 +27,8 @@ function Tyres() {
     const [patterns, setPatterns] = useState([]);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(10);
+    const [isFiltering, setIsFiltering] = useState(false);
     const menu = useRef(null);
     const breadItems = [{ label: "Home" }, { label: "Tyres" }];
     const dispatch = useDispatch();
@@ -91,6 +93,7 @@ function Tyres() {
     const getAllTyres = async () => {
         const params = {
             skip: skip,
+            limit: rows,
         };
         const res = await handleGetRequest("/getAllTyres", params);
         const total = await handleGetRequest("/countTyres");
@@ -98,8 +101,10 @@ function Tyres() {
         setAllTyres(res?.data);
     };
     useEffect(() => {
-        getAllTyres();
-    }, [skip]);
+        if (!isFiltering) {
+            getAllTyres();
+        }
+    }, [isFiltering, rows, skip]);
 
     const getData = async () => {
         const result = await handleGetRequest("/getAll/Tyre/manufacturer");
@@ -129,15 +134,20 @@ function Tyres() {
     const handleApplyFilter = async (value, names) => {
         const trimmed = (value || "").trim();
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            getAllTyres();
+            setIsFiltering(false);
+            setSkip(0);
             return;
         }
+        setIsFiltering(true);
+        setSkip(0);
         const result = await Axios.get(DEV + "/adminSearch", {
             params: {
                 [names]: trimmed,
             },
         });
-        setAllTyres(result?.data?.data);
+        const filteredTyres = result?.data?.data || [];
+        setAllTyres(filteredTyres);
+        setTotal(filteredTyres.length);
     };
 
     const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
@@ -159,15 +169,19 @@ function Tyres() {
     const apllyManufacturer = async (value) => {
         const trimmed = (value || "").trim();
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            getAllTyres();
+            setIsFiltering(false);
+            setSkip(0);
             return;
         }
+        setIsFiltering(true);
+        setSkip(0);
         const query = trimmed.toLowerCase().split("");
         const searchPattern = new RegExp(query.map((term) => `(?=.*${term})`).join(""), "i");
         const search = brands.filter((option) => option.title.match(searchPattern));
         const manufacturerId = search?.[0]?._id;
         if (!manufacturerId) {
             setAllTyres([]);
+            setTotal(0);
             return;
         }
         const result = await Axios.get(DEV + "/adminSearch", {
@@ -175,7 +189,9 @@ function Tyres() {
                 manufacturer: manufacturerId,
             },
         });
-        setAllTyres(result?.data?.data);
+        const filteredTyres = result?.data?.data || [];
+        setAllTyres(filteredTyres);
+        setTotal(filteredTyres.length);
     };
 
     const debouncedApplyManufacturer = useDebouncedCallback(apllyManufacturer, FILTER_DEBOUNCE_MS);
@@ -197,15 +213,19 @@ function Tyres() {
     const apllyPattern = async (value) => {
         const trimmed = (value || "").trim();
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            getAllTyres();
+            setIsFiltering(false);
+            setSkip(0);
             return;
         }
+        setIsFiltering(true);
+        setSkip(0);
         const query = trimmed.toLowerCase().split("");
         const searchPattern = new RegExp(query.map((term) => `(?=.*${term})`).join(""), "i");
         const search = patterns.filter((option) => option.title.match(searchPattern));
         const patternId = search?.[0]?._id;
         if (!patternId) {
             setAllTyres([]);
+            setTotal(0);
             return;
         }
         const result = await Axios.get(DEV + "/adminSearch", {
@@ -213,7 +233,9 @@ function Tyres() {
                 pattern: patternId,
             },
         });
-        setAllTyres(result?.data?.data);
+        const filteredTyres = result?.data?.data || [];
+        setAllTyres(filteredTyres);
+        setTotal(filteredTyres.length);
     };
 
     const debouncedApplyPattern = useDebouncedCallback(apllyPattern, FILTER_DEBOUNCE_MS);
@@ -232,8 +254,9 @@ function Tyres() {
         );
     };
 
-    const handleskip = (num) => {
-        setSkip(num);
+    const onPageChange = (event) => {
+        setSkip(event.first);
+        setRows(event.rows);
     };
 
     const handlesuccess = () => {
@@ -285,10 +308,13 @@ function Tyres() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            lazy={!isFiltering}
                             paginator
-                            rows={10}
+                            first={skip}
+                            rows={rows}
                             rowsPerPageOptions={[10, 20, 50]}
                             totalRecords={total}
+                            onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

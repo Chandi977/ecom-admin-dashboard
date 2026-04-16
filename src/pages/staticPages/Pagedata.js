@@ -5,8 +5,7 @@ import { InputText } from "primereact/inputtext";
 import { useParams } from "react-router-dom";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
-import { Editor } from "react-draft-wysiwyg";
-import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import Editor from "../../components/SafeRichTextEditor";
 import { EditorState, ContentState } from "draft-js";
 import draftToHtml from "draftjs-to-html";
 import htmlToDraft from "html-to-draftjs";
@@ -113,3 +112,4 @@ function Pagedata() {
 }
 
 export default Pagedata;
+

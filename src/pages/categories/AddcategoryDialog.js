@@ -5,9 +5,42 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
+import { createOverviewField, normalizeOverviewFields, slugifyOverviewFieldKey } from "../../utils/overviewFields";
 
 function AddcategoryDialog({ onsuccess }) {
     const dispatch = useDispatch();
+    const [overviewFields, setOverviewFields] = React.useState([]);
+
+    const handleOverviewFieldChange = (index, field, value) => {
+        setOverviewFields((prev) =>
+            prev.map((item, itemIndex) => {
+                if (itemIndex !== index) {
+                    return item;
+                }
+
+                if (field === "label") {
+                    return {
+                        ...item,
+                        label: value,
+                        key: item.key || slugifyOverviewFieldKey(value),
+                    };
+                }
+
+                return {
+                    ...item,
+                    [field]: value,
+                };
+            }),
+        );
+    };
+
+    const handleAddOverviewField = () => {
+        setOverviewFields((prev) => [...prev, createOverviewField()]);
+    };
+
+    const handleRemoveOverviewField = (index) => {
+        setOverviewFields((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    };
 
     const formik = useFormik({
         initialValues: {
@@ -23,6 +56,7 @@ function AddcategoryDialog({ onsuccess }) {
                 category_id: data.category_id,
                 meta_title: data.meta_title,
                 meta_description: data.meta_description,
+                overview_fields: normalizeOverviewFields(overviewFields),
             };
             await dispatch(handlePostRequest(dat, "/category/create", true, true));
             onsuccess();
@@ -74,6 +108,26 @@ function AddcategoryDialog({ onsuccess }) {
                             <InputText placeholder="Amazon" id="meta_description" name="meta_description" value={formik.values.meta_description} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("meta_description") }, "Input__Round")} />
 
                             {getFormErrorMessage("meta_description")}
+                        </div>
+                    </div>
+                    <div className="p-field col-12 md:col-12">
+                        <div className="p-field" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <label className="Label__Text">Quick Overview Fields</label>
+                                <Button type="button" label="Add Field" onClick={handleAddOverviewField} style={{ width: "140px", height: "35px" }} />
+                            </div>
+                            <small>These fields will be available for products in this category.</small>
+                            {overviewFields.map((field, index) => (
+                                <div key={field.key || `overview-field-${index}`} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                                    <InputText
+                                        placeholder="Field label"
+                                        value={field.label}
+                                        onChange={(e) => handleOverviewFieldChange(index, "label", e.target.value)}
+                                        className="Input__Round"
+                                    />
+                                    <Button type="button" label="Remove" className="p-button-danger" onClick={() => handleRemoveOverviewField(index)} />
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>

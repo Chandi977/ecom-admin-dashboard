@@ -6,11 +6,11 @@ import { InputText } from "primereact/inputtext";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { handleGetRequest } from "../../services/GetTemplate";
-import { Editor } from "react-draft-wysiwyg";
-import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import Editor from "../../components/SafeRichTextEditor";
 import { EditorState } from "draft-js";
 import draftToHtml from "draftjs-to-html";
 import { toast } from "react-toastify";
+import { createOverviewField, mergeOverviewFieldsWithTemplate, normalizeOverviewFields, slugifyOverviewFieldKey } from "../../utils/overviewFields";
 
 function AddproductDialog({ onsuccess }) {
     const [text1, setText1] = useState(EditorState.createEmpty());
@@ -26,6 +26,7 @@ function AddproductDialog({ onsuccess }) {
     const [price, setPrice] = useState([]);
     const [images, setImages] = useState([]);
     const [urls, setUrls] = useState([]);
+    const [overviewFields, setOverviewFields] = useState([]);
 
     const getData = useCallback(async () => {
         const cat = await handleGetRequest("/category/all");
@@ -64,7 +65,7 @@ function AddproductDialog({ onsuccess }) {
             const temp = subCategories?.filter((item) => String(item.category) === String(id));
             setFilteredSubCategories(temp);
         },
-        [subCategories]
+        [subCategories],
     );
 
     useEffect(() => {
@@ -73,6 +74,16 @@ function AddproductDialog({ onsuccess }) {
         }
     }, [selectedCategory, handleSubCategory]);
 
+    useEffect(() => {
+        if (!selectedCategory) {
+            return;
+        }
+
+        const selectedCategoryData = categories.find((item) => item?._id === selectedCategory);
+        const templateFields = selectedCategoryData?.overview_fields || [];
+        setOverviewFields((prev) => mergeOverviewFieldsWithTemplate(templateFields, prev));
+    }, [selectedCategory, categories]);
+
     const toNumber = (v) => {
         const n = Number(v);
         return Number.isFinite(n) ? n : undefined;
@@ -80,14 +91,7 @@ function AddproductDialog({ onsuccess }) {
 
     const normalizePriceList = () =>
         price
-            .filter(
-                (p) =>
-                    p?.number ||
-                    p?.MRP ||
-                    p?.SP ||
-                    p?.pack_weight ||
-                    p?.stock_quantity
-            )
+            .filter((p) => p?.number || p?.MRP || p?.SP || p?.pack_weight || p?.stock_quantity)
             .map((p) => ({
                 number: toNumber(p.number),
                 MRP: toNumber(p.MRP),
@@ -109,13 +113,13 @@ function AddproductDialog({ onsuccess }) {
             thickness: "",
             pouch_weight: "",
             material: "",
-            delivery_time: "",
             hsn_code: "",
             price: "",
             gst: "",
             gusset: "",
             print: "",
             label_in_roll: "",
+            core_size: "",
             color: "",
             length: "",
             width: "",
@@ -171,13 +175,13 @@ function AddproductDialog({ onsuccess }) {
                 thickness: data?.thickness,
                 pouch_weight: data?.pouch_weight,
                 material: data?.material,
-                delivery_time: data?.delivery_time,
                 hsn_code: data?.hsn_code,
                 priceList,
                 gst: toNumber(data?.gst),
                 gusset: data?.gusset,
                 print: data?.print,
                 label_in_roll: toNumber(data?.label_in_roll),
+                core_size: toNumber(data?.core_size),
                 color: data?.color,
                 length: toNumber(data?.length),
                 width: toNumber(data?.width),
@@ -194,6 +198,7 @@ function AddproductDialog({ onsuccess }) {
                 length_mm: toNumber(data?.length_mm),
                 aboutItem: data?.aboutItem,
                 images: imu,
+                overview_fields: normalizeOverviewFields(overviewFields, { includeValue: true }),
             };
             if (subCategoryId) {
                 dat.sub_category = String(subCategoryId);
@@ -236,6 +241,38 @@ function AddproductDialog({ onsuccess }) {
         setImages(filtered);
         setUrls(filtered2);
     };
+
+    const handleOverviewFieldChange = (index, field, value) => {
+        setOverviewFields((prev) =>
+            prev.map((item, itemIndex) => {
+                if (itemIndex !== index) {
+                    return item;
+                }
+
+                if (field === "label") {
+                    return {
+                        ...item,
+                        label: value,
+                        key: item.key || slugifyOverviewFieldKey(value),
+                    };
+                }
+
+                return {
+                    ...item,
+                    [field]: value,
+                };
+            }),
+        );
+    };
+
+    const handleAddOverviewField = () => {
+        setOverviewFields((prev) => [...prev, createOverviewField()]);
+    };
+
+    const handleRemoveOverviewField = (index) => {
+        setOverviewFields((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    };
+
     return (
         <>
             <form onSubmit={formik.handleSubmit} className="p-fluid p-mt-2">
@@ -413,18 +450,6 @@ function AddproductDialog({ onsuccess }) {
                         </div>
                     </div>
 
-                    {/* DELIVERY TIME */}
-                    <div className="p-field col-12 md:col-12">
-                        <div className="p-field">
-                            <label htmlFor="delivery_time" className={classNames({ "p-error": isFormFieldValid("delivery_time") }, "Label__Text")}>
-                                Delivery Time
-                            </label>
-                            <InputText placeholder="2-4 days" id="delivery_time" name="delivery_time" value={formik.values.delivery_time} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("delivery_time") }, "Input__Round")} />
-
-                            {getFormErrorMessage("delivery_time")}
-                        </div>
-                    </div>
-
                     {/* HSN CODE */}
                     <div className="p-field col-12 md:col-12">
                         <div className="p-field">
@@ -515,6 +540,32 @@ function AddproductDialog({ onsuccess }) {
                             <InputText placeholder="About the product" id="aboutItem" name="aboutItem" value={formik.values.aboutItem} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("aboutItem") }, "Input__Round")} />
 
                             {getFormErrorMessage("aboutItem")}
+                        </div>
+                    </div>
+                    <div className="p-field col-12 md:col-12">
+                        <div className="p-field" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <label className="Label__Text">Quick Overview Values</label>
+                                <Button type="button" label="Add Row" onClick={handleAddOverviewField} style={{ width: "140px", height: "35px" }} />
+                            </div>
+                            <small>Category fields are loaded automatically. You can edit labels and values per product.</small>
+                            {overviewFields.map((field, index) => (
+                                <div key={field.key || `overview-field-${index}`} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                                    <InputText
+                                        placeholder="Label"
+                                        value={field.label}
+                                        onChange={(e) => handleOverviewFieldChange(index, "label", e.target.value)}
+                                        className="Input__Round"
+                                    />
+                                    <InputText
+                                        placeholder="Value"
+                                        value={field.value || ""}
+                                        onChange={(e) => handleOverviewFieldChange(index, "value", e.target.value)}
+                                        className="Input__Round"
+                                    />
+                                    <Button type="button" label="Remove" className="p-button-danger" onClick={() => handleRemoveOverviewField(index)} />
+                                </div>
+                            ))}
                         </div>
                     </div>
 
@@ -683,6 +734,17 @@ function AddproductDialog({ onsuccess }) {
                             <InputText placeholder="20" id="label_in_roll" name="label_in_roll" value={formik.values.label_in_roll} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("label_in_roll") }, "Input__Round")} />
 
                             {getFormErrorMessage("label_in_roll")}
+                        </div>
+                    </div>
+
+                    <div className="p-field col-12 md:col-12">
+                        <div className="p-field">
+                            <label htmlFor="core_size" className={classNames({ "p-error": isFormFieldValid("core_size") }, "Label__Text")}>
+                                Core size in inch
+                            </label>
+                            <InputText placeholder="3" id="core_size" name="core_size" value={formik.values.core_size} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("core_size") }, "Input__Round")} />
+
+                            {getFormErrorMessage("core_size")}
                         </div>
                     </div>
 

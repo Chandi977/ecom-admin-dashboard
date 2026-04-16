@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
 import { useHistory } from "react-router-dom";
@@ -26,6 +26,8 @@ function GlobalOffers() {
     const [manufacturers, setManufacturers] = useState([]);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(10);
+    const [isFiltering, setIsFiltering] = useState(false);
     const [loading, setLoading] = useState();
     const dispatch = useDispatch();
     const menu = useRef(null);
@@ -39,6 +41,7 @@ function GlobalOffers() {
     const getVehicleManufacturers = async () => {
         const params = {
             skip: skip,
+            limit: rows,
         };
         const res = await handleGetRequest("/allOffers", params);
         const result = await handleGetRequest("/countGlobal");
@@ -46,8 +49,10 @@ function GlobalOffers() {
         setManufacturers(res?.data);
     };
     useEffect(() => {
-        getVehicleManufacturers();
-    }, [skip]);
+        if (!isFiltering) {
+            getVehicleManufacturers();
+        }
+    }, [isFiltering, rows, skip]);
     const handleActionButton = (e, rowData) => {
         e.preventDefault();
         history.push(`/globaloffer/${rowData?._id}`);
@@ -112,15 +117,20 @@ function GlobalOffers() {
     const handleApplyFilter = async (value, names) => {
         const trimmed = (value || "").trim();
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            getVehicleManufacturers();
+            setIsFiltering(false);
+            setSkip(0);
             return;
         }
+        setIsFiltering(true);
+        setSkip(0);
         const result = await Axios.get(DEV + "/searchOffer", {
             params: {
                 [names]: trimmed,
             },
         });
-        setManufacturers(result?.data?.data);
+        const filteredOffers = result?.data?.data || [];
+        setManufacturers(filteredOffers);
+        setTotal(filteredOffers.length);
     };
 
     const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
@@ -145,9 +155,10 @@ function GlobalOffers() {
         window.location.reload();
     };
 
-    const handleskip = (num) => {
-        setSkip(num);
-    };
+    const onPageChange = useCallback((event) => {
+        setSkip(event.first);
+        setRows(event.rows);
+    }, []);
     return (
         <>
             <Dialog visible={showDialog} header="Offers" style={{ width: "750px" }} onHide={() => setShowDialog(false)}>
@@ -170,10 +181,13 @@ function GlobalOffers() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            lazy={!isFiltering}
                             paginator
-                            rows={10}
+                            first={skip}
+                            rows={rows}
                             rowsPerPageOptions={[10, 20, 50]}
                             totalRecords={total}
+                            onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No List found."

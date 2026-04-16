@@ -17,6 +17,7 @@ function Coupons() {
     const [manufacturers, setManufacturers] = useState([]);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
+    const [rows, setRows] = useState(12);
     const dispatch = useDispatch();
     const history = useHistory();
     const [role, setRole] = useState("");
@@ -27,13 +28,14 @@ function Coupons() {
     const getBrands = useCallback(async () => {
         const params = {
             skip: skip,
+            limit: rows,
         };
         const res = await handleGetRequest("/coupon/get/all", params);
         const total = await handleGetRequest("/coupon/count");
         // console.log("res", res);
         setManufacturers(res?.data);
         setTotal(total?.data);
-    }, [skip]);
+    }, [rows, skip]);
     useEffect(() => {
         getBrands();
     }, [getBrands]);
@@ -80,9 +82,10 @@ function Coupons() {
         window.location.reload();
     };
 
-    const handleskip = (num) => {
-        setSkip(num);
-    };
+    const onPageChange = useCallback((event) => {
+        setSkip(event.first);
+        setRows(event.rows);
+    }, []);
     const onHideFaq = () => {
         setShowDialog(false);
     };
@@ -119,13 +122,19 @@ function Coupons() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive"
+                            lazy
+                            paginator
+                            first={skip}
+                            rows={rows}
+                            rowsPerPageOptions={[12, 24, 48]}
+                            totalRecords={total}
+                            onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
                             emptyMessage="No Coupon Code found."
                             responsiveLayout="scroll"
                             value={manufacturers}
                             selection={selectedRow}
-                            rows={12}
                             onSelectionChange={(e) => setselectedRow(e.value)}
                         >
                             <Column selectionMode="multiple" style={{ width: "3em" }} />
