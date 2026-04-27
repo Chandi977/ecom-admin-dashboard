@@ -2,6 +2,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { loadingAction } from "../redux/loadingAction";
 import { DEV } from "./constants";
+import { clearGetRequestCache } from "./GetTemplate";
 
 export const handlePostRequest =
     (data, url, isShowLoad = false, isShowToast = true) =>
@@ -21,6 +22,7 @@ export const handlePostRequest =
                 },
             });
             if (isShowLoad) dispatch(loadingAction(false));
+            clearGetRequestCache();
             return response?.data;
         } catch (error) {
             console.error("Error in handlePostRequest:", error);

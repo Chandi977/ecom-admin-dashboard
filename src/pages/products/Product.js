@@ -32,6 +32,19 @@ const formatProductLabel = (product) => {
     return [brandName, name, model].filter(Boolean).join(" ").trim();
 };
 
+const hydrateProductSelections = (values, selectableProducts) => {
+    const productLookup = new Map((selectableProducts || []).filter((item) => item?._id).map((item) => [item._id, item]));
+
+    return (Array.isArray(values) ? values : [])
+        .map((value) => {
+            if (value && typeof value === "object" && value._id) return value;
+            const id = normalizeId(value);
+            if (!id) return null;
+            return productLookup.get(id) || { _id: id, name: id };
+        })
+        .filter(Boolean);
+};
+
 function Product() {
     const [manufacturer, setManufacturers] = useState();
     const history = useHistory();
@@ -95,97 +108,60 @@ function Product() {
         const uniqueProducts = Array.from(new Map(allProducts.map((item) => [item?._id, item])).values()).filter(Boolean);
 
         setProducts(uniqueProducts);
+        return uniqueProducts;
     }, []);
 
     useEffect(() => {
         const getData = async () => {
-            const res = await handleGetRequest(`/product/single/${id}`);
-            setSelectedBrand(normalizeId(res?.data?.brand));
-            setSelectedCategory(normalizeId(res?.data?.category));
-            setSelectedSubCategory(normalizeId(res?.data?.sub_category));
-            setCategoryId(normalizeId(res?.data?.category));
-            console.log("Category ID: ", normalizeId(res?.data.category));
-            setBuyItWith(res?.data?.buyItWith);
-            setRelatedProducts(res?.data?.relatedProducts);
-            setPrice(res?.data?.priceList);
-            setSelectedProductIds(res?.data?.buyItWith || []);
-            setSelectedProductIdsRP(res?.data?.relatedProducts || []);
-            setOverviewFields(Array.isArray(res?.data?.overview_fields) ? res.data.overview_fields : []);
-            if (res?.data?.description) {
-                const contentBlock = htmlToDraft(res?.data?.description);
+            const [res, cat, subcat, brand, selectableProducts] = await Promise.all([
+                handleGetRequest(`/product/single/${id}`),
+                handleGetRequest("/category/all"),
+                handleGetRequest("/subcategory/all"),
+                handleGetRequest("/brand/all"),
+                fetchSelectableProducts(),
+            ]);
+            const productData = res?.data || {};
+            const hydratedBuyItWith = hydrateProductSelections(productData?.buyItWith, selectableProducts);
+            const hydratedRelatedProducts = hydrateProductSelections(productData?.relatedProducts, selectableProducts);
+
+            setSelectedBrand(normalizeId(productData?.brand));
+            setSelectedCategory(normalizeId(productData?.category));
+            setSelectedSubCategory(normalizeId(productData?.sub_category));
+            setCategoryId(normalizeId(productData?.category));
+            setBuyItWith(hydratedBuyItWith);
+            setRelatedProducts(hydratedRelatedProducts);
+            setPrice(productData?.priceList);
+            setSelectedProductIds(hydratedBuyItWith);
+            setSelectedProductIdsRP(hydratedRelatedProducts);
+            setOverviewFields(Array.isArray(productData?.overview_fields) ? productData.overview_fields : []);
+            if (productData?.description) {
+                const contentBlock = htmlToDraft(productData?.description);
                 if (contentBlock) {
                     const contentState = ContentState.createFromBlockArray(contentBlock.contentBlocks);
                     const editorState = EditorState.createWithContent(contentState);
                     setText1(editorState);
                 }
             }
-            setDescription(res?.data?.description || "");
+            setDescription(productData?.description || "");
 
-            setManufacturers(res?.data);
+            setManufacturers(productData);
 
-            const cat = await handleGetRequest("/category/all");
-            const subcat = await handleGetRequest("/subcategory/all");
-            const brand = await handleGetRequest("/brand/all");
-            await fetchSelectableProducts();
-            setCategories(cat?.data);
-            setSubCategories(subcat?.data);
-            setBrands(brand?.data);
-            const imageNames = res?.data?.images?.map((im) => im?.image) || [];
+            setCategories(cat?.data || []);
+            setSubCategories(subcat?.data || []);
+            setBrands(brand?.data || []);
+            const imageNames = productData?.images?.map((im) => im?.image) || [];
             const imageUrls = await Promise.all(
                 imageNames.map(async (image) => {
                     const result = await handleGetRequest(`/getImage?image=${image}`);
                     return result?.data?.url;
                 }),
             );
-            setImages(imageUrls);
+            setImages(imageUrls.filter(Boolean));
             setUrl(imageNames);
         };
 
         getData();
     }, [id, fetchSelectableProducts]);
-
-    const fetchProductDetails = useCallback(async (productId) => {
-        const res = await handleGetRequest(`/product/single/${productId}`);
-        return res?.data;
-    }, []);
-
-    const fetchBuyItWithDetails = useCallback(
-        async (productIds) => {
-            const productDetails = await Promise.all(productIds.map(fetchProductDetails));
-            setBuyItWith(productDetails);
-        },
-        [fetchProductDetails],
-    );
-
-    const fetchBuyItWithDetailsRP = useCallback(
-        async (productIds) => {
-            const productDetails = await Promise.all(productIds.map(fetchProductDetails));
-            setRelatedProducts(productDetails);
-        },
-        [fetchProductDetails],
-    );
-
-    useEffect(() => {
-        if (buyItWith && buyItWith.length > 0) {
-            const hasObject = buyItWith.some((product) => product && typeof product === "object");
-            if (hasObject) return;
-            const productIds = buyItWith.map((product) => normalizeId(product)).filter(Boolean);
-            if (productIds.length > 0) {
-                fetchBuyItWithDetails(productIds);
-            }
-        }
-    }, [buyItWith, fetchBuyItWithDetails]);
-
-    useEffect(() => {
-        if (relatedProducts && relatedProducts.length > 0) {
-            const hasObject = relatedProducts.some((product) => product && typeof product === "object");
-            if (hasObject) return;
-            const productIds = relatedProducts.map((product) => normalizeId(product)).filter(Boolean);
-            if (productIds.length > 0) {
-                fetchBuyItWithDetailsRP(productIds);
-            }
-        }
-    }, [relatedProducts, fetchBuyItWithDetailsRP]);
 
     const handleSelection = (selectedProduct) => {
         if (!selectedProduct?._id) return;
@@ -1040,7 +1016,7 @@ function Product() {
                                         <label htmlFor="print" className={classNames({ "p-error": isFormFieldValid("print") }, "Label__Text")}>
                                             Print
                                         </label>
-                                        <InputText placeholder="un-printed" id="print" name="print" value={formik.values.print} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("print") }, "Input__Round")} />
+                                        <InputText placeholder="unprinted" id="print" name="print" value={formik.values.print} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("print") }, "Input__Round")} />
 
                                         {getFormErrorMessage("print")}
                                     </div>
@@ -1272,18 +1248,8 @@ function Product() {
                                 <small>Category fields are merged automatically. Edit the values that should appear on the product page.</small>
                                 {overviewFields.map((field, index) => (
                                     <div key={field.key || `overview-field-${index}`} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                                        <InputText
-                                            placeholder="Label"
-                                            value={field.label}
-                                            onChange={(e) => handleOverviewFieldChange(index, "label", e.target.value)}
-                                            className="Input__Round"
-                                        />
-                                        <InputText
-                                            placeholder="Value"
-                                            value={field.value || ""}
-                                            onChange={(e) => handleOverviewFieldChange(index, "value", e.target.value)}
-                                            className="Input__Round"
-                                        />
+                                        <InputText placeholder="Label" value={field.label} onChange={(e) => handleOverviewFieldChange(index, "label", e.target.value)} className="Input__Round" />
+                                        <InputText placeholder="Value" value={field.value || ""} onChange={(e) => handleOverviewFieldChange(index, "value", e.target.value)} className="Input__Round" />
                                         <Button type="button" label="Remove" className="p-button-danger" onClick={() => handleRemoveOverviewField(index)} />
                                     </div>
                                 ))}

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { toast } from "react-toastify";
 import { DEV } from "./constants";
+import { clearGetRequestCache } from "./GetTemplate";
 
 export const handlePutRequest = async (data, url) => {
     const token = localStorage.getItem("token");
@@ -14,6 +15,7 @@ export const handlePutRequest = async (data, url) => {
         },
     })
         .then((res) => {
+            clearGetRequestCache();
             return res?.data;
         })
         .catch((error) => {

@@ -29,12 +29,10 @@ function AddproductDialog({ onsuccess }) {
     const [overviewFields, setOverviewFields] = useState([]);
 
     const getData = useCallback(async () => {
-        const cat = await handleGetRequest("/category/all");
-        const subcat = await handleGetRequest("/subcategory/all");
-        const brand = await handleGetRequest("/brand/all");
-        setCategories(cat?.data);
-        setSubCategories(subcat?.data);
-        setBrands(brand?.data);
+        const [cat, subcat, brand] = await Promise.all([handleGetRequest("/category/all"), handleGetRequest("/subcategory/all"), handleGetRequest("/brand/all")]);
+        setCategories(cat?.data || []);
+        setSubCategories(subcat?.data || []);
+        setBrands(brand?.data || []);
     }, []);
 
     const addPrice = () => {
@@ -551,18 +549,8 @@ function AddproductDialog({ onsuccess }) {
                             <small>Category fields are loaded automatically. You can edit labels and values per product.</small>
                             {overviewFields.map((field, index) => (
                                 <div key={field.key || `overview-field-${index}`} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                                    <InputText
-                                        placeholder="Label"
-                                        value={field.label}
-                                        onChange={(e) => handleOverviewFieldChange(index, "label", e.target.value)}
-                                        className="Input__Round"
-                                    />
-                                    <InputText
-                                        placeholder="Value"
-                                        value={field.value || ""}
-                                        onChange={(e) => handleOverviewFieldChange(index, "value", e.target.value)}
-                                        className="Input__Round"
-                                    />
+                                    <InputText placeholder="Label" value={field.label} onChange={(e) => handleOverviewFieldChange(index, "label", e.target.value)} className="Input__Round" />
+                                    <InputText placeholder="Value" value={field.value || ""} onChange={(e) => handleOverviewFieldChange(index, "value", e.target.value)} className="Input__Round" />
                                     <Button type="button" label="Remove" className="p-button-danger" onClick={() => handleRemoveOverviewField(index)} />
                                 </div>
                             ))}
@@ -719,7 +707,7 @@ function AddproductDialog({ onsuccess }) {
                             <label htmlFor="print" className={classNames({ "p-error": isFormFieldValid("print") }, "Label__Text")}>
                                 Print
                             </label>
-                            <InputText placeholder="un-printed" id="print" name="print" value={formik.values.print} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("print") }, "Input__Round")} />
+                            <InputText placeholder="unprinted" id="print" name="print" value={formik.values.print} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("print") }, "Input__Round")} />
 
                             {getFormErrorMessage("print")}
                         </div>
@@ -729,7 +717,7 @@ function AddproductDialog({ onsuccess }) {
                     <div className="p-field col-12 md:col-12">
                         <div className="p-field">
                             <label htmlFor="label_in_roll" className={classNames({ "p-error": isFormFieldValid("label_in_roll") }, "Label__Text")}>
-                                Number of labels in role
+                                Number of labels in roll
                             </label>
                             <InputText placeholder="20" id="label_in_roll" name="label_in_roll" value={formik.values.label_in_roll} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("label_in_roll") }, "Input__Round")} />
 
