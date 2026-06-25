@@ -9,6 +9,8 @@ import { handleGetRequest } from "../../services/GetTemplate";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
 import { createOverviewField, normalizeOverviewFields, slugifyOverviewFieldKey } from "../../utils/overviewFields";
+import { FieldVisibilityGrid } from "../../components/FieldVisibilityGrid";
+import { FIELD_VISIBILITY_GROUPS, normalizeFieldVisibility } from "../../utils/fieldVisibility";
 
 function Category() {
     const [manufacturer, setManufacturers] = useState();
@@ -20,6 +22,7 @@ function Category() {
     const [meta_description, setMetaDescription] = useState();
     const [category_id, setCategoryId] = useState();
     const [overviewFields, setOverviewFields] = useState([]);
+    const [fieldVisibility, setFieldVisibility] = useState({});
 
     const getData = useCallback(async () => {
         const res = await handleGetRequest(`/category/get/${id}`);
@@ -29,6 +32,7 @@ function Category() {
         setMetaDescription(res?.data?.meta_description);
         setCategoryId(res?.data?.category_id);
         setOverviewFields(Array.isArray(res?.data?.overview_fields) ? res.data.overview_fields : []);
+        setFieldVisibility(res?.data?.field_visibility && typeof res.data.field_visibility === "object" ? res.data.field_visibility : {});
 
         setManufacturers(res?.data);
     }, [id]);
@@ -57,6 +61,7 @@ function Category() {
                 id: id,
                 category_id: category_id,
                 overview_fields: normalizeOverviewFields(overviewFields),
+                field_visibility: normalizeFieldVisibility(fieldVisibility),
             };
             const res = await handlePutRequest(dat, "/category/update");
             if (res?.success === true) {
@@ -102,6 +107,10 @@ function Category() {
 
     const handleRemoveOverviewField = (index) => {
         setOverviewFields((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    };
+
+    const handleFieldVisibilityToggle = (key, checked) => {
+        setFieldVisibility((prev) => ({ ...prev, [key]: checked }));
     };
 
     return (
@@ -196,6 +205,20 @@ function Category() {
                                     ))}
                                 </div>
                             </div>
+                        </div>
+
+                        <div style={{ marginTop: "20px" }}>
+                            <label className="Label__Text">Storefront Field Visibility</label>
+                            <small style={{ display: "block", marginBottom: "10px" }}>
+                                Controls which common product-page fields are shown for every product in this
+                                category. Ticked = shown, unticked = hidden. Individual products can still hide
+                                their own specification rows. Everything is shown by default.
+                            </small>
+                            <FieldVisibilityGrid
+                                groups={FIELD_VISIBILITY_GROUPS}
+                                value={fieldVisibility}
+                                onToggle={handleFieldVisibilityToggle}
+                            />
                         </div>
 
                         <div className="Down__Btn">

@@ -6,15 +6,27 @@ import App from "./App";
 import { BrowserRouter } from "react-router-dom";
 import ScrollToTop from "./ScrollToTop";
 import { Provider } from "react-redux";
-import store from "./redux/store"
+import store from "./redux/store";
+import { QueryClient, QueryClientProvider } from "react-query";
 
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            refetchOnWindowFocus: false,
+            retry: 1,
+            staleTime: 5 * 60 * 1000, // 5 minutes cache TTL
+        },
+    },
+});
 
 ReactDOM.render(
     <BrowserRouter>
         <ScrollToTop>
-           <Provider store={store}>
-           <App></App>
-           </Provider>
+            <Provider store={store}>
+                <QueryClientProvider client={queryClient}>
+                    <App />
+                </QueryClientProvider>
+            </Provider>
         </ScrollToTop>
     </BrowserRouter>,
     document.getElementById("root")

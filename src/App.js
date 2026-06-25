@@ -50,6 +50,7 @@ import SubCategories from "./pages/subCategories/SubCategories";
 import SubCategory from "./pages/subCategories/SubCategory";
 import Products from "./pages/products/Products";
 import Product from "./pages/products/Product";
+import { ProductCreate } from "./features/products/ProductCreate";
 import Deals from "./pages/deals/Deals";
 import Deal from "./pages/deals/Deal";
 import CustomPackaging from "./pages/custom-packaging/customPackaging";
@@ -356,6 +357,7 @@ const App = () => {
                                 <ProtectedRoute exact path="/subcategories" component={SubCategories} allowedRoles={["admin", "manager"]} />
                                 <ProtectedRoute exact path="/subcategory/:id" component={SubCategory} allowedRoles={["admin", "manager"]} />
                                 <ProtectedRoute exact path="/products" component={Products} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/products/create" component={ProductCreate} allowedRoles={["admin", "manager"]} />
                                 <ProtectedRoute exact path="/product/:id" component={Product} allowedRoles={["admin", "manager"]} />
                                 <ProtectedRoute exact path="/deals" component={Deals} allowedRoles={["admin", "manager"]} />
                                 <ProtectedRoute exact path="/deal/:id" component={Deal} allowedRoles={["admin", "manager"]} />

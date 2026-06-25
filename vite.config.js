@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+// Force Vite server restart to clear file system watcher cache
 import react from "@vitejs/plugin-react";
 import path from "path";
 
