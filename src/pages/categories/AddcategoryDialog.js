@@ -6,10 +6,13 @@ import { InputText } from "primereact/inputtext";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { createOverviewField, normalizeOverviewFields, slugifyOverviewFieldKey } from "../../utils/overviewFields";
+import { SpecSchemaBuilder, CommonAttributesEditor, normalizeSpecSchema, pairsToAttributes } from "../../components/CategoryAttributesEditor";
 
 function AddcategoryDialog({ onsuccess }) {
     const dispatch = useDispatch();
     const [overviewFields, setOverviewFields] = React.useState([]);
+    const [specFields, setSpecFields] = React.useState([]);
+    const [attributePairs, setAttributePairs] = React.useState([]);
 
     const handleOverviewFieldChange = (index, field, value) => {
         setOverviewFields((prev) =>
@@ -57,6 +60,8 @@ function AddcategoryDialog({ onsuccess }) {
                 meta_title: data.meta_title,
                 meta_description: data.meta_description,
                 overview_fields: normalizeOverviewFields(overviewFields),
+                spec_schema: normalizeSpecSchema(specFields),
+                common_attributes: pairsToAttributes(attributePairs),
             };
             await dispatch(handlePostRequest(dat, "/category/create", true, true));
             onsuccess();
@@ -128,6 +133,16 @@ function AddcategoryDialog({ onsuccess }) {
                                     <Button type="button" label="Remove" className="p-button-danger" onClick={() => handleRemoveOverviewField(index)} />
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                    <div className="p-field col-12 md:col-12">
+                        <div className="p-field">
+                            <SpecSchemaBuilder value={specFields} onChange={setSpecFields} />
+                        </div>
+                    </div>
+                    <div className="p-field col-12 md:col-12">
+                        <div className="p-field">
+                            <CommonAttributesEditor value={attributePairs} onChange={setAttributePairs} />
                         </div>
                     </div>
                 </div>

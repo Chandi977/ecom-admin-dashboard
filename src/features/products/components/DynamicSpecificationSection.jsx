@@ -6,8 +6,30 @@ import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
 import classNames from "classnames";
 
+// Build the spec form schema from a category's backend `spec_schema`. Returns
+// null when the category hasn't defined one, so the caller can fall back to the
+// legacy hard-coded specificationSchemas.js for un-migrated categories.
+const buildSchemaFromCategory = (category) => {
+    const specSchema = Array.isArray(category?.spec_schema) ? category.spec_schema : [];
+    if (!specSchema.length) return null;
+    return {
+        displayName: `${category?.name || "Category"} Specifications`,
+        fields: specSchema
+            .filter((field) => field && field.key)
+            .map((field) => ({
+                name: field.key,
+                label: field.label || field.key,
+                type: ["text", "number", "select"].includes(field.type) ? field.type : "text",
+                options: Array.isArray(field.options) ? field.options : undefined,
+                required: !!field.required,
+                description: field.unit ? `Unit: ${field.unit}` : undefined,
+                default_value: field.default_value,
+            })),
+    };
+};
+
 export const DynamicSpecificationSection = () => {
-    const { control, watch, setValue } = useFormContext();
+    const { control, watch, setValue, getValues } = useFormContext();
     const { data: categories } = useCategories();
     const { data: subCategories } = useSubCategories();
 
@@ -28,13 +50,27 @@ export const DynamicSpecificationSection = () => {
         const category = categoriesList.find((c) => String(c._id) === String(selectedCategoryId));
         const subCategory = subCategoriesList.find((s) => String(s._id) === String(selectedSubCategoryId));
 
-        const schema = resolveSpecSchema(subCategory?.name || "", category?.name || "");
+        // Prefer the category's own spec_schema (admin-defined); fall back to the
+        // legacy hard-coded schemas for categories not yet migrated.
+        const schema =
+            buildSchemaFromCategory(category) || resolveSpecSchema(subCategory?.name || "", category?.name || "");
         setSpecSchema(schema);
 
         if (!schema) {
             setValue("specification", {}, { shouldDirty: true });
+            return;
         }
-    }, [selectedCategoryId, selectedSubCategoryId, categoriesList, subCategoriesList, setValue]);
+
+        // Pre-fill declared defaults for fields the form left blank. Never clobbers
+        // an existing value, so editing a product keeps its saved specs intact.
+        schema.fields.forEach((field) => {
+            if (field.default_value === undefined || field.default_value === null || field.default_value === "") return;
+            const current = getValues(`specification.${field.name}`);
+            if (current === undefined || current === null || current === "") {
+                setValue(`specification.${field.name}`, field.default_value, { shouldDirty: false });
+            }
+        });
+    }, [selectedCategoryId, selectedSubCategoryId, categoriesList, subCategoriesList, setValue, getValues]);
 
     if (!selectedCategoryId) {
         return (

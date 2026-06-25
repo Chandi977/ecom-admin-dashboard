@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import { createOverviewField, normalizeOverviewFields, slugifyOverviewFieldKey } from "../../utils/overviewFields";
 import { FieldVisibilityGrid } from "../../components/FieldVisibilityGrid";
 import { FIELD_VISIBILITY_GROUPS, normalizeFieldVisibility } from "../../utils/fieldVisibility";
+import { SpecSchemaBuilder, CommonAttributesEditor, normalizeSpecSchema, specSchemaToEditable, pairsToAttributes, attributesToPairs } from "../../components/CategoryAttributesEditor";
 
 function Category() {
     const [manufacturer, setManufacturers] = useState();
@@ -23,6 +24,8 @@ function Category() {
     const [category_id, setCategoryId] = useState();
     const [overviewFields, setOverviewFields] = useState([]);
     const [fieldVisibility, setFieldVisibility] = useState({});
+    const [specFields, setSpecFields] = useState([]);
+    const [attributePairs, setAttributePairs] = useState([]);
 
     const getData = useCallback(async () => {
         const res = await handleGetRequest(`/category/get/${id}`);
@@ -33,6 +36,8 @@ function Category() {
         setCategoryId(res?.data?.category_id);
         setOverviewFields(Array.isArray(res?.data?.overview_fields) ? res.data.overview_fields : []);
         setFieldVisibility(res?.data?.field_visibility && typeof res.data.field_visibility === "object" ? res.data.field_visibility : {});
+        setSpecFields(specSchemaToEditable(res?.data?.spec_schema));
+        setAttributePairs(attributesToPairs(res?.data?.common_attributes));
 
         setManufacturers(res?.data);
     }, [id]);
@@ -62,6 +67,8 @@ function Category() {
                 category_id: category_id,
                 overview_fields: normalizeOverviewFields(overviewFields),
                 field_visibility: normalizeFieldVisibility(fieldVisibility),
+                spec_schema: normalizeSpecSchema(specFields),
+                common_attributes: pairsToAttributes(attributePairs),
             };
             const res = await handlePutRequest(dat, "/category/update");
             if (res?.success === true) {
@@ -219,6 +226,14 @@ function Category() {
                                 value={fieldVisibility}
                                 onToggle={handleFieldVisibilityToggle}
                             />
+                        </div>
+
+                        <div style={{ marginTop: "20px" }}>
+                            <SpecSchemaBuilder value={specFields} onChange={setSpecFields} />
+                        </div>
+
+                        <div style={{ marginTop: "20px" }}>
+                            <CommonAttributesEditor value={attributePairs} onChange={setAttributePairs} />
                         </div>
 
                         <div className="Down__Btn">
