@@ -1,0 +1,54 @@
+.page__main {
+
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 30px;
+    .double_open {
+        margin-right: 15px;
+        font-size: 17px;
+        margin-top: 10px;
+        cursor: pointer;
+    }
+    .double_close {
+        margin-left: 15px;
+        font-size: 17px;
+        margin-top: 10px;
+        cursor: pointer;
+    }
+    .single_open {
+        margin-right: 15px;
+        font-size: 17px;
+        margin-top: 10px;
+        cursor: pointer;
+    }
+    .single_close {
+        margin-left: 15px;
+        font-size: 17px;
+        margin-top: 10px;
+        cursor: pointer;
+    }
+    .selected {
+        font-size: 17px;
+        margin-left: 10px;
+        margin-right: 10px;
+        background-color: aquamarine;
+        border-radius: 50%;
+        padding: 2px 12px;
+        margin-top: 10px;
+        cursor: pointer;
+    }
+    .not-selected {
+        font-size: 17px;
+        margin-left: 10px;
+        margin-right: 10px;
+        margin-top: 10px;
+        cursor: pointer;
+    }
+    .inner-text{
+        font-size: 17px;
+            margin-left: 10px;
+            margin-right: 10px;
+    }
+}

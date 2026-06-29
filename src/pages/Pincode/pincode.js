@@ -1,0 +1,261 @@
+import React, { useCallback, useEffect, useState } from "react";
+import { Button } from "primereact/button";
+import { useHistory } from "react-router-dom";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Dialog } from "primereact/dialog";
+import { handleGetRequest } from "../../services/GetTemplate";
+import moment from "moment";
+import { useDispatch } from "react-redux";
+import { toast } from "react-toastify";
+import { handlePostRequest } from "../../services/PostTemplate";
+import Axios from "axios";
+import { DEV } from "../../services/constants";
+import AddPincodeDialog from "./AddPincodeDialog";
+import { FaPen, FaTrash } from "react-icons/fa";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
+
+const MIN_FILTER_LENGTH = 2;
+const FILTER_DEBOUNCE_MS = 300;
+
+function PinCodes() {
+    const [selectedRow, setselectedRow] = useState([]);
+    const [showDialog, setShowDialog] = useState(false);
+    const [manufacturers, setManufacturers] = useState([]);
+    const dispatch = useDispatch();
+    const history = useHistory();
+    const [role, setRole] = useState("");
+
+    const handledClicked = () => {
+        setShowDialog(true);
+    };
+    const getBrands = useCallback(async () => {
+        const res = await handleGetRequest("/pinCode/get/all");
+        setManufacturers(res?.data);
+    }, []);
+    useEffect(() => {
+        getBrands();
+    }, [getBrands]);
+    const actionBodyTemplate = (rowData) => {
+        return (
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {role === "admin" && (
+                <Button className="p-button-rounded mr-1 Elipse_Icon" onClick={() => history.push(`/pincode/${rowData?._id}`)}>
+                    <FaPen />
+                </Button>
+                )}
+                {role === "admin" && (
+                    <Button
+                        className="p-button-rounded p-button-text p-button-danger"
+                        onClick={() => handleDelete(rowData?._id)}
+                        tooltip="Delete Pincode"
+                        tooltipOptions={{ position: "left" }}
+                    >
+                        <FaTrash />
+                    </Button>
+                )}
+            </div>
+        );
+    };
+
+    const dateTemplate = (rowdata) => {
+        return (
+            <div>
+                <p>
+                    {moment(rowdata?.createdAt).format("DD-MM-YY")} &nbsp; | &nbsp;
+                    {moment(rowdata?.createdAt).format("hh:mm a")}
+                </p>
+            </div>
+        );
+    };
+
+    const handleDelete = (pincodeId) => {
+        const selectedId = pincodeId
+            ? [pincodeId]
+            : selectedRow
+                  .map((val) => val?._id)
+                  .filter(Boolean);
+
+        if (!selectedId.length) {
+            toast.info("Select at least one pincode to delete.");
+            return;
+        }
+
+        const data = { id: selectedId };
+        dispatch(handlePostRequest(data, "/pinCode/delete", true, true));
+        getBrands();
+        setselectedRow([]);
+        toast.success(selectedId.length > 1 ? "Pincodes deleted." : "Pincode deleted.");
+    };
+
+    const onsuccess = () => {
+        onHideFaq();
+        toast.success("Pincode added");
+        setShowDialog(false);
+        getBrands();
+    };
+
+    const [values, setValues] = useState({
+        pincode: "",
+        city: "",
+        state: "",
+    });
+
+    const handleApplyFilter = async (value, names) => {
+        const trimmed = (value || "").trim();
+        if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
+            getBrands();
+            return;
+        }
+        const result = await Axios.get(DEV + "/pinCode/search", {
+            params: {
+                [names]: trimmed,
+            },
+        });
+        setManufacturers(result?.data?.data);
+    };
+
+    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
+
+    const handleFilter = (name) => {
+        return (
+            <input
+                style={{
+                    width: "100%",
+                    height: "37px",
+                    borderRadius: "5px",
+                    border: "1px solid #cecece",
+                }}
+                value={values[name]}
+                onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setValues((prev) => ({ ...prev, [name]: nextValue }));
+                    debouncedApplyFilter(nextValue, name);
+                }}
+            ></input>
+        );
+    };
+
+    const onHideFaq = () => {
+        setShowDialog(false);
+    };
+
+    useEffect(() => {
+        const role = localStorage.getItem("role");
+        setRole(role);
+    }, []);
+    return (
+        <>
+            <Dialog visible={showDialog} header="Pincode" style={{ width: "750px" }} onHide={() => setShowDialog(false)}>
+                <AddPincodeDialog onsuccess={onsuccess} />
+            </Dialog>
+
+            <div className="Page__Header">
+                <div>
+                    <h2 className="pb-4" style={{ fontWeight: 700, fontSize: "2rem", marginBottom: 4, color: "#222" }}>
+                        Pincodes
+                    </h2>
+                    {/* <BreadCrumb model={breadItems} home={home} /> */}
+                </div>
+                {role === "admin" && (
+                    <div className="Top__Btn">
+                        <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
+                        <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />
+                    </div>
+                )}
+            </div>
+            <style>{`
+                .custom-card {
+                    border-radius: 18px;
+                    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+                    padding: 24px 18px 18px 18px;
+                    background: #fff;
+                }
+                .custom-table .p-datatable-thead > tr > th {
+                    background: #f6f8fa;
+                    color: #222;
+                    font-weight: 600;
+                    border: none;
+                    font-size: 1.08rem;
+                    padding: 16px 10px;
+                }
+                .custom-table .p-datatable-tbody > tr {
+                    transition: background 0.35s cubic-bezier(0.4,0,0.2,1);
+                }
+                .custom-table .p-datatable-tbody > tr:nth-child(even) {
+                    background: #f9fafb;
+                }
+                .custom-table .p-datatable-tbody > tr:hover {
+                    background: #e6f0fa !important;
+                    transition: background 0.35s cubic-bezier(0.4,0,0.2,1);
+                }
+                .custom-table .p-datatable-tbody > tr > td {
+                    border: none;
+                    padding: 14px 10px;
+                    font-size: 1.01rem;
+                }
+                .custom-table .p-datatable {
+                    border-radius: 14px;
+                    overflow: hidden;
+                }
+                .custom-table .p-datatable-wrapper {
+                    border-radius: 14px;
+                }
+                .custom-table .p-datatable .p-datatable-tbody > tr > td .Elipse_Icon {
+                    color: #1976d2;
+                    background: #e3f2fd;
+                    border-radius: 50%;
+                }
+                .custom-table .p-datatable .p-datatable-tbody > tr > td .Elipse_Icon:hover {
+                    background: #bbdefb;
+                }
+                .custom-table .p-datatable .p-datatable-tbody > tr > td p {
+                    margin: 0;
+                }
+                .custom-filter-input {
+                    width: 100%;
+                    height: 37px;
+                    border-radius: 7px;
+                    border: 1px solid #cecece;
+                    padding: 0 12px;
+                    background: #f6f8fa;
+                    transition: border 0.2s;
+                    margin-bottom: 2px;
+                }
+                .custom-filter-input:focus {
+                    border: 1.5px solid #1976d2;
+                    outline: none;
+                    background: #fff;
+                }
+            `}</style>
+            <div className="grid">
+                <div className="col-12">
+                    <div className="custom-card shadow-lg">
+                        <DataTable
+                            filterDisplay="row"
+                            className="datatable-responsive custom-table"
+                            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
+                            emptyMessage="Loading Pincodes..."
+                            responsiveLayout="scroll"
+                            value={manufacturers}
+                            paginator={true}
+                            selection={selectedRow}
+                            rows={12}
+                            onSelectionChange={(e) => setselectedRow(e.value)}
+                        >
+                            <Column selectionMode="multiple" style={{ width: "3em" }} />
+                            <Column filter field="pincode" header="Pincode" filterElement={() => handleFilter("pincode")} />
+                            <Column filter field="city" header="City" filterElement={() => handleFilter("city")} />
+                            <Column filter field="state" header="State" filterElement={() => handleFilter("state")} />
+                            <Column header="Created On" body={dateTemplate} />
+                            <Column header="Edit Pincode" body={actionBodyTemplate} />
+                        </DataTable>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+}
+
+export default PinCodes;

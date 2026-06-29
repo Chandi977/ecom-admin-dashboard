@@ -1,0 +1,85 @@
+{
+    "name": "sakai-react",
+    "version": "7.0.3",
+    "homepage": ".",
+    "private": false,
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/primefaces/sakai-react.git"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "@fullcalendar/core": "^5.7.2",
+        "@fullcalendar/daygrid": "^5.7.2",
+        "@fullcalendar/interaction": "^5.7.2",
+        "@fullcalendar/react": "^5.7.0",
+        "@fullcalendar/timegrid": "^5.7.2",
+        "@getbrevo/brevo": "^1.0.1",
+        "@hookform/resolvers": "^3.10.0",
+        "@reduxjs/toolkit": "^1.9.1",
+        "axios": "^1.13.2",
+        "chart.js": "3.3.2",
+        "classnames": "^2.2.6",
+        "dotenv": "^16.0.0",
+        "draft-js": "^0.11.7",
+        "draftjs-to-html": "^0.9.1",
+        "exceljs": "^4.4.0",
+        "file-saver": "^2.0.5",
+        "formik": "^2.2.9",
+        "html-to-draftjs": "^1.5.0",
+        "i18next": "^21.6.12",
+        "immutable": "^4.3.8",
+        "jwt-check-expiration": "^1.0.5",
+        "moment": "^2.29.4",
+        "primeflex": "3.1.0",
+        "primeicons": "^5.0.0",
+        "primereact": "7.2.0",
+        "prismjs": "^1.29.0",
+        "pusher-js": "^8.0.0",
+        "react": "^17.0.2",
+        "react-app-polyfill": "^1.0.6",
+        "react-dom": "^17.0.2",
+        "react-draft-wysiwyg": "^1.15.0",
+        "react-dropzone": "^14.2.3",
+        "react-helmet": "^6.1.0",
+        "react-hook-form": "^7.80.0",
+        "react-icons": "^4.6.0",
+        "react-query": "^3.39.3",
+        "react-redux": "^7.2.4",
+        "react-router-dom": "^5.2.0",
+        "react-select": "^5.7.0",
+        "react-toastify": "^8.2.0",
+        "react-transition-group": "^4.4.1",
+        "sass": "^1.98.0",
+        "yup": "^0.32.11",
+        "zod": "^3.25.76"
+    },
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-react": "^4.0.0",
+        "vite": "^6.4.1"
+    },
+    "overrides": {
+        "draft-js": {
+            "immutable": "3.8.3"
+        }
+    },
+    "engines": {
+        "node": ">=20.0.0"
+    },
+    "eslintConfig": {
+        "extends": [
+            "react-app"
+        ]
+    },
+    "browserslist": [
+        ">0.2%",
+        "not dead",
+        "not ie <= 11",
+        "not op_mini all"
+    ]
+}

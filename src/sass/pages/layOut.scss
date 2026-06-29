@@ -1,0 +1,20 @@
+
+.layout_main{
+    width: 100%;
+    height: auto;
+    margin-top: 100px;
+    display: flex;
+    .left__{
+        width: 17%;
+        height: auto;
+        display: flex;
+        justify-content: center;
+        padding: 40px 20px;
+        background: #F6F6F6;
+    }
+    .right__{
+        width: 80%;
+        height: auto;
+        padding: 40px 20px;
+    }
+}

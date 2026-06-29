@@ -1,0 +1,102 @@
+@font-face {
+    font-family: "inter";
+    src: url("../../assets/fonts/Inter-VariableFont_slnt\,wght.ttf");
+}
+
+.customers_main{
+    width: 100%;
+    height: auto;
+    .cust_header{
+        width: 100%;
+        height: auto;
+        display: flex;
+        justify-content: space-between;
+        >div:nth-child(1){
+            width: auto;
+            height: auto;
+            >p:nth-child(1){
+                font-family: "inter";
+                color: #000;
+                text-transform: capitalize;
+                font-size: 22px;
+                font-weight: 600;
+            }
+            >p:nth-child(2){
+                font-family: "inter";
+                cursor: pointer;
+                font-size: 16px;
+                color: #8491A5;
+                text-transform: capitalize;
+            }
+            .home__{
+                color: #333840;
+                cursor: pointer;
+            }
+        }
+        >div:nth-child(2){
+            display: flex;
+            >div{
+                width: 100px;
+                height: 35px;
+                display: flex;
+                justify-content: space-between;
+                padding: 5px 10px;
+                background: #E9F3F8;
+                border: 1px solid #0C4E9C;
+                border-radius: 5px;
+                margin-right: 20px;
+                cursor: pointer;
+                >p:nth-child(2){
+                    margin-top: -2px;
+                }
+                >p{
+                    font-size: 16px;
+                    font-family: "inter";
+                    text-transform: capitalize;
+                    color: #0C4E9C;
+                }
+
+            }
+            >button{
+                width: 40px;
+                height: 35px;
+                border-radius: 5px;
+                border: 1px solid #DF473C;
+                color: #DF473C;
+                background: #FFF1F0;
+            }
+        }
+    }
+    .data_div{
+        width: 100%;
+        height: auto;
+        margin-top: 40px;
+    }
+    .Global__Header {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    
+        h5 {
+            color: #000 !important;
+            font-weight: 600 !important;
+            font-family: "inter";
+        }
+    
+        .p-input-icon-left > i:first-of-type,
+        .p-input-icon-left > svg:first-of-type,
+        .p-input-icon-left > .p-input-prefix {
+            left: 0.7rem;
+            color: #6c757d;
+        }
+    
+        .p-inputtext {
+            text-indent: 0px;
+        }
+    
+        .p-inputtext::-webkit-input-placeholder {
+            padding-left: 0rem;
+        }
+    }
+}
