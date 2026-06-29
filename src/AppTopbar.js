@@ -123,8 +123,8 @@ export const AppTopbar = (props) => {
                         </p>
                     </div>
                 </div>
-                <div className="p-2 shadow-lg" style={{ marginLeft: "30px", cursor: "pointer", backgroundColor: "#E92227", color: "white", borderRadius: "12px" }} onClick={handleSignout}>
-                    <b>
+                <div className="shadow-lg" style={{ marginLeft: "20px", marginRight: "10px", cursor: "pointer", backgroundColor: "#E92227", color: "white", borderRadius: "12px", padding: "10px 18px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }} onClick={handleSignout}>
+                    <b style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <span>Logout</span> <i className="pi pi-sign-out"></i>
                     </b>
                 </div>

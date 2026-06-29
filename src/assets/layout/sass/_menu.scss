@@ -7,6 +7,7 @@
     height: calc(100vh - 9rem);
     z-index: 999;
     overflow-y: auto;
+    overflow-x: hidden;
     user-select: none;
     top: 7rem;
     left: 2rem;
@@ -52,6 +53,8 @@
 
             span {
                 margin-left: 0.5rem;
+                white-space: normal;
+                word-break: break-word;
             }
 
             .menuitem-toggle-icon {

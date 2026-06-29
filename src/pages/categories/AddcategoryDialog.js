@@ -63,8 +63,10 @@ function AddcategoryDialog({ onsuccess }) {
                 spec_schema: normalizeSpecSchema(specFields),
                 common_attributes: pairsToAttributes(attributePairs),
             };
-            await dispatch(handlePostRequest(dat, "/category/create", true, true));
-            onsuccess();
+            const res = await dispatch(handlePostRequest(dat, "/category/create", true, true));
+            if (res?.success === true) {
+                onsuccess();
+            }
         },
     });
     const isFormFieldValid = (name) => !!(formik.touched[name] && formik.errors[name]);
@@ -115,6 +117,7 @@ function AddcategoryDialog({ onsuccess }) {
                             {getFormErrorMessage("meta_description")}
                         </div>
                     </div>
+
                     <div className="p-field col-12 md:col-12">
                         <div className="p-field" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

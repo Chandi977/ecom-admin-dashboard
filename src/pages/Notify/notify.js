@@ -1,25 +1,32 @@
 import React, { useEffect, useState } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import Axios from "axios";
-import { DEV } from "../../services/constants";
+import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
 
 function NotifyData() {
     const [manufacturers, setManufacturers] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let isMounted = true;
+
         async function fetchData() {
             try {
-                const response = await Axios.get(DEV + "/notify/get");
-                // console.log(response);
-                setManufacturers(response.data.data);
+                const response = await handleGetRequest("/notify/get");
+                const rows = Array.isArray(response?.data) ? response.data : [];
+                if (isMounted) setManufacturers(rows);
             } catch (error) {
                 console.error("Error fetching data from API:", error);
+            } finally {
+                if (isMounted) setLoading(false);
             }
         }
 
         fetchData();
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     const dateTemplate = (rowdata) => {
@@ -41,7 +48,9 @@ function NotifyData() {
             <div className="grid">
                 <div className="col-12">
                     <div className="card">
-                        {manufacturers.length > 0 ? (
+                        {loading ? (
+                            <p>Loading data...</p>
+                        ) : manufacturers.length > 0 ? (
                             <>
                                 <DataTable
                                     filterDisplay="row"
@@ -68,7 +77,7 @@ function NotifyData() {
                                 </DataTable>
                             </>
                         ) : (
-                            <p>Loading data...</p>
+                            <p>No notification requests found.</p>
                         )}
                     </div>
                 </div>

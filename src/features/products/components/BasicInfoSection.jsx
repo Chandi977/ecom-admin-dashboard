@@ -8,8 +8,13 @@ import { EditorState, ContentState } from "draft-js";
 import draftToHtml from "draftjs-to-html";
 import htmlToDraft from "html-to-draftjs";
 
+const humanizeKey = (key) =>
+    String(key)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+
 export const BasicInfoSection = () => {
-    const { control, watch, setValue } = useFormContext();
+    const { control, watch, setValue, getValues } = useFormContext();
     const { data: brands, isLoading: loadingBrands } = useBrands();
     const { data: categories, isLoading: loadingCategories } = useCategories();
     const { data: subCategories, isLoading: loadingSubCategories } = useSubCategories();
@@ -20,6 +25,19 @@ export const BasicInfoSection = () => {
 
     const selectedCategoryId = watch("categoryId");
     const productName = watch("name");
+
+    // The selected category is the single source for inherited "common fields"
+    // (GST + common_attributes). The product inherits them unless it overrides.
+    const selectedCategory = useMemo(
+        () => categoriesList.find((c) => String(c._id) === String(selectedCategoryId)),
+        [categoriesList, selectedCategoryId],
+    );
+    const inheritedGst = selectedCategory?.gst;
+    const commonAttributes =
+        selectedCategory && typeof selectedCategory.common_attributes === "object" && !Array.isArray(selectedCategory.common_attributes)
+            ? selectedCategory.common_attributes
+            : {};
+    const commonAttributeKeys = Object.keys(commonAttributes);
     
     const [filteredSubCategories, setFilteredSubCategories] = useState([]);
     const [editorState, setEditorState] = useState(EditorState.createEmpty());
@@ -36,6 +54,23 @@ export const BasicInfoSection = () => {
         });
         setFilteredSubCategories(filtered);
     }, [selectedCategoryId, subCategoriesList]);
+
+    // On edit, pre-fill common-field overrides from the product's OWN values, but
+    // only for the keys this category declares as common. Fields the product did
+    // not override stay blank so they keep inheriting. (__rawProduct is set by
+    // ProductEdit and is absent when creating.)
+    const rawProduct = watch("__rawProduct");
+    useEffect(() => {
+        if (!selectedCategory || !rawProduct) return;
+        commonAttributeKeys.forEach((key) => {
+            const current = getValues(`common_overrides.${key}`);
+            const ownValue = rawProduct[key];
+            if ((current === undefined || current === "") && ownValue !== undefined && ownValue !== null && ownValue !== "") {
+                setValue(`common_overrides.${key}`, ownValue, { shouldDirty: false });
+            }
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedCategory, rawProduct]);
 
     useEffect(() => {
         if (productName && !watch("slug")) {
@@ -131,10 +166,14 @@ export const BasicInfoSection = () => {
             <FormInputNumber
                 name="gst"
                 label="GST Rate (%)"
-                placeholder="18"
+                placeholder={inheritedGst != null ? `${inheritedGst} (inherited)` : "Inherited from category"}
                 min={0}
                 max={100}
-                required
+                description={
+                    inheritedGst != null
+                        ? `Inherited from category: ${inheritedGst}%. Leave blank to use it.`
+                        : "Leave blank to inherit the category's GST."
+                }
             />
 
             <FormInputText
@@ -142,6 +181,28 @@ export const BasicInfoSection = () => {
                 label="Estimated Delivery Time"
                 placeholder="e.g. 3-5 working days"
             />
+
+            {commonAttributeKeys.length > 0 && (
+                <div className="p-field col-12" style={{ marginTop: "0.5rem", marginBottom: "0.25rem" }}>
+                    <label className="Label__Text" style={{ display: "block", fontWeight: 600, color: "#2196F3" }}>
+                        <i className="pi pi-sitemap" style={{ marginRight: "0.5rem" }}></i>
+                        Common Fields (inherited from category)
+                    </label>
+                    <small className="p-text-secondary">
+                        These are defined once on the category. Leave a field blank to inherit its value;
+                        type only to override it for this product.
+                    </small>
+                </div>
+            )}
+
+            {commonAttributeKeys.map((key) => (
+                <FormInputText
+                    key={`common-${key}`}
+                    name={`common_overrides.${key}`}
+                    label={humanizeKey(key)}
+                    placeholder={`${commonAttributes[key]} (inherited)`}
+                />
+            ))}
 
             <FormCheckbox
                 name="top_product"

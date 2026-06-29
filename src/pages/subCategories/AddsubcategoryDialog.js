@@ -3,14 +3,22 @@ import { useFormik } from "formik";
 import classNames from "classnames";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
+import { Dropdown } from "primereact/dropdown";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { handleGetRequest } from "../../services/GetTemplate";
+import { CommonAttributesEditor, pairsToAttributes } from "../../components/CategoryAttributesEditor";
 
 function AddsubcategoryDialog({ onsuccess }) {
     const dispatch = useDispatch();
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState("");
+    const [gst, setGst] = useState("");
+    const [hsn_code, setHsnCode] = useState("");
+    const [sac_code, setSacCode] = useState("");
+    const [tax_category, setTaxCategory] = useState("Goods");
+    const [delivery_time, setDeliveryTime] = useState("");
+    const [attributePairs, setAttributePairs] = useState([]);
 
     const getCategories = useCallback(async () => {
         const res = await handleGetRequest("/category/all");
@@ -24,18 +32,18 @@ function AddsubcategoryDialog({ onsuccess }) {
     const formik = useFormik({
         initialValues: {
             name: "",
-            sub_category_id: "",
-            meta_title: "",
-            meta_description: "",
         },
 
         onSubmit: async (data) => {
             const dat = {
                 name: data.name,
-                sub_category_id: data.sub_category_id,
-                meta_title: data.meta_title,
-                meta_description: data.meta_description,
                 category: selectedCategory,
+                gst: gst !== "" && gst !== null ? Number(gst) : undefined,
+                hsn_code: hsn_code.trim() || undefined,
+                sac_code: sac_code.trim() || undefined,
+                tax_category: tax_category.trim() || undefined,
+                delivery_time: delivery_time.trim() || undefined,
+                common_attributes: pairsToAttributes(attributePairs),
             };
             await dispatch(handlePostRequest(dat, "/subcategory/create", true, true));
             onsuccess();
@@ -49,16 +57,6 @@ function AddsubcategoryDialog({ onsuccess }) {
         <>
             <form onSubmit={formik.handleSubmit} className="p-fluid p-mt-2">
                 <div className="p-fluid p-formgrid grid mb-5">
-                    <div className="p-field col-12 md:col-12">
-                        <div className="p-field">
-                            <label htmlFor="sub_category_id" className={classNames({ "p-error": isFormFieldValid("sub_category_id") }, "Label__Text")}>
-                                SubCategory ID
-                            </label>
-                            <InputText placeholder="3342" id="sub_category_id" name="sub_category_id" value={formik.values.sub_category_id} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("sub_category_id") }, "Input__Round")} />
-
-                            {getFormErrorMessage("sub_category_id")}
-                        </div>
-                    </div>
                     <div className="p-field col-12 md:col-12">
                         <div className="p-field">
                             <label htmlFor="name" className={classNames({ "p-error": isFormFieldValid("name") }, "Label__Text")}>
@@ -87,24 +85,63 @@ function AddsubcategoryDialog({ onsuccess }) {
                             {getFormErrorMessage("name")}
                         </div>
                     </div>
-                    <div className="p-field col-12 md:col-12">
-                        <div className="p-field">
-                            <label htmlFor="meta_title" className={classNames({ "p-error": isFormFieldValid("meta_title") }, "Label__Text")}>
-                                Meta Title
-                            </label>
-                            <InputText placeholder="Amazon" id="meta_title" name="meta_title" value={formik.values.meta_title} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("meta_title") }, "Input__Round")} />
 
-                            {getFormErrorMessage("meta_title")}
+                    {/* Tax and Fulfillment Sections */}
+                    <div className="p-field col-12 md:col-12">
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "10px", marginBottom: "15px" }}>
+                            {/* Tax Configuration Card */}
+                            <div className="card" style={{ padding: "1.5rem", borderRadius: "8px", border: "1px solid #dee2e6", margin: 0 }}>
+                                <h5 style={{ fontWeight: 600, color: "#182C5A", marginBottom: "1.25rem", marginTop: 0, display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "16px" }}>
+                                    <i className="pi pi-percentage" style={{ fontSize: "1.1rem" }}></i> Tax Configuration
+                                </h5>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                    <div>
+                                        <label htmlFor="subcategory_gst" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
+                                            GST Rate (%)
+                                        </label>
+                                        <InputText id="subcategory_gst" type="number" value={gst} onChange={(e) => setGst(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="subcategory_hsn" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
+                                            HSN Code
+                                        </label>
+                                        <InputText id="subcategory_hsn" value={hsn_code} onChange={(e) => setHsnCode(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="subcategory_sac" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
+                                            SAC Code
+                                        </label>
+                                        <InputText id="subcategory_sac" value={sac_code} onChange={(e) => setSacCode(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="subcategory_tax_cat" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
+                                            Tax Category
+                                        </label>
+                                        <Dropdown id="subcategory_tax_cat" value={tax_category} options={[{ label: "Goods", value: "Goods" }, { label: "Services", value: "Services" }]} onChange={(e) => setTaxCategory(e.value)} placeholder="Select Tax Category" className="Input__Round" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Fulfillment Configuration Card */}
+                            <div className="card" style={{ padding: "1.5rem", borderRadius: "8px", border: "1px solid #dee2e6", margin: 0 }}>
+                                <h5 style={{ fontWeight: 600, color: "#22C55E", marginBottom: "1.25rem", marginTop: 0, display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "16px" }}>
+                                    <i className="pi pi-truck" style={{ fontSize: "1.1rem" }}></i> Fulfillment Configuration
+                                </h5>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                    <div>
+                                        <label htmlFor="subcategory_delivery" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
+                                            Estimated Delivery Time
+                                        </label>
+                                        <InputText id="subcategory_delivery" value={delivery_time} onChange={(e) => setDeliveryTime(e.target.value)} placeholder="e.g. 3-5 business days" className="Input__Round" />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
                     <div className="p-field col-12 md:col-12">
                         <div className="p-field">
-                            <label htmlFor="meta_description" className={classNames({ "p-error": isFormFieldValid("meta_description") }, "Label__Text")}>
-                                Meta Description
-                            </label>
-                            <InputText placeholder="Amazon" id="meta_description" name="meta_description" value={formik.values.meta_description} onChange={formik.handleChange} className={classNames({ "p-invalid": isFormFieldValid("meta_description") }, "Input__Round")} />
-
-                            {getFormErrorMessage("meta_description")}
+                            <CommonAttributesEditor value={attributePairs} onChange={setAttributePairs} />
                         </div>
                     </div>
                 </div>

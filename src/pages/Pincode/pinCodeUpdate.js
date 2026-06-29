@@ -14,6 +14,11 @@ function PinCodeUpdate() {
     const [manufacturer, setManufacturers] = useState();
     const history = useHistory();
     const { id } = useParams();
+    const [role, setRole] = useState("");
+
+    useEffect(() => {
+        setRole(localStorage.getItem("role"));
+    }, []);
     const [pincode, setPincode] = useState(); // Number
     const [city, setCity] = useState(""); // String
     const [state, setState] = useState(""); // String
@@ -242,7 +247,7 @@ function PinCodeUpdate() {
 
                         <div className="Down__Btn">
                             <Button label="Cancel" className="Btn__Transparent" onClick={handleCancel} />
-                            <Button label="Update" className="Btn__Dark" />
+                            {role === "admin" && <Button label="Update" className="Btn__Dark" />}
                         </div>
                     </form>
                 </div>

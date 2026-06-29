@@ -18,7 +18,7 @@ const Dashboard = () => {
     });
     const [dataset, setDataSet] = useState([]);
 
-    const getData = useCallback(async () => {
+    const getData = useCallback(async (isMounted = () => true) => {
         // const users = await handleGetRequest("/countUsers");
         // const orders = await handleGetRequest("/ordersCount");
         const categories = await handleGetRequest("/category/count");
@@ -28,6 +28,7 @@ const Dashboard = () => {
         const countOrder = await handleGetRequest("/order/count");
         const sts = await handleGetRequest("/userStats");
         const products = await handleGetRequest("/product/count");
+        if (!isMounted()) return;
         setDataSet(sts?.data?.["2024"]);
         setStats({
             users: countUser?.data,
@@ -54,7 +55,11 @@ const Dashboard = () => {
     }, []);
 
     useEffect(() => {
-        getData();
+        let isMounted = true;
+        getData(() => isMounted);
+        return () => {
+            isMounted = false;
+        };
     }, [getData]);
 
     console.log(dataset);

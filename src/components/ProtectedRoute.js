@@ -1,5 +1,6 @@
 import React from "react";
 import { Route, Redirect } from "react-router-dom";
+import { clearAuthSession, getStoredAuthSession, hasValidAuthSession, isTokenExpired } from "../utils/authSession";
 
 /**
  * ProtectedRoute Component
@@ -10,14 +11,9 @@ import { Route, Redirect } from "react-router-dom";
  * @param {Object} rest - Other Route props
  */
 const ProtectedRoute = ({ component: Component, allowedRoles = [], ...rest }) => {
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
-
-    // Check if user is authenticated
-    const isAuthenticated = !!token;
-
-    // Check if user has required role (empty allowedRoles means all authenticated users)
-    const hasRequiredRole = allowedRoles.length === 0 || allowedRoles.includes(role);
+    const { token, role } = getStoredAuthSession();
+    const isAuthenticated = !!token && !isTokenExpired(token);
+    const hasRequiredRole = hasValidAuthSession(allowedRoles);
 
     return (
         <Route
@@ -25,6 +21,7 @@ const ProtectedRoute = ({ component: Component, allowedRoles = [], ...rest }) =>
             render={(props) => {
                 // Not authenticated - redirect to login
                 if (!isAuthenticated) {
+                    clearAuthSession();
                     return <Redirect to="/auth" />;
                 }
 

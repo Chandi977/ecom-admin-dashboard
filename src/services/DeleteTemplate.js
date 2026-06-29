@@ -1,6 +1,7 @@
 import axios from "axios";
 import { toast } from "react-toastify";
 import { loadingAction } from "../redux/loadingAction";
+import { handleAuthFailure, isAuthFailureStatus } from "../utils/authSession";
 
 export const handleDeleteRequest =
     (data, url, isShowLoad = false, isShowToast = true) =>
@@ -22,7 +23,10 @@ export const handleDeleteRequest =
             return response?.data;
         } catch (error) {
             if (isShowLoad) dispatch(loadingAction(false));
-            if (error?.response?.status === 400 || error?.response?.status === 500) {
+            if (isAuthFailureStatus(error?.response?.status)) {
+                toast.warn(error?.response?.data?.messages || error?.response?.data?.message || "Session expired. Please log in again.");
+                handleAuthFailure();
+            } else if (error?.response?.status === 400 || error?.response?.status === 500) {
                 toast.warn(error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!");
             } else {
                 toast.warn(error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!");

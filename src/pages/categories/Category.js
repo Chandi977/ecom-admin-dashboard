@@ -17,6 +17,11 @@ function Category() {
     const [manufacturer, setManufacturers] = useState();
     const history = useHistory();
     const { id } = useParams();
+    const [role, setRole] = useState("");
+
+    useEffect(() => {
+        setRole(localStorage.getItem("role"));
+    }, []);
     const [name, setName] = useState();
     const [slug, setSlug] = useState();
     const [meta_title, setMetaTitle] = useState();
@@ -29,17 +34,22 @@ function Category() {
 
     const getData = useCallback(async () => {
         const res = await handleGetRequest(`/category/get/${id}`);
-        setName(res?.data?.name);
-        setSlug(res?.data?.slug);
-        setMetaTitle(res?.data?.meta_title);
-        setMetaDescription(res?.data?.meta_description);
-        setCategoryId(res?.data?.category_id);
-        setOverviewFields(Array.isArray(res?.data?.overview_fields) ? res.data.overview_fields : []);
-        setFieldVisibility(res?.data?.field_visibility && typeof res.data.field_visibility === "object" ? res.data.field_visibility : {});
-        setSpecFields(specSchemaToEditable(res?.data?.spec_schema));
-        setAttributePairs(attributesToPairs(res?.data?.common_attributes));
+        const cat = res?.data;
+        setName(cat?.name);
+        setSlug(cat?.slug);
+        setMetaTitle(cat?.meta_title);
+        setMetaDescription(cat?.meta_description);
+        setCategoryId(cat?.category_id);
+        
+        const commonAttrs = cat?.common_attributes || {};
 
-        setManufacturers(res?.data);
+        setOverviewFields(Array.isArray(cat?.overview_fields) ? cat.overview_fields : []);
+        setFieldVisibility(cat?.field_visibility && typeof cat.field_visibility === "object" ? cat.field_visibility : {});
+        setSpecFields(specSchemaToEditable(cat?.spec_schema));
+        
+        setAttributePairs(attributesToPairs(commonAttrs));
+
+        setManufacturers(cat);
     }, [id]);
     useEffect(() => {
         getData();
@@ -196,7 +206,7 @@ function Category() {
                                 <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                         <label className="Label__Text">Quick Overview Fields</label>
-                                        <Button type="button" label="Add Field" onClick={handleAddOverviewField} style={{ width: "140px", height: "35px" }} />
+                                        {role === "admin" || role === "catalog-manager" && <Button type="button" label="Add Field" onClick={handleAddOverviewField} style={{ width: "140px", height: "35px" }} />}
                                     </div>
                                     <small>These fields define the quick overview rows for this category.</small>
                                     {overviewFields.map((field, index) => (
@@ -207,7 +217,7 @@ function Category() {
                                                 onChange={(e) => handleOverviewFieldChange(index, "label", e.target.value)}
                                                 className="Input__Round"
                                             />
-                                            <Button type="button" label="Remove" className="p-button-danger" onClick={() => handleRemoveOverviewField(index)} />
+                                            {role === "admin" || role === "catalog-manager" && <Button type="button" label="Remove" className="p-button-danger" onClick={() => handleRemoveOverviewField(index)} />}
                                         </div>
                                     ))}
                                 </div>
@@ -238,7 +248,7 @@ function Category() {
 
                         <div className="Down__Btn">
                             <Button label="Cancel" className="Btn__Transparent" onClick={handleCancel} />
-                            <Button label="Update" className="Btn__Dark" />
+                            {role === "admin" || role === "catalog-manager" && <Button label="Update" className="Btn__Dark" />}
                         </div>
                     </form>
                 </div>

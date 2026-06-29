@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +19,12 @@ import { FieldVisibilitySection } from "./components/FieldVisibilitySection";
 export const ProductEdit = () => {
     const { id } = useParams();
     const history = useHistory();
+    const [role, setRole] = useState("");
+
+    useEffect(() => {
+        setRole(localStorage.getItem("role"));
+    }, []);
+
     const { data: apiResponse, isLoading, isError } = useProduct(id);
     const updateMutation = useUpdateProduct();
 
@@ -47,7 +53,12 @@ export const ProductEdit = () => {
                 brandId: typeof prod.brand === "object" ? prod.brand?._id : prod.brand || "",
                 categoryId: typeof prod.category === "object" ? prod.category?._id : prod.category || "",
                 subCategoryId: typeof prod.subCategory === "object" ? prod.subCategory?._id : prod.subCategory || typeof prod.sub_category === "object" ? prod.sub_category?._id : prod.sub_category || "",
-                gst: prod.gst ?? 18,
+                gst: prod.gst ?? "",
+                common_overrides: {},
+                // Raw product (own values only — fetched with inherit:false) so
+                // BasicInfoSection can pre-fill overrides just for the category's
+                // common keys. Stripped by zod before submit, never sent.
+                __rawProduct: prod,
                 description: prod.description || "",
                 aboutItem: prod.aboutItem || "",
                 usage: prod.usage || "",
@@ -132,7 +143,16 @@ export const ProductEdit = () => {
     }, [apiResponse, reset]);
 
     const onSubmit = (values) => {
+        // Per-product overrides for the category's common fields. Blank entries are
+        // dropped so the product inherits those category defaults.
+        const commonOverrides = Object.fromEntries(
+            Object.entries(values.common_overrides || {}).filter(
+                ([, v]) => v !== "" && v !== undefined && v !== null,
+            ),
+        );
         const apiPayload = {
+            // Inherited common-field overrides first; explicit fields below win.
+            ...commonOverrides,
             // Root-level flat fields (legacy compatibility)
             name: values.name,
             product_id: values.product_id,
@@ -140,7 +160,8 @@ export const ProductEdit = () => {
             brand: values.brandId,
             category: values.categoryId,
             sub_category: values.subCategoryId || undefined,
-            gst: values.gst,
+            // Blank = inherit the category's GST (omitted from the payload).
+            gst: values.gst === "" || values.gst === undefined || values.gst === null ? undefined : values.gst,
             description: values.description,
             aboutItem: values.aboutItem,
             usage: values.usage,
@@ -324,6 +345,7 @@ export const ProductEdit = () => {
                             style={{ width: "120px", borderRadius: "6px" }}
                             disabled={isSubmitting || updateMutation.isLoading}
                         />
+                        {role === "admin" || role === "catalog-manager" && (
                         <Button
                             type="submit"
                             label={isSubmitting || updateMutation.isLoading ? "Saving..." : "Save Changes"}
@@ -332,6 +354,7 @@ export const ProductEdit = () => {
                             style={{ width: "150px", borderRadius: "6px" }}
                             disabled={isSubmitting || updateMutation.isLoading}
                         />
+                        )}
                     </div>
                 </div>
             </form>

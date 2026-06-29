@@ -12,6 +12,9 @@ export interface ICategory {
     slug: string;
     category_id?: string;
     gst?: number;
+    hsn_code?: string;
+    sac_code?: string;
+    tax_category?: string;
     meta_title?: string;
     meta_description?: string;
     overview_fields?: Array<{ label: string; key?: string }>;

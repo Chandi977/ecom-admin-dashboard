@@ -162,9 +162,7 @@ const CustomerDialog = ({ onHideCustomerDialog, handlesuccess }) => {
                                     Please select role
                                 </option>
                                 <option value="admin">Admin</option>
-                                <option value="digital marketing">Digital Marketing</option>
-                                <option value="manager">Manager</option>
-                                <option value="calling">Calling</option>
+                                <option value="catalog-manager">Catalog Manager</option>
                             </select>
                         </div>
                     </div>

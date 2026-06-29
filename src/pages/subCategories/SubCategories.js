@@ -9,6 +9,26 @@ import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
 import AddcategoryDialog from "./AddsubcategoryDialog";
 import { FaPen, FaTrash } from "react-icons/fa";
+import { can } from "../../rbac/permissions";
+
+const CATEGORY_ORDER = ["main", "rollabel", "packpro"];
+
+const normalizeCategoryKey = (value) =>
+    String(value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+
+const sortSubCategories = (items = []) =>
+    [...items].sort((a, b) => {
+        const aIndex = CATEGORY_ORDER.indexOf(normalizeCategoryKey(a.categoryName));
+        const bIndex = CATEGORY_ORDER.indexOf(normalizeCategoryKey(b.categoryName));
+        if (aIndex !== bIndex) {
+            if (aIndex === -1) return 1;
+            if (bIndex === -1) return -1;
+            return aIndex - bIndex;
+        }
+        return String(a.name || "").localeCompare(String(b.name || ""));
+    });
 
 function SubCategories() {
     const [showDialog, setShowDialog] = useState(false);
@@ -21,8 +41,24 @@ function SubCategories() {
         setShowDialog(true);
     };
     const getBrands = useCallback(async () => {
-        const res = await handleGetRequest("/subcategory/get");
-        setManufacturers(res?.data);
+        const [subCategoryRes, categoryRes] = await Promise.all([
+            handleGetRequest("/subcategory/all"),
+            handleGetRequest("/category/all"),
+        ]);
+        const categories = Array.isArray(categoryRes?.data) ? categoryRes.data : [];
+        const categoryById = new Map(categories.map((category) => [String(category?._id), category]));
+        const subCategories = Array.isArray(subCategoryRes?.data) ? subCategoryRes.data : [];
+        const enrichedSubCategories = subCategories.map((subCategory) => {
+            const rawCategory = subCategory?.category;
+            const categoryId = typeof rawCategory === "object" ? rawCategory?._id : rawCategory;
+            const category = typeof rawCategory === "object" ? rawCategory : categoryById.get(String(categoryId));
+            return {
+                ...subCategory,
+                category,
+                categoryName: category?.name || "-",
+            };
+        });
+        setManufacturers(sortSubCategories(enrichedSubCategories));
     }, []);
     useEffect(() => {
         getBrands();
@@ -167,10 +203,10 @@ function SubCategories() {
                     </h2>
                     {/* <BreadCrumb model={breadItems} home={home} /> */}
                 </div>
-                {role === "admin" && (
+                {(can("subcategory:create") || can("subcategory:delete")) && (
                     <div className="Top__Btn">
-                        <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
-                        <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />
+                        {can("subcategory:create") && <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />}
+                        {can("subcategory:delete") && <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />}
                     </div>
                 )}
             </div>
@@ -183,15 +219,17 @@ function SubCategories() {
                         <div className="subcat-info">
                             <div className="subcat-name">{subcat.name || "-"}</div>
                             {/* <div className="subcat-slug">{subcat.slug || "-"}</div> */}
-                            <div className="subcat-category">{subcat.category?.name || "-"}</div>
+                            <div className="subcat-category">{subcat.categoryName || subcat.category?.name || "-"}</div>
                             <div className="subcat-date">{moment(subcat.createdAt).format("DD/MM/YYYY")}</div>
                         </div>
                         <div className="subcat-actions">
+                            {role === "admin" || role === "catalog-manager" && (
                             <button className="subcat-action-btn" onClick={() => history.push(`/subcategory/${subcat._id}`)}>
                                 <FaPen style={{ color: "#1976d2", fontSize: "1.3rem" }} />
                                 <span className="tooltip">Edit SubCategory</span>
                             </button>
-                            {role === "admin" && (
+                            )}
+                            {can("subcategory:delete") && (
                                 <button className="subcat-action-btn" onClick={() => handleDelete(subcat._id)}>
                                     <FaTrash style={{ color: "red", fontSize: "1.3rem" }} />
                                     <span className="tooltip">Delete SubCategory</span>

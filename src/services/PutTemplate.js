@@ -2,6 +2,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { DEV } from "./constants";
 import { clearGetRequestCache } from "./GetTemplate";
+import { handleAuthFailure, isAuthFailureStatus } from "../utils/authSession";
 
 export const handlePutRequest = async (data, url) => {
     const token = localStorage.getItem("token");
@@ -19,7 +20,11 @@ export const handlePutRequest = async (data, url) => {
             return res?.data;
         })
         .catch((error) => {
-            if (error?.response?.status === 400 || error?.response?.status === 500) {
+            if (isAuthFailureStatus(error?.response?.status)) {
+                clearGetRequestCache();
+                toast.warn(error?.response?.data?.messages || error?.response?.data?.message || "Session expired. Please log in again.");
+                handleAuthFailure();
+            } else if (error?.response?.status === 400 || error?.response?.status === 500) {
                 toast.warn(error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!");
             } else {
                 toast.warn(error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!");

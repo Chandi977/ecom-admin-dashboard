@@ -9,6 +9,7 @@ import { useFormik } from "formik";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { persistAuth } from "../../redux/authSlice";
 import { toast } from "react-toastify";
+import { clearAuthSession } from "../../utils/authSession";
 
 function Login() {
     const [loading] = useState(false);
@@ -28,16 +29,21 @@ function Login() {
             password: "",
         },
         onSubmit: async (data) => {
+            clearAuthSession();
             const res = await dispatch(handlePostRequest(data, "/signin", true, true));
             if (res?.success && res?.data?.user) {
-                if (res?.data?.user?.role !== "admin") {
-                    toast.warn("Only admin users can sign in to the dashboard.");
+                if (res?.data?.user?.role === "user") {
+                    clearAuthSession();
+                    toast.warn("You do not have dashboard access.");
                     return;
                 }
-                persistAuth(res?.data);
-                history.push("/");
-                window.location.reload();
+                if (persistAuth(res?.data)) {
+                    history.push("/");
+                    window.location.reload();
+                    return;
+                }
             }
+            clearAuthSession();
         },
     });
     const isFormFieldValid = (name) => !!(formik.touched[name] && formik.errors[name]);

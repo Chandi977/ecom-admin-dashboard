@@ -9,19 +9,37 @@ import moment from "moment";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
-import Axios from "axios";
-import { DEV } from "../../services/constants";
 import AddcategoryDialog from "./AddcategoryDialog";
 import { FaPen } from "react-icons/fa";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
+import { can } from "../../rbac/permissions";
 
 const MIN_FILTER_LENGTH = 2;
 const FILTER_DEBOUNCE_MS = 300;
+const CATEGORY_SECTION_ORDER = ["main", "rollabel", "packpro"];
+
+const normalizeCategoryKey = (value) =>
+    String(value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+
+const sortCategories = (categories = []) =>
+    [...categories].sort((a, b) => {
+        const aIndex = CATEGORY_SECTION_ORDER.indexOf(normalizeCategoryKey(a?.name));
+        const bIndex = CATEGORY_SECTION_ORDER.indexOf(normalizeCategoryKey(b?.name));
+        if (aIndex === -1 && bIndex === -1) {
+            return String(a?.name || "").localeCompare(String(b?.name || ""));
+        }
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+    });
 
 function Categories() {
     const [selectedRow, setselectedRow] = useState([]);
     const [showDialog, setShowDialog] = useState(false);
     const [manufacturers, setManufacturers] = useState([]);
+    const [allCategories, setAllCategories] = useState([]);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
     const [rows, setRows] = useState(10);
@@ -30,19 +48,21 @@ function Categories() {
     const history = useHistory();
     const [role, setRole] = useState("");
 
+    useEffect(() => {
+        setRole(localStorage.getItem("role"));
+    }, []);
+
     const handledClicked = () => {
         setShowDialog(true);
     };
     const getBrands = useCallback(async () => {
-        const params = {
-            skip: skip,
-            limit: rows,
-        };
-        const res = await handleGetRequest("/category/get", params);
-        const total = await handleGetRequest("/category/count");
-        setManufacturers(res?.data);
-        setTotal(total?.data);
-    }, [rows, skip]);
+        const res = await handleGetRequest("/category/all");
+        const categories = Array.isArray(res?.data) ? res.data : [];
+        const sortedCategories = sortCategories(categories);
+        setAllCategories(categories);
+        setManufacturers(sortedCategories);
+        setTotal(sortedCategories.length);
+    }, []);
     useEffect(() => {
         if (!isFiltering) {
             getBrands();
@@ -51,9 +71,11 @@ function Categories() {
     const actionBodyTemplate = (rowData) => {
         return (
             <div>
+                {role === "admin" || role === "catalog-manager" && (
                 <Button className="p-button-rounded mr-2 Elipse_Icon" onClick={() => history.push(`/category/${rowData?._id}`)}>
                     <FaPen />
                 </Button>
+                )}
             </div>
         );
     };
@@ -65,6 +87,23 @@ function Categories() {
                     {moment(rowdata?.createdAt).format("DD-MM-YY")} &nbsp; | &nbsp;
                     {moment(rowdata?.createdAt).format("hh:mm a")}
                 </p>
+            </div>
+        );
+    };
+
+    const subCategoriesTemplate = (rowdata) => {
+        const subCategories = Array.isArray(rowdata?.subCategories) ? rowdata.subCategories : [];
+        if (subCategories.length === 0) {
+            return <span>-</span>;
+        }
+
+        return (
+            <div className="subcategory-list">
+                {subCategories.map((subCategory) => (
+                    <span className="subcategory-chip" key={subCategory?._id || subCategory?.name}>
+                        {subCategory?.name}
+                    </span>
+                ))}
             </div>
         );
     };
@@ -90,26 +129,29 @@ function Categories() {
     };
 
     const [values, setValues] = useState({
-        categories_id: "",
+        category_id: "",
         name: "",
         slug: "",
     });
 
     const handleApplyFilter = async (value, names) => {
         const trimmed = (value || "").trim();
+        const sortedCategories = sortCategories(allCategories);
         if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
             setIsFiltering(false);
             setSkip(0);
+            setManufacturers(sortedCategories);
+            setTotal(sortedCategories.length);
             return;
         }
         setIsFiltering(true);
         setSkip(0);
-        const result = await Axios.get(DEV + "/category/search", {
-            params: {
-                [names]: trimmed,
-            },
-        });
-        const filteredCategories = result?.data?.data || [];
+        const searchValue = trimmed.toLowerCase();
+        const filteredCategories = sortedCategories.filter((category) =>
+            String(category?.[names] || "")
+                .toLowerCase()
+                .includes(searchValue),
+        );
         setManufacturers(filteredCategories);
         setTotal(filteredCategories.length);
     };
@@ -160,10 +202,10 @@ function Categories() {
                     </h2>
                     {/* <BreadCrumb model={breadItems} home={home} /> */}
                 </div>
-                {role === "admin" && (
+                {role === "admin" || role === "catalog-manager" && (
                     <div className="Top__Btn">
                         <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
-                        <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />
+                        {can("category:delete") && <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />}
                     </div>
                 )}
             </div>
@@ -225,6 +267,23 @@ function Categories() {
                 .custom-paginator {
                     margin-top: 18px;
                 }
+                .subcategory-list {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                }
+                .subcategory-chip {
+                    display: inline-flex;
+                    align-items: center;
+                    min-height: 24px;
+                    padding: 3px 9px;
+                    border-radius: 6px;
+                    border: 1px solid #d8dee9;
+                    background: #f8fafc;
+                    color: #334155;
+                    font-size: 0.86rem;
+                    line-height: 1.2;
+                }
             `}</style>
             <div className="grid">
                 <div className="col-12">
@@ -232,7 +291,6 @@ function Categories() {
                         <DataTable
                             filterDisplay="row"
                             className="datatable-responsive custom-table"
-                            lazy={!isFiltering}
                             paginator
                             first={skip}
                             rows={rows}
@@ -251,6 +309,7 @@ function Categories() {
                             <Column filter field="category_id" header="ID" filterElement={() => handleFilter("category_id")} />
                             <Column filter field="name" header="Name" filterElement={() => handleFilter("name")} />
                             <Column filter header="Slug" field="slug" filterElement={() => handleFilter("slug")} />
+                            <Column header="Sub Categories" body={subCategoriesTemplate} />
                             <Column header="Created On" body={dateTemplate} />
                             <Column header="Edit Category" body={actionBodyTemplate} />
                         </DataTable>

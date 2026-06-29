@@ -192,6 +192,7 @@ export const ProductList = () => {
                     tooltip="View details"
                     tooltipOptions={{ position: "bottom" }}
                 />
+                {role === "admin" || role === "catalog-manager" && (
                 <Button
                     icon="pi pi-pencil"
                     className="p-button-rounded p-button-text p-button-sm p-button-info"
@@ -199,6 +200,7 @@ export const ProductList = () => {
                     tooltip="Edit product"
                     tooltipOptions={{ position: "bottom" }}
                 />
+                )}
             </div>
         );
     };
@@ -238,7 +240,7 @@ export const ProductList = () => {
                         Manage corporate packaging inventory, price tiers, and dynamic specifications.
                     </p>
                 </div>
-                {role === "admin" && (
+                {role === "admin" || role === "catalog-manager" && (
                     <div style={{ display: "flex", gap: "1rem" }}>
                         <Button
                             label="Add Product"

@@ -17,6 +17,11 @@ function OrderDetail() {
     const [trackingId, setTrackingId] = useState("");
     const [deliveryPartner, setDeliveryPartner] = useState("");
     const [deliveredDate, setDeliveredDate] = useState("");
+    const [role, setRole] = useState("");
+
+    useEffect(() => {
+        setRole(localStorage.getItem("role"));
+    }, []);
 
     const history = useHistory();
     const { id } = useParams();
@@ -307,7 +312,7 @@ function OrderDetail() {
                                     <div className="value">
                                         {resData?.trackingId} — {resData?.deliveryPartner}
                                     </div>
-                                ) : (
+                                ) : role === "admin" ? (
                                     <form
                                         onSubmit={(e) => {
                                             e.preventDefault();
@@ -321,6 +326,8 @@ function OrderDetail() {
                                             Submit
                                         </button>
                                     </form>
+                                ) : (
+                                    <div className="value" style={{ color: "#94a3b8" }}>Not yet assigned</div>
                                 )}
                             </div>
 
@@ -329,13 +336,15 @@ function OrderDetail() {
                                 <div className="label">Shipped Date</div>
                                 {resData?.shippingDate ? (
                                     <div className="value">{resData?.shippingDate}</div>
-                                ) : (
+                                ) : role === "admin" ? (
                                     <div className="row-inline">
                                         <input type="text" placeholder="DD-MM-YYYY" value={shippingDate} onChange={(e) => e.target.value.length <= 10 && setShippingDate(e.target.value)} />
                                         <button className="btn" onClick={handleShippingDateUpdate}>
                                             Submit
                                         </button>
                                     </div>
+                                ) : (
+                                    <div className="value" style={{ color: "#94a3b8" }}>Not yet assigned</div>
                                 )}
                             </div>
 
@@ -344,13 +353,15 @@ function OrderDetail() {
                                 <div className="label">Delivered Date</div>
                                 {resData?.deliveredDate ? (
                                     <div className="value">{resData?.deliveredDate}</div>
-                                ) : (
+                                ) : role === "admin" ? (
                                     <div className="row-inline">
                                         <input type="text" placeholder="DD-MM-YYYY" value={deliveredDate} onChange={(e) => e.target.value.length <= 10 && setDeliveredDate(e.target.value)} />
                                         <button className="btn" onClick={handleDeliveredDateUpdate}>
                                             Submit
                                         </button>
                                     </div>
+                                ) : (
+                                    <div className="value" style={{ color: "#94a3b8" }}>Not yet assigned</div>
                                 )}
                             </div>
                         </div>
@@ -370,7 +381,7 @@ function OrderDetail() {
                 style={{ width: "50vw" }}
                 footer={
                     <div>
-                        <Button label="Verify Payment" className="p-button-success" onClick={handleVerifyClick} />
+                        {role === "admin" && <Button label="Verify Payment" className="p-button-success" onClick={handleVerifyClick} />}
                         <Button label="Cancel" className="p-button-secondary" onClick={() => setDisplayModal(false)} />
                     </div>
                 }

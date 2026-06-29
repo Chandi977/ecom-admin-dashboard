@@ -23,7 +23,15 @@ export const productFormSchema = z.object({
     brandId: z.string().min(1, "Brand is required"),
     categoryId: z.string().min(1, "Category is required"),
     subCategoryId: z.string().optional(),
-    gst: z.preprocess((val) => Number(val), z.number().min(0, "GST cannot be negative").default(18)),
+    // GST is optional: blank means "inherit the category's GST". An empty string
+    // becomes undefined here (not 0) so it is omitted from the payload downstream.
+    gst: z.preprocess(
+        (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+        z.number().min(0, "GST cannot be negative").optional(),
+    ),
+    // Per-product overrides for category common fields (key -> value). Blank
+    // entries are stripped before submit so the product inherits those defaults.
+    common_overrides: z.record(z.any()).optional(),
     description: z.string().optional(),
     aboutItem: z.string().optional(),
     usage: z.string().optional(),

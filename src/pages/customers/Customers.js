@@ -31,6 +31,7 @@ function Customers() {
     const [users, setUsers] = useState([]);
     const [customers, setCustomers] = useState([]);
     const history = useHistory();
+    const [role, setRole] = useState("");
     const [values, setValues] = useState({
         name: "",
         email: "",
@@ -60,6 +61,10 @@ function Customers() {
         }
     }, [getData, isFiltering]);
 
+    useEffect(() => {
+        setRole(localStorage.getItem("role"));
+    }, []);
+
     const handleDelete = async (value) => {
         const data = {
             id: [value?._id],
@@ -74,6 +79,8 @@ function Customers() {
     const actionBodyTemplate = (rowData) => {
         return (
             <div style={{ display: "flex", alignItems: "center" }}>
+                {role === "admin" && (
+                <>
                 <div style={{ position: "relative" }}>
                     <Button
                         className="p-button-rounded mr-2 Elipse_Icon"
@@ -108,6 +115,8 @@ function Customers() {
                     </span>
                     <span style={{ display: "none", position: "absolute", top: "40px", left: "0", background: "#222", color: "#fff", padding: "6px 14px", borderRadius: "7px", fontSize: "0.95rem", zIndex: 10 }}>Delete User</span>
                 </div>
+                </>
+                )}
             </div>
         );
     };
@@ -294,8 +303,12 @@ function Customers() {
                     {/* <BreadCrumb model={breadItems} home={home} /> */}
                 </div>
                 <div className="Top__Btn">
+                    {role === "admin" && (
                     <Button label="Add New User" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "140px" }} />
+                    )}
+                    {role === "admin" && (
                     <Button icon="pi pi-trash" iconPos="right" onClick={handledDelete} className="Btn__DarkDelete" style={{ width: "140px" }} />
+                    )}
                     <Button label="Download Users List" className="buttonsaaa" onClick={() => exportJsonToExcel({ data: users, fileName: "users" })} />
                 </div>
             </div>

@@ -62,6 +62,10 @@ import PinCodes from "./pages/Pincode/pincode";
 import PinCodeUpdate from "./pages/Pincode/pinCodeUpdate";
 import Coupons from "./pages/Coupon/coupon";
 import CouponUpdate from "./pages/Coupon/CouonUpdate";
+import Analytics from "./pages/analytics/Analytics";
+import DemandSignals from "./pages/analytics/DemandSignals";
+import Notifications from "./pages/Notifications/Notifications";
+import { clearAuthSession, getStoredAuthSession, isTokenExpired } from "./utils/authSession";
 
 const App = () => {
     const history = useHistory();
@@ -89,8 +93,9 @@ const App = () => {
     }, [mobileMenuActive]);
 
     useEffect(() => {
-        let token = localStorage.getItem("token");
-        if (!token) {
+        const { token, role } = getStoredAuthSession();
+        if (window.location.pathname !== "/auth" && (!token || isTokenExpired(token) || !role)) {
+            clearAuthSession();
             history.push("/auth");
         }
     }, [history]);
@@ -204,120 +209,32 @@ const App = () => {
         setRole(role);
     }, []);
 
-    const getCustomer = () => {
-        if (role === "manager" || role === "admin") {
-            return [{ label: "Users", icon: "pi pi-users", to: "/customers" }];
-        }
-    };
-
-    const getAdmin = () => {
-        if (role === "manager" || role === "admin") {
-            return [{ label: "Admin", icon: "pi pi-user", to: "/admin" }];
-        }
-    };
-
-    const getFaq = () => {
-        if (role === "admin" || role === "digital marketing") {
-            return [{ label: "Brands", icon: "pi pi-question", to: "/brands" }];
-        }
-    };
-
-    const getManage = () => {
-        if (role === "admin" || role === "digital marketing") {
-            return [{ label: "Category", icon: "pi pi-list", to: "/categories" }];
-        }
-    };
-
-    const getFeatures = () => {
-        if (role === "admin" || role === "manager") {
-            return [{ label: "SubCategory", icon: "pi pi-server", to: "/subcategories" }];
-        }
-    };
-    const getEnquiry = () => {
-        if (role === "admin" || role === "manager") {
-            return [{ label: "Product", icon: "pi pi-box", to: "/products" }];
-        }
-    };
-    const getCustomerDeatil = () => {
-        if (role === "admin" || role === "manager") {
-            return [{ label: "Customers Query", icon: "pi pi-envelope", to: "/data/customer" }];
-        }
-    };
-
-    const getCoupon = () => {
-        if (role === "admin" || role === "manager") {
-            return [{ label: "Coupon", icon: "pi pi-tags", to: "/coupon" }];
-        }
-    };
-
-    const getContact = () => {
-        if (role === "admin" || role === "manager") {
-            return [{ label: "Contact Form Main Website", icon: "pi pi-phone", to: "/data/contact" }];
-        }
-    };
-    const getCustomPAckagingFormData = () => {
-        if (role === "admin" || role === "manager") {
-            return [{ label: "Custom Packaging", icon: "pi pi-pencil", to: "/custom-packaging" }];
-        }
-    };
-
-    const getNotify = () => {
-        if (role === "admin" || role === "manager") {
-            return [{ label: "Notify", icon: "pi pi-pencil", to: "/notify" }];
-        }
-    };
-
-    const getPinCode = () => {
-        if (role === "admin" || role === "manager") {
-            return [{ label: "Pincodes", icon: "pi pi-map-marker", to: "/pincode" }];
-        }
-    };
+    // Declarative menu: each item lists the roles allowed to see it (empty = everyone).
+    // `catalog-manager` has read-only access across the dashboard — can view all
+    // operational pages but cannot create, edit, or delete any data.
+    const MENU_MODEL = [
+        { label: "Dashboard", icon: "pi pi-home", to: "/", roles: ["admin", "catalog-manager"] },
+        { label: "Users", icon: "pi pi-users", to: "/customers", roles: ["admin", "catalog-manager"] },
+        { label: "Admin", icon: "pi pi-user", to: "/admin", roles: ["admin"] },
+        { label: "Brands", icon: "pi pi-question", to: "/brands", roles: ["admin", "digital marketing", "catalog-manager"] },
+        { label: "Category", icon: "pi pi-list", to: "/categories", roles: ["admin", "digital marketing", "catalog-manager"] },
+        { label: "Pincodes", icon: "pi pi-map-marker", to: "/pincode", roles: ["admin", "catalog-manager"] },
+        { label: "SubCategory", icon: "pi pi-server", to: "/subcategories", roles: ["admin", "catalog-manager"] },
+        { label: "Coupon", icon: "pi pi-tags", to: "/coupon", roles: ["admin"] },
+        { label: "Product", icon: "pi pi-box", to: "/products", roles: ["admin", "catalog-manager"] },
+        { label: "Orders", icon: "pi pi-shopping-cart", to: "/orders", roles: ["admin", "catalog-manager"] },
+        { label: "Customers Query", icon: "pi pi-envelope", to: "/data/customer", roles: ["admin", "catalog-manager"] },
+        { label: "Custom Packaging", icon: "pi pi-pencil", to: "/custom-packaging", roles: ["admin", "catalog-manager"] },
+        { label: "Contact Form Main Website", icon: "pi pi-phone", to: "/data/contact", roles: ["admin", "catalog-manager"] },
+        { label: "Notify", icon: "pi pi-pencil", to: "/notify", roles: ["admin", "catalog-manager"] },
+        { label: "Notifications", icon: "pi pi-bell", to: "/notifications", roles: ["admin", "catalog-manager"] },
+        { label: "Analytics", icon: "pi pi-chart-line", to: "/analytics", roles: ["admin"] },
+        { label: "Demand Signals", icon: "pi pi-chart-bar", to: "/demand-signals", roles: ["admin"] },
+    ];
 
     const menu = [
         {
-            ...(role === "admin" && { items: [{ label: "Dashboard", icon: "pi pi-home", to: "/" }] }),
-        },
-        {
-            items: getCustomer(),
-        },
-        {
-            items: getAdmin(),
-        },
-        {
-            items: getFaq(),
-        },
-        {
-            items: getManage(),
-        },
-        {
-            items: getPinCode(),
-        },
-        {
-            items: getFeatures(),
-        },
-        {
-            items: getCoupon(),
-        },
-        {
-            items: getEnquiry(),
-        },
-        // {
-        //     items: getOffers(),
-        // },
-        {
-            items: [{ label: "Orders", icon: "pi pi-shopping-cart", to: "/orders" }],
-        },
-        {
-            items: getCustomerDeatil(),
-        },
-        {
-            items: getCustomPAckagingFormData(),
-        },
-        {
-            items: getContact(),
-        },
-        {
-            items: getNotify(),
+            items: MENU_MODEL.filter((item) => item.roles.length === 0 || item.roles.includes(role)).map(({ roles, ...item }) => item),
         },
     ];
 
@@ -337,46 +254,51 @@ const App = () => {
                         </div>
                         <div className="layout-main-container" style={{ backgroundColor: "#F6F8FA" }}>
                             <div className="layout-main">
-                                {/* Dashboard - Admin only */}
-                                <ProtectedRoute exact path="/" component={Dashboard} allowedRoles={["admin"]} />
-
-                                {/* Customer Management - Admin and Manager */}
-                                <ProtectedRoute exact path="/customers" component={Customers} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/customer/:id" component={Customer} allowedRoles={["admin", "manager"]} />
+                                {/* Dashboard - Admin / catalog-manager (read-only) */}
+                                <ProtectedRoute exact path="/" component={Dashboard} allowedRoles={["admin", "catalog-manager"]} />
+                                
+                                {/* Customer Management - Admin / catalog-manager (read-only) */}
+                                <ProtectedRoute exact path="/customers" component={Customers} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/customer/:id" component={Customer} allowedRoles={["admin", "catalog-manager"]} />
 
                                 {/* Admin Management - Admin and Manager */}
-                                <ProtectedRoute exact path="/admin" component={AllAdmin} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/admin" component={AllAdmin} allowedRoles={["admin"]} />
 
                                 {/* Content Management - Admin and Digital Marketing */}
-                                <ProtectedRoute exact path="/brands" component={Brands} allowedRoles={["admin", "digital marketing"]} />
-                                <ProtectedRoute exact path="/brand/:id" component={Brand} allowedRoles={["admin", "digital marketing"]} />
-                                <ProtectedRoute exact path="/categories" component={Categories} allowedRoles={["admin", "digital marketing"]} />
-                                <ProtectedRoute exact path="/category/:id" component={Category} allowedRoles={["admin", "digital marketing"]} />
+                                <ProtectedRoute exact path="/brands" component={Brands} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/brand/:id" component={Brand} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/categories" component={Categories} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/category/:id" component={Category} allowedRoles={["admin", "catalog-manager"]} />
 
                                 {/* Product Management - Admin and Manager */}
-                                <ProtectedRoute exact path="/subcategories" component={SubCategories} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/subcategory/:id" component={SubCategory} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/products" component={Products} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/products/create" component={ProductCreate} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/product/:id" component={Product} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/deals" component={Deals} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/deal/:id" component={Deal} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/subcategories" component={SubCategories} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/subcategory/:id" component={SubCategory} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/products" component={Products} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/products/create" component={ProductCreate} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/product/:id" component={Product} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/deals" component={Deals} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/deal/:id" component={Deal} allowedRoles={["admin"]} />
 
-                                {/* Orders - All authenticated users */}
-                                <ProtectedRoute exact path="/orders" component={Orders} allowedRoles={[]} />
-                                <ProtectedRoute exact path="/orderdetail/:id" component={OrderDetail} allowedRoles={[]} />
+                                {/* Orders - Admin / catalog-manager (read-only) */}
+                                <ProtectedRoute exact path="/orders" component={Orders} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/orderdetail/:id" component={OrderDetail} allowedRoles={["admin", "catalog-manager"]} />
 
-                                {/* Customer Data & Queries - Admin and Manager */}
-                                <ProtectedRoute exact path="/data/customer" component={CustomersData} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/data/contact" component={ContactData} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/custom-packaging" component={CustomPackaging} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/notify" component={NotifyData} allowedRoles={["admin", "manager"]} />
+                                {/* Customer Data & Queries - Admin / catalog-manager (read-only) */}
+                                <ProtectedRoute exact path="/data/customer" component={CustomersData} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/data/contact" component={ContactData} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/custom-packaging" component={CustomPackaging} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/notify" component={NotifyData} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/notifications" component={Notifications} allowedRoles={["admin", "catalog-manager"]} />
 
-                                {/* Configuration - Admin and Manager */}
-                                <ProtectedRoute exact path="/pincode" component={PinCodes} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/pincode/:id" component={PinCodeUpdate} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/coupon" component={Coupons} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/coupon/:id" component={CouponUpdate} allowedRoles={["admin", "manager"]} />
+                                {/* Configuration - Admin / catalog-manager (read-only) */}
+                                <ProtectedRoute exact path="/pincode" component={PinCodes} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/pincode/:id" component={PinCodeUpdate} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/coupon" component={Coupons} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/coupon/:id" component={CouponUpdate} allowedRoles={["admin"]} />
+
+                                {/* Analytics - Admin only */}
+                                <ProtectedRoute exact path="/analytics" component={Analytics} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/demand-signals" component={DemandSignals} allowedRoles={["admin"]} />
 
                                 {/* Legacy/Misc pages - Admin only */}
                                 <ProtectedRoute exact path="/manage" component={Manage} allowedRoles={["admin"]} />
@@ -384,10 +306,10 @@ const App = () => {
                                 <ProtectedRoute exact path="/notices" component={Notices} allowedRoles={["admin"]} />
                                 <ProtectedRoute exact path="/loginhistory" component={LoginHistory} allowedRoles={["admin"]} />
                                 <ProtectedRoute exact path="/pages" component={StaticPages} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/features" component={Features} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/feature/:id" component={Feature} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/enquiry" component={Enquirey} allowedRoles={["admin", "manager"]} />
-                                <ProtectedRoute exact path="/enquireydetails/:id" component={EnquireyDetails} allowedRoles={["admin", "manager"]} />
+                                <ProtectedRoute exact path="/features" component={Features} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/feature/:id" component={Feature} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/enquiry" component={Enquirey} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/enquireydetails/:id" component={EnquireyDetails} allowedRoles={["admin"]} />
                                 <ProtectedRoute exact path="/allStaticPages/:id" component={Pagedata} allowedRoles={["admin"]} />
                                 <ProtectedRoute exact path="/data" component={Warranty} allowedRoles={["admin"]} />
                                 <ProtectedRoute exact path="/privacypolicy" component={Pagedata} allowedRoles={["admin"]} />

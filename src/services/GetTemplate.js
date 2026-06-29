@@ -1,6 +1,7 @@
 import axios from "axios";
 import { toast } from "react-toastify";
 import { DEV } from "./constants";
+import { handleAuthFailure, isAuthFailureStatus } from "../utils/authSession";
 
 const CACHEABLE_GET_URLS = new Set(["/category/all", "/subcategory/all", "/brand/all"]);
 const GET_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -48,8 +49,13 @@ export const handleGetRequest = async (url, params, isShowToast = false) => {
             return response.data;
         } catch (error) {
             const id = toast.loading("Please wait...");
-            if (error?.response?.status === 401) toast.update(id, { render: error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!", type: "error", isLoading: false, autoClose: 3000 });
-            else toast.update(id, { render: error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!", type: "warn", isLoading: false, autoClose: 3000 });
+            if (isAuthFailureStatus(error?.response?.status)) {
+                clearGetRequestCache();
+                toast.update(id, { render: error?.response?.data?.messages || error?.response?.data?.message || "Session expired. Please log in again.", type: "error", isLoading: false, autoClose: 3000 });
+                handleAuthFailure();
+            } else {
+                toast.update(id, { render: error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!", type: "warn", isLoading: false, autoClose: 3000 });
+            }
         } finally {
             if (shouldCache) {
                 inFlightGetRequests.delete(cacheKey);

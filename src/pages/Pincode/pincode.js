@@ -39,9 +39,11 @@ function PinCodes() {
     const actionBodyTemplate = (rowData) => {
         return (
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {role === "admin" && (
                 <Button className="p-button-rounded mr-1 Elipse_Icon" onClick={() => history.push(`/pincode/${rowData?._id}`)}>
                     <FaPen />
                 </Button>
+                )}
                 {role === "admin" && (
                     <Button
                         className="p-button-rounded p-button-text p-button-danger"

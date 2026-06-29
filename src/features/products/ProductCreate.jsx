@@ -1,5 +1,5 @@
-import React from "react";
-import { useHistory } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useHistory, useLocation } from "react-router-dom";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { productFormSchema } from "../../schemas/productSchema";
@@ -17,7 +17,19 @@ import { FieldVisibilitySection } from "./components/FieldVisibilitySection";
 
 export const ProductCreate = () => {
     const history = useHistory();
+    const location = useLocation();
+    const [role, setRole] = useState("");
+
+    useEffect(() => {
+        setRole(localStorage.getItem("role"));
+    }, []);
+
     const createMutation = useCreateProduct();
+
+    // Optional pre-fill when arriving from a specific subcategory (or category).
+    const presetParams = new URLSearchParams(location.search);
+    const presetCategoryId = presetParams.get("categoryId") || "";
+    const presetSubCategoryId = presetParams.get("subCategoryId") || "";
 
     const breadItems = [
         { label: "Home", url: "/" },
@@ -34,9 +46,10 @@ export const ProductCreate = () => {
             product_id: "",
             slug: "",
             brandId: "",
-            categoryId: "",
-            subCategoryId: "",
-            gst: 18,
+            categoryId: presetCategoryId,
+            subCategoryId: presetSubCategoryId,
+            gst: "",
+            common_overrides: {},
             description: "",
             aboutItem: "",
             usage: "",
@@ -86,7 +99,16 @@ export const ProductCreate = () => {
     const { handleSubmit, formState: { errors, isDirty, isSubmitting } } = methods;
 
     const onSubmit = (values) => {
+        // Per-product overrides for the category's common fields. Blank entries are
+        // dropped so the product inherits those category defaults.
+        const commonOverrides = Object.fromEntries(
+            Object.entries(values.common_overrides || {}).filter(
+                ([, v]) => v !== "" && v !== undefined && v !== null,
+            ),
+        );
         const apiPayload = {
+            // Inherited common-field overrides first; explicit fields below win.
+            ...commonOverrides,
             // Root-level flat fields (legacy compatibility)
             name: values.name,
             product_id: values.product_id,
@@ -94,7 +116,8 @@ export const ProductCreate = () => {
             brand: values.brandId,
             category: values.categoryId,
             sub_category: values.subCategoryId || undefined,
-            gst: values.gst,
+            // Blank = inherit the category's GST (omitted from the payload).
+            gst: values.gst === "" || values.gst === undefined || values.gst === null ? undefined : values.gst,
             description: values.description,
             aboutItem: values.aboutItem,
             usage: values.usage,
@@ -255,6 +278,7 @@ export const ProductCreate = () => {
                             style={{ width: "120px", borderRadius: "6px" }}
                             disabled={isSubmitting || createMutation.isLoading}
                         />
+                        {role === "admin" || role === "catalog-manager" && (
                         <Button
                             type="submit"
                             label={isSubmitting || createMutation.isLoading ? "Saving..." : "Save Product"}
@@ -263,6 +287,7 @@ export const ProductCreate = () => {
                             style={{ width: "150px", borderRadius: "6px" }}
                             disabled={isSubmitting || createMutation.isLoading}
                         />
+                        )}
                     </div>
                 </div>
             </form>

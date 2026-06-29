@@ -1,27 +1,33 @@
 import React, { useEffect, useState } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import Axios from "axios";
-import { DEV } from "../../services/constants";
+import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
 
 function CustomersData() {
     const [manufacturers, setManufacturers] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let isMounted = true;
+
         async function fetchData() {
             try {
-                const response = await Axios.get(DEV + "/customer/get");
-                console.log(response);
-                const sortedData = response.data.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                setManufacturers(sortedData);
+                const response = await handleGetRequest("/customer/get");
+                const rows = Array.isArray(response?.data) ? response.data : [];
+                const sortedData = rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                if (isMounted) setManufacturers(sortedData);
             } catch (error) {
                 console.error("Error fetching data from API:", error);
+            } finally {
+                if (isMounted) setLoading(false);
             }
         }
 
         fetchData();
-        // console.log(manufacturers);
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     const dateTemplate = (rowdata) => {
@@ -43,7 +49,9 @@ function CustomersData() {
             <div className="grid">
                 <div className="col-12">
                     <div className="card">
-                        {manufacturers.length > 0 ? (
+                        {loading ? (
+                            <p>Loading data...</p>
+                        ) : manufacturers.length > 0 ? (
                             <>
                                 <DataTable
                                     filterDisplay="row"
@@ -64,7 +72,7 @@ function CustomersData() {
                                 </DataTable>
                             </>
                         ) : (
-                            <p>Loading data...</p>
+                            <p>No customer data found.</p>
                         )}
                     </div>
                 </div>

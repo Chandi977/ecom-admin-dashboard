@@ -28,3 +28,6 @@ yarn-error.log*
 
 layout.css
 pages.css
+
+# Secrets — keep AWS credentials out of the repo (use config.example.js as a template)
+src/assets/data/config.js

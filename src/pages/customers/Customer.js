@@ -20,6 +20,12 @@ function Customer() {
     const [passwordDaialog, setPasswordDialog] = useState(false);
     const [user, setUser] = useState();
     const { id } = useParams();
+    const [role, setRole] = useState("");
+
+    useEffect(() => {
+        setRole(localStorage.getItem("role"));
+    }, []);
+
     const getData = useCallback(async (userId) => {
         const result = await handleGetRequest(`/getuser/${userId}`);
         setUser(result?.data);
@@ -87,7 +93,7 @@ function Customer() {
                     <BreadCrumb model={breadItems} home={home} />
                 </div>
                 <div className="middle__">
-                    <Button label="Change Password" className="grey__button" onClick={() => setPasswordDialog(true)} />
+                    {role === "admin" && <Button label="Change Password" className="grey__button" onClick={() => setPasswordDialog(true)} />}
                 </div>
             </div>
             <div className="customer_details_section">
@@ -160,7 +166,7 @@ function Customer() {
                             </div>
                         </div>
                         <div className="Down__Btn">
-                            <Button label="Edit" className="Btn__Dark" />
+                            {role === "admin" && <Button label="Edit" className="Btn__Dark" />}
                         </div>
                     </form>
                 </div>
