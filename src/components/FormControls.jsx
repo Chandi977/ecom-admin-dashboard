@@ -112,6 +112,7 @@ export const FormInputNumber = ({
     description,
     min,
     max,
+    step,
 }) => {
     const { control } = useFormContext();
 
@@ -132,6 +133,7 @@ export const FormInputNumber = ({
                             value={field.value ?? ""}
                             min={min}
                             max={max}
+                            step={step || "any"}
                             disabled={disabled}
                             placeholder={placeholder}
                             onChange={(e) => {

@@ -206,7 +206,7 @@ function Category() {
                                 <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                         <label className="Label__Text">Quick Overview Fields</label>
-                                        {role === "admin" || role === "catalog-manager" && <Button type="button" label="Add Field" onClick={handleAddOverviewField} style={{ width: "140px", height: "35px" }} />}
+                                        {(role === "admin" || role === "catalog-manager") && <Button type="button" label="Add Field" onClick={handleAddOverviewField} style={{ width: "140px", height: "35px" }} />}
                                     </div>
                                     <small>These fields define the quick overview rows for this category.</small>
                                     {overviewFields.map((field, index) => (
@@ -217,7 +217,7 @@ function Category() {
                                                 onChange={(e) => handleOverviewFieldChange(index, "label", e.target.value)}
                                                 className="Input__Round"
                                             />
-                                            {role === "admin" || role === "catalog-manager" && <Button type="button" label="Remove" className="p-button-danger" onClick={() => handleRemoveOverviewField(index)} />}
+                                            {(role === "admin" || role === "catalog-manager") && <Button type="button" label="Remove" className="p-button-danger" onClick={() => handleRemoveOverviewField(index)} />}
                                         </div>
                                     ))}
                                 </div>
@@ -248,7 +248,7 @@ function Category() {
 
                         <div className="Down__Btn">
                             <Button label="Cancel" className="Btn__Transparent" onClick={handleCancel} />
-                            {role === "admin" || role === "catalog-manager" && <Button label="Update" className="Btn__Dark" />}
+                            {(role === "admin" || role === "catalog-manager") && <Button label="Update" className="Btn__Dark" />}
                         </div>
                     </form>
                 </div>

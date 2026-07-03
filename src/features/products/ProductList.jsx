@@ -132,12 +132,17 @@ export const ProductList = () => {
             />
         );
     };
-
     const priceTemplate = (rowData) => {
-        const base = rowData?.pricing?.basePrice;
-        const firstTierSp = rowData?.pricing?.priceList?.[0]?.sellingPrice;
-        const displayPrice = firstTierSp ?? base ?? 0;
+        const base = rowData?.price ?? rowData?.pricing?.basePrice;
+        const priceList = rowData?.priceList ?? rowData?.pricing?.priceList ?? [];
+        const firstTier = priceList[0];
+        const displayPrice = firstTier?.price ?? firstTier?.sellingPrice ?? base ?? 0;
         return <span>₹{displayPrice}</span>;
+    };
+
+    const gstTemplate = (rowData) => {
+        const gstVal = rowData?.gst;
+        return <span>{gstVal != null ? `${Math.round(gstVal * 100)}%` : "--"}</span>;
     };
 
     const stockTemplate = (rowData) => {
@@ -192,7 +197,7 @@ export const ProductList = () => {
                     tooltip="View details"
                     tooltipOptions={{ position: "bottom" }}
                 />
-                {role === "admin" || role === "catalog-manager" && (
+                {(role === "admin" || role === "catalog-manager") && (
                 <Button
                     icon="pi pi-pencil"
                     className="p-button-rounded p-button-text p-button-sm p-button-info"
@@ -240,7 +245,7 @@ export const ProductList = () => {
                         Manage corporate packaging inventory, price tiers, and dynamic specifications.
                     </p>
                 </div>
-                {role === "admin" || role === "catalog-manager" && (
+                {(role === "admin" || role === "catalog-manager") && (
                     <div style={{ display: "flex", gap: "1rem" }}>
                         <Button
                             label="Add Product"
@@ -307,7 +312,7 @@ export const ProductList = () => {
                     <Column header="Brand" body={brandTemplate} />
                     <Column header="Category" body={categoryTemplate} />
                     <Column header="Sub-Category" body={subCategoryTemplate} />
-                    <Column header="Price" body={priceTemplate} />
+                    <Column header="GST" body={gstTemplate} style={{ width: "90px" }} />
                     <Column header="Stock" body={stockTemplate} />
                     <Column header="Top" body={(row) => badgeTemplate(!!row.top_product, "#3b82f6")} style={{ textAlign: "center", width: "70px" }} />
                     <Column header="Deal" body={(row) => badgeTemplate(!!row.deal_product, "#fbbf24")} style={{ textAlign: "center", width: "70px" }} />

@@ -71,7 +71,7 @@ function Categories() {
     const actionBodyTemplate = (rowData) => {
         return (
             <div>
-                {role === "admin" || role === "catalog-manager" && (
+                {(role === "admin" || role === "catalog-manager") && (
                 <Button className="p-button-rounded mr-2 Elipse_Icon" onClick={() => history.push(`/category/${rowData?._id}`)}>
                     <FaPen />
                 </Button>
@@ -202,7 +202,7 @@ function Categories() {
                     </h2>
                     {/* <BreadCrumb model={breadItems} home={home} /> */}
                 </div>
-                {role === "admin" || role === "catalog-manager" && (
+                {(role === "admin" || role === "catalog-manager") && (
                     <div className="Top__Btn">
                         <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
                         {can("category:delete") && <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />}

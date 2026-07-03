@@ -217,7 +217,7 @@ function Brands() {
                         )}
                     </div>
                 </div>
-                {role === "admin" || role === "catalog-manager" && (
+                {(role === "admin" || role === "catalog-manager") && (
                     <div className="Top__Btn">
                         <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
                         <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />
@@ -236,7 +236,7 @@ function Brands() {
                             <div className="brand-date">{moment(brand.createdAt).format("DD/MM/YYYY")}</div>
                         </div>
                         <div className="brand-actions">
-                            {role === "admin" || role === "catalog-manager" && (
+                            {(role === "admin" || role === "catalog-manager") && (
                             <>
                             <button className="brand-action-btn" onClick={() => history.push(`/brand/${brand._id}`)}>
                                 <i className="pi pi-pencil" style={{ color: "#1976d2", fontSize: "1.3rem" }}></i>

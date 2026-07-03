@@ -91,6 +91,7 @@ export const PricingSection = () => {
                                                             <InputText
                                                                 type="number"
                                                                 {...inputField}
+                                                                value={inputField.value ?? ""}
                                                                 placeholder="e.g. 50"
                                                                 onChange={(e) => inputField.onChange(e.target.value === "" ? "" : Number(e.target.value))}
                                                                 className={classNames({ "p-invalid": fieldState.invalid }, "Input__Round")}
@@ -111,6 +112,7 @@ export const PricingSection = () => {
                                                             <InputText
                                                                 type="number"
                                                                 {...inputField}
+                                                                value={inputField.value ?? ""}
                                                                 placeholder="Original MRP"
                                                                 onChange={(e) => {
                                                                     const val = e.target.value === "" ? "" : Number(e.target.value);
@@ -135,6 +137,7 @@ export const PricingSection = () => {
                                                             <InputText
                                                                 type="number"
                                                                 {...inputField}
+                                                                value={inputField.value ?? ""}
                                                                 placeholder="Selling Price"
                                                                 onChange={(e) => {
                                                                     const val = e.target.value === "" ? "" : Number(e.target.value);
@@ -159,6 +162,7 @@ export const PricingSection = () => {
                                                             <InputText
                                                                 type="number"
                                                                 {...inputField}
+                                                                value={inputField.value ?? ""}
                                                                 placeholder="0%"
                                                                 onChange={(e) => inputField.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
                                                                 className={classNames({ "p-invalid": fieldState.invalid }, "Input__Round")}
@@ -181,6 +185,7 @@ export const PricingSection = () => {
                                                                 type="number"
                                                                 step="0.001"
                                                                 {...inputField}
+                                                                value={inputField.value ?? ""}
                                                                 placeholder="Weight in kg"
                                                                 onChange={(e) => inputField.onChange(e.target.value === "" ? "" : Number(e.target.value))}
                                                                 className={classNames({ "p-invalid": fieldState.invalid }, "Input__Round")}
@@ -201,6 +206,7 @@ export const PricingSection = () => {
                                                             <InputText
                                                                 type="number"
                                                                 {...inputField}
+                                                                value={inputField.value ?? ""}
                                                                 placeholder="Available stock"
                                                                 onChange={(e) => inputField.onChange(e.target.value === "" ? "" : Number(e.target.value))}
                                                                 className={classNames({ "p-invalid": fieldState.invalid }, "Input__Round")}

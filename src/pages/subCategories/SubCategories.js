@@ -223,7 +223,7 @@ function SubCategories() {
                             <div className="subcat-date">{moment(subcat.createdAt).format("DD/MM/YYYY")}</div>
                         </div>
                         <div className="subcat-actions">
-                            {role === "admin" || role === "catalog-manager" && (
+                            {(role === "admin" || role === "catalog-manager") && (
                             <button className="subcat-action-btn" onClick={() => history.push(`/subcategory/${subcat._id}`)}>
                                 <FaPen style={{ color: "#1976d2", fontSize: "1.3rem" }} />
                                 <span className="tooltip">Edit SubCategory</span>

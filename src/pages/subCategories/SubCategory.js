@@ -188,6 +188,13 @@ function SubCategory() {
         },
 
         onSubmit: async (data) => {
+            if (gst !== "" && gst !== null && gst !== undefined) {
+                const numericGst = Number(gst);
+                if (numericGst < 0 || numericGst > 1) {
+                    toast.error("GST Rate must be a decimal value between 0 and 1 (e.g. 0.18 for 18%)");
+                    return;
+                }
+            }
             const dat = {
                 name: name,
                 slug: slug,
@@ -480,9 +487,18 @@ function SubCategory() {
                                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                     <div>
                                         <label htmlFor="subcategory_gst" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
-                                            GST Rate (%)
+                                            GST Rate (Decimal)
                                         </label>
-                                        <InputText id="subcategory_gst" type="number" value={gst} onChange={(e) => setGst(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
+                                        <InputText id="subcategory_gst" type="number" min={0} max={1} step="any" value={gst} onChange={(e) => setGst(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
+                                        {gst !== "" && gst !== null && gst !== undefined && (
+                                            <small style={{ display: "block", marginTop: "0.25rem" }}>
+                                                {Number(gst) > 1 || Number(gst) < 0 ? (
+                                                    <span className="p-error">GST rate must be between 0 and 1 (e.g. 0.18 for 18%)</span>
+                                                ) : (
+                                                    <span className="p-text-secondary">Calculated: {Math.round(Number(gst) * 100)}% GST</span>
+                                                )}
+                                            </small>
+                                        )}
                                     </div>
                                     <div>
                                         <label htmlFor="subcategory_hsn" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
@@ -530,14 +546,14 @@ function SubCategory() {
 
                         <div className="Down__Btn">
                             <Button label="Cancel" className="Btn__Transparent" onClick={handleCancel} type="button" />
-                            {role === "admin" || role === "catalog-manager" && <Button label="Update" className="Btn__Dark" type="submit" />}
+                            {(role === "admin" || role === "catalog-manager") && <Button label="Update" className="Btn__Dark" type="submit" />}
                         </div>
                     </form>
                 </div>
                 <div className="right_section subcategory-products-panel">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", gap: "12px", flexWrap: "wrap" }}>
                         <h5 style={{ margin: 0, fontWeight: 600, color: "#182C5A", fontSize: "16px" }}>Products</h5>
-                        {role === "admin" || role === "catalog-manager" && (
+                        {(role === "admin" || role === "catalog-manager") && (
                         <Button
                             label="Create Product"
                             icon="pi pi-plus"

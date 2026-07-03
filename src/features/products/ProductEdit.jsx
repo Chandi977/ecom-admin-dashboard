@@ -15,6 +15,7 @@ import { InventorySection } from "./components/InventorySection";
 import { DynamicSpecificationSection } from "./components/DynamicSpecificationSection";
 import { SEOSection } from "./components/SEOSection";
 import { FieldVisibilitySection } from "./components/FieldVisibilitySection";
+import { RelatedProductsSection } from "./components/RelatedProductsSection";
 
 export const ProductEdit = () => {
     const { id } = useParams();
@@ -54,6 +55,10 @@ export const ProductEdit = () => {
                 categoryId: typeof prod.category === "object" ? prod.category?._id : prod.category || "",
                 subCategoryId: typeof prod.subCategory === "object" ? prod.subCategory?._id : prod.subCategory || typeof prod.sub_category === "object" ? prod.sub_category?._id : prod.sub_category || "",
                 gst: prod.gst ?? "",
+                model: prod.model || "",
+                hsn_code: prod.hsn_code || "",
+                sac_code: prod.sac_code || "",
+                tax_category: prod.tax_category || "",
                 common_overrides: {},
                 // Raw product (own values only — fetched with inherit:false) so
                 // BasicInfoSection can pre-fill overrides just for the category's
@@ -77,15 +82,16 @@ export const ProductEdit = () => {
                     basePrice: prod.pricing?.basePrice ?? prod.price,
                     priceList: prod.pricing?.priceList?.map((tier) => ({
                         number: tier.number,
-                        sellingPrice: tier.sellingPrice ?? tier.price,
-                        originalPrice: tier.originalPrice ?? tier.original_price,
+                        // Support both the current (sellingPrice/price) and legacy (SP/MRP) tier shapes.
+                        sellingPrice: tier.sellingPrice ?? tier.price ?? tier.SP,
+                        originalPrice: tier.originalPrice ?? tier.original_price ?? tier.MRP,
                         discount: tier.discount || 0,
                         packWeight: tier.packWeight ?? tier.pack_weight,
                         stockQuantity: tier.stockQuantity ?? tier.stock_quantity,
                     })) || prod.priceList?.map((tier) => ({
                         number: tier.number,
-                        sellingPrice: tier.price,
-                        originalPrice: tier.original_price,
+                        sellingPrice: tier.price ?? tier.SP ?? tier.sellingPrice,
+                        originalPrice: tier.original_price ?? tier.MRP ?? tier.originalPrice,
                         discount: tier.discount || 0,
                         packWeight: tier.pack_weight,
                         stockQuantity: tier.stock_quantity,
@@ -162,6 +168,10 @@ export const ProductEdit = () => {
             sub_category: values.subCategoryId || undefined,
             // Blank = inherit the category's GST (omitted from the payload).
             gst: values.gst === "" || values.gst === undefined || values.gst === null ? undefined : values.gst,
+            model: values.model || undefined,
+            hsn_code: values.hsn_code || undefined,
+            sac_code: values.sac_code || undefined,
+            tax_category: values.tax_category || undefined,
             description: values.description,
             aboutItem: values.aboutItem,
             usage: values.usage,
@@ -193,11 +203,11 @@ export const ProductEdit = () => {
                 basePrice: values.pricing.basePrice,
                 priceList: values.pricing.priceList.map(tier => ({
                     number: tier.number,
-                    sellingPrice: tier.sellingPrice,
-                    originalPrice: tier.originalPrice,
+                    price: tier.sellingPrice,
+                    original_price: tier.originalPrice,
                     discount: tier.discount,
-                    packWeight: tier.packWeight,
-                    stockQuantity: tier.stockQuantity,
+                    pack_weight: tier.packWeight,
+                    stock_quantity: tier.stockQuantity,
                 })),
             },
             inventory: {
@@ -222,14 +232,10 @@ export const ProductEdit = () => {
             }
         };
 
-        updateMutation.mutate(
-            { id, data: apiPayload },
-            {
-                onSuccess: () => {
-                    history.push("/products");
-                },
-            }
-        );
+        // Stay on the edit page after saving. useUpdateProduct already toasts
+        // success and invalidates the detail query, which refetches and re-syncs
+        // the form (clearing the "unsaved changes" state) without navigating away.
+        updateMutation.mutate({ id, data: apiPayload });
     };
 
     const handleCancel = () => {
@@ -301,6 +307,9 @@ export const ProductEdit = () => {
                         <AccordionTab header="Section 7: Storefront Field Visibility">
                             <FieldVisibilitySection />
                         </AccordionTab>
+                        <AccordionTab header="Section 8: Related Products & Buy It With">
+                            <RelatedProductsSection />
+                        </AccordionTab>
                     </Accordion>
                 </div>
 
@@ -345,7 +354,7 @@ export const ProductEdit = () => {
                             style={{ width: "120px", borderRadius: "6px" }}
                             disabled={isSubmitting || updateMutation.isLoading}
                         />
-                        {role === "admin" || role === "catalog-manager" && (
+                        {(role === "admin" || role === "catalog-manager") && (
                         <Button
                             type="submit"
                             label={isSubmitting || updateMutation.isLoading ? "Saving..." : "Save Changes"}

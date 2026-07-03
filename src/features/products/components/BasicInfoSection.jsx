@@ -39,6 +39,26 @@ export const BasicInfoSection = () => {
             : {};
     const commonAttributeKeys = Object.keys(commonAttributes);
     
+    const gstValue = watch("gst");
+    const gstDescription = useMemo(() => {
+        let text = "";
+        if (inheritedGst != null) {
+            const inheritedDisplay = inheritedGst > 0 && inheritedGst <= 1 ? `${Math.round(inheritedGst * 100)}%` : `${inheritedGst}%`;
+            text = `Inherited from category: ${inheritedDisplay}. Leave blank to use it.`;
+        } else {
+            text = "Leave blank to inherit the category's GST.";
+        }
+
+        if (gstValue !== undefined && gstValue !== null && gstValue !== "") {
+            const parsedGst = Number(gstValue);
+            if (!isNaN(parsedGst) && parsedGst >= 0 && parsedGst <= 1) {
+                const percent = Math.round(parsedGst * 100);
+                text += ` (Entered: ${gstValue} = ${percent}% GST)`;
+            }
+        }
+        return text;
+    }, [inheritedGst, gstValue]);
+    
     const [filteredSubCategories, setFilteredSubCategories] = useState([]);
     const [editorState, setEditorState] = useState(EditorState.createEmpty());
 
@@ -124,6 +144,12 @@ export const BasicInfoSection = () => {
             />
 
             <FormInputText
+                name="model"
+                label="Model / Variant Name"
+                placeholder="e.g. D2"
+            />
+
+            <FormInputText
                 name="slug"
                 label="Slug / SEO Route"
                 placeholder="e.g. kraft-paper-bags-kpb-001"
@@ -165,15 +191,36 @@ export const BasicInfoSection = () => {
 
             <FormInputNumber
                 name="gst"
-                label="GST Rate (%)"
+                label="GST Rate (Decimal)"
                 placeholder={inheritedGst != null ? `${inheritedGst} (inherited)` : "Inherited from category"}
                 min={0}
-                max={100}
-                description={
-                    inheritedGst != null
-                        ? `Inherited from category: ${inheritedGst}%. Leave blank to use it.`
-                        : "Leave blank to inherit the category's GST."
-                }
+                max={1}
+                step="any"
+                description={gstDescription}
+            />
+
+            <FormInputText
+                name="hsn_code"
+                label="HSN Code"
+                placeholder={rawProduct?.hsn_code ? `${rawProduct.hsn_code}` : "e.g. 48191010"}
+            />
+
+            <FormInputText
+                name="sac_code"
+                label="SAC Code"
+                placeholder="e.g. 998812 (for services)"
+            />
+
+            <FormDropdown
+                name="tax_category"
+                label="Tax Category"
+                options={[
+                    { label: "Goods", value: "Goods" },
+                    { label: "Services", value: "Services" },
+                ]}
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select tax category"
             />
 
             <FormInputText

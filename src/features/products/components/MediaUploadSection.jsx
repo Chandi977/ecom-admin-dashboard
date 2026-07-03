@@ -69,6 +69,14 @@ export const MediaUploadSection = () => {
         if (thumbnail === keyToDelete) {
             setValue("media.thumbnail", updatedImages[0] || "", { shouldDirty: true, shouldValidate: true });
         }
+
+        // Free the S3 object if nothing references it (e.g. it was uploaded this
+        // session). The backend keeps any image still referenced by a saved
+        // product and cleans those up on save instead — so this never orphans
+        // or prematurely deletes a persisted image. Best-effort; ignore errors.
+        if (keyToDelete && !/^https?:\/\//i.test(keyToDelete)) {
+            productService.deleteProductImages([keyToDelete]).catch(() => {});
+        }
     };
 
     const handleSetThumbnail = (key) => {

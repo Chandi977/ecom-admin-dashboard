@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useFormik } from "formik";
 import classNames from "classnames";
+import { toast } from "react-toastify";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
@@ -35,6 +36,13 @@ function AddsubcategoryDialog({ onsuccess }) {
         },
 
         onSubmit: async (data) => {
+            if (gst !== "" && gst !== null && gst !== undefined) {
+                const numericGst = Number(gst);
+                if (numericGst < 0 || numericGst > 1) {
+                    toast.error("GST Rate must be a decimal value between 0 and 1 (e.g. 0.18 for 18%)");
+                    return;
+                }
+            }
             const dat = {
                 name: data.name,
                 category: selectedCategory,
@@ -97,9 +105,18 @@ function AddsubcategoryDialog({ onsuccess }) {
                                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                     <div>
                                         <label htmlFor="subcategory_gst" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
-                                            GST Rate (%)
+                                            GST Rate (Decimal)
                                         </label>
-                                        <InputText id="subcategory_gst" type="number" value={gst} onChange={(e) => setGst(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
+                                        <InputText id="subcategory_gst" type="number" min={0} max={1} step="any" value={gst} onChange={(e) => setGst(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
+                                        {gst !== "" && gst !== null && gst !== undefined && (
+                                            <small style={{ display: "block", marginTop: "0.25rem" }}>
+                                                {Number(gst) > 1 || Number(gst) < 0 ? (
+                                                    <span className="p-error">GST rate must be between 0 and 1 (e.g. 0.18 for 18%)</span>
+                                                ) : (
+                                                    <span className="p-text-secondary">Calculated: {Math.round(Number(gst) * 100)}% GST</span>
+                                                )}
+                                            </small>
+                                        )}
                                     </div>
                                     <div>
                                         <label htmlFor="subcategory_hsn" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
