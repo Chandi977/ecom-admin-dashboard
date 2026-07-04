@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 // Brand app icon shown in the push/in-app preview (same logo used in emails).
 const APP_ICON_URL = "https://store.prempackaging.com/pp_logo_1.png";
@@ -103,8 +103,12 @@ export function EmailPreview({ subject, body }) {
     );
 }
 
-export function PushPreview({ title, body }) {
+export function PushPreview({ title, body, image }) {
     const [iconFailed, setIconFailed] = useState(false);
+    const [imageFailed, setImageFailed] = useState(false);
+    // Re-attempt rendering when the URL changes (a corrected URL should recover).
+    useEffect(() => setImageFailed(false), [image]);
+    const showImage = image && String(image).trim() && !imageFailed;
     return (
         <div
             style={{
@@ -121,50 +125,60 @@ export function PushPreview({ title, body }) {
                     borderRadius: 16,
                     padding: 12,
                     display: "flex",
+                    flexDirection: "column",
                     gap: 10,
-                    alignItems: "flex-start",
                     boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
                 }}
             >
-                <div
-                    style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 9,
-                        background: "#fff",
-                        border: "1px solid #e5e7eb",
-                        color: "#14254C",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        fontWeight: 700,
-                        overflow: "hidden",
-                    }}
-                >
-                    {iconFailed ? (
-                        "PP"
-                    ) : (
-                        <img
-                            src={APP_ICON_URL}
-                            alt="App icon"
-                            onError={() => setIconFailed(true)}
-                            style={{ width: "100%", height: "100%", objectFit: "contain", padding: 3 }}
-                        />
-                    )}
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <div
+                        style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 9,
+                            background: "#fff",
+                            border: "1px solid #e5e7eb",
+                            color: "#14254C",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            fontWeight: 700,
+                            overflow: "hidden",
+                        }}
+                    >
+                        {iconFailed ? (
+                            "PP"
+                        ) : (
+                            <img
+                                src={APP_ICON_URL}
+                                alt="App icon"
+                                onError={() => setIconFailed(true)}
+                                style={{ width: "100%", height: "100%", objectFit: "contain", padding: 3 }}
+                            />
+                        )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>Prem Packaging</span>
+                            <span style={{ fontSize: 11, color: "#94a3b8" }}>now</span>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginTop: 2, wordBreak: "break-word" }}>
+                            {renderSample(title) || "Notification title"}
+                        </div>
+                        <div style={{ fontSize: 13, color: "#475569", marginTop: 2, wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
+                            {renderSample(body) || "Your message preview will appear here."}
+                        </div>
+                    </div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>Prem Packaging</span>
-                        <span style={{ fontSize: 11, color: "#94a3b8" }}>now</span>
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginTop: 2, wordBreak: "break-word" }}>
-                        {renderSample(title) || "Notification title"}
-                    </div>
-                    <div style={{ fontSize: 13, color: "#475569", marginTop: 2, wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
-                        {renderSample(body) || "Your message preview will appear here."}
-                    </div>
-                </div>
+                {showImage && (
+                    <img
+                        src={image}
+                        alt="Notification"
+                        onError={() => setImageFailed(true)}
+                        style={{ width: "100%", maxHeight: 170, objectFit: "cover", borderRadius: 10, display: "block" }}
+                    />
+                )}
             </div>
         </div>
     );

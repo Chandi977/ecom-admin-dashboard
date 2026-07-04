@@ -9,6 +9,7 @@ import { InputTextarea } from "primereact/inputtextarea";
 import { Dropdown } from "primereact/dropdown";
 import { InputSwitch } from "primereact/inputswitch";
 import { Checkbox } from "primereact/checkbox";
+import { AutoComplete } from "primereact/autocomplete";
 import { Tag } from "primereact/tag";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
@@ -17,6 +18,7 @@ import moment from "moment";
 import { handleGetRequest } from "../../services/GetTemplate";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { handlePostRequest } from "../../services/PostTemplate";
+import { productService } from "../../services/productService";
 import { can } from "../../rbac/permissions";
 import { EmailPreview, PushPreview } from "./NotificationPreview";
 
@@ -33,6 +35,26 @@ const ROLE_OPTIONS = [
     { label: "Catalog Manager", value: "catalog-manager" },
     { label: "Admin", value: "admin" },
 ];
+
+// What tapping the notification opens on the phone. The produced `data` payload
+// must match the mobile deep-link resolver (type + productId / orderId).
+const LINK_TYPE_OPTIONS = [
+    { label: "Nothing (just show it)", value: "none" },
+    { label: "Open a product", value: "product" },
+    { label: "Open an order", value: "order" },
+    { label: "Custom JSON (advanced)", value: "custom" },
+];
+
+// Android notification channel — order updates get their own channel so users
+// can mute promos without losing transactional alerts.
+const CHANNEL_OPTIONS = [
+    { label: "Offers & Promotions", value: "promotions" },
+    { label: "Order Updates", value: "orders" },
+];
+
+// Best-effort pick of a product's primary image across possible shapes.
+const productImage = (p) =>
+    p?.image?.[0]?.url || p?.images?.[0]?.url || p?.image?.[0] || p?.images?.[0] || (typeof p?.image === "string" ? p.image : "") || "";
 
 function Notifications() {
     const dispatch = useDispatch();
@@ -100,24 +122,87 @@ function Notifications() {
     const [userIds, setUserIds] = useState("");
     const [title, setTitle] = useState("");
     const [bodyText, setBodyText] = useState("");
+    const [imageUrl, setImageUrl] = useState("");
+    const [channelId, setChannelId] = useState("promotions");
+    const [linkType, setLinkType] = useState("none");
+    const [linkProduct, setLinkProduct] = useState(null); // { label, value, image }
+    const [productSuggestions, setProductSuggestions] = useState([]);
+    const [orderId, setOrderId] = useState("");
     const [dataJson, setDataJson] = useState("");
     const [alsoEmail, setAlsoEmail] = useState(false);
     const [sending, setSending] = useState(false);
+
+    // Type-ahead product search for the "open a product" deep link.
+    const searchProducts = async (e) => {
+        try {
+            const res = await productService.searchProducts({ q: e.query });
+            const list = Array.isArray(res?.data) ? res.data : [];
+            setProductSuggestions(
+                list.map((p) => ({
+                    label: p.name || p.model || p._id,
+                    value: p._id,
+                    image: productImage(p),
+                })),
+            );
+        } catch {
+            setProductSuggestions([]);
+        }
+    };
+
+    // Assemble the `data` payload the mobile app understands (deep link + image
+    // + channel). Returns null on a validation error (toast already shown).
+    const buildData = () => {
+        const data = {};
+        if (linkType === "product") {
+            if (!linkProduct?.value) {
+                toast.warn("Pick a product for the deep link");
+                return null;
+            }
+            data.type = "product";
+            data.productId = linkProduct.value;
+        } else if (linkType === "order") {
+            if (!orderId.trim()) {
+                toast.warn("Enter an order ID for the deep link");
+                return null;
+            }
+            data.type = "order";
+            data.orderId = orderId.trim();
+        } else if (linkType === "custom" && dataJson.trim()) {
+            try {
+                Object.assign(data, JSON.parse(dataJson));
+            } catch {
+                toast.warn("Custom deep-link data must be valid JSON");
+                return null;
+            }
+        }
+        if (imageUrl.trim()) data.image = imageUrl.trim();
+        // Order deep-links always route to the "orders" channel on the device;
+        // otherwise honour the chosen channel.
+        if (channelId) data.channelId = channelId;
+        return data;
+    };
+
+    const resetSendForm = () => {
+        setTitle("");
+        setBodyText("");
+        setImageUrl("");
+        setChannelId("promotions");
+        setLinkType("none");
+        setLinkProduct(null);
+        setOrderId("");
+        setDataJson("");
+        setUserIds("");
+        setAlsoEmail(false);
+    };
 
     const sendNotification = async () => {
         if (!title.trim()) {
             toast.warn("Title is required");
             return;
         }
-        let data = {};
-        if (dataJson.trim()) {
-            try {
-                data = JSON.parse(dataJson);
-            } catch {
-                toast.warn("Deep-link data must be valid JSON");
-                return;
-            }
-        }
+        const data = buildData();
+        if (data === null) return;
+
         const payload = { audience, title: title.trim(), body: bodyText, data, email: alsoEmail };
         if (audience === "role") payload.role = role;
         if (audience === "users") payload.userIds = userIds.split(",").map((s) => s.trim()).filter(Boolean);
@@ -127,11 +212,7 @@ function Notifications() {
             const res = await dispatch(handlePostRequest(payload, "/notification/send", true, false));
             if (res && res !== "error" && res?.success) {
                 toast.success(res.message || "Notification sent");
-                setTitle("");
-                setBodyText("");
-                setDataJson("");
-                setUserIds("");
-                setAlsoEmail(false);
+                resetSendForm();
                 fetchCampaigns();
             }
         } finally {
@@ -229,17 +310,83 @@ function Notifications() {
                                         <label className="block mb-2">Message</label>
                                         <InputTextarea value={bodyText} onChange={(e) => setBodyText(e.target.value)} rows={4} className="w-full" disabled={!canWrite} />
                                     </div>
-                                    <div className="col-12">
-                                        <label className="block mb-2">Deep-link data (optional JSON)</label>
-                                        <InputTextarea
-                                            value={dataJson}
-                                            onChange={(e) => setDataJson(e.target.value)}
-                                            rows={2}
-                                            placeholder='e.g. {"type":"product","slug":"corrugated-box"}'
+                                    <div className="col-12 md:col-6">
+                                        <label className="block mb-2">Image URL (optional)</label>
+                                        <InputText
+                                            value={imageUrl}
+                                            onChange={(e) => setImageUrl(e.target.value)}
+                                            placeholder="https://res.cloudinary.com/.../offer.jpg"
+                                            className="w-full"
+                                            disabled={!canWrite}
+                                        />
+                                        <small style={{ color: "#94a3b8" }}>Shown as a big picture on the phone.</small>
+                                    </div>
+                                    <div className="col-12 md:col-6">
+                                        <label className="block mb-2">Channel</label>
+                                        <Dropdown
+                                            value={channelId}
+                                            options={CHANNEL_OPTIONS}
+                                            onChange={(e) => setChannelId(e.value)}
                                             className="w-full"
                                             disabled={!canWrite}
                                         />
                                     </div>
+                                    <div className="col-12 md:col-6">
+                                        <label className="block mb-2">On tap, open</label>
+                                        <Dropdown
+                                            value={linkType}
+                                            options={LINK_TYPE_OPTIONS}
+                                            onChange={(e) => setLinkType(e.value)}
+                                            className="w-full"
+                                            disabled={!canWrite}
+                                        />
+                                    </div>
+                                    {linkType === "product" && (
+                                        <div className="col-12 md:col-6">
+                                            <label className="block mb-2">Product</label>
+                                            <AutoComplete
+                                                value={linkProduct}
+                                                suggestions={productSuggestions}
+                                                completeMethod={searchProducts}
+                                                field="label"
+                                                dropdown
+                                                forceSelection
+                                                placeholder="Search by name / model / SKU"
+                                                onChange={(e) => setLinkProduct(e.value)}
+                                                onSelect={(e) => {
+                                                    if (!imageUrl && e.value?.image) setImageUrl(e.value.image);
+                                                }}
+                                                className="w-full"
+                                                inputClassName="w-full"
+                                                disabled={!canWrite}
+                                            />
+                                        </div>
+                                    )}
+                                    {linkType === "order" && (
+                                        <div className="col-12 md:col-6">
+                                            <label className="block mb-2">Order ID</label>
+                                            <InputText
+                                                value={orderId}
+                                                onChange={(e) => setOrderId(e.target.value)}
+                                                placeholder="e.g. 665f0c1a9b3e2f0012a4bc21"
+                                                className="w-full"
+                                                disabled={!canWrite}
+                                            />
+                                        </div>
+                                    )}
+                                    {linkType === "custom" && (
+                                        <div className="col-12">
+                                            <label className="block mb-2">Custom deep-link data (JSON)</label>
+                                            <InputTextarea
+                                                value={dataJson}
+                                                onChange={(e) => setDataJson(e.target.value)}
+                                                rows={2}
+                                                placeholder='{"type":"product","productId":"665f...bc21"}'
+                                                className="w-full"
+                                                disabled={!canWrite}
+                                            />
+                                        </div>
+                                    )}
                                     <div className="col-12">
                                         <label className="block mb-2">Channels</label>
                                         <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
@@ -263,7 +410,7 @@ function Notifications() {
                                 </div>
                                 <div className="col-12 md:col-5">
                                     <label className="block mb-2">Preview</label>
-                                    <PushPreview title={title} body={bodyText} />
+                                    <PushPreview title={title} body={bodyText} image={imageUrl} />
                                 </div>
                               </div>
                             </TabPanel>
