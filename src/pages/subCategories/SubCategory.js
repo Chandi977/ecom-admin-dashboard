@@ -1,19 +1,27 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
-import { useFormik } from "formik";
-import classNames from "classnames";
-import { InputText } from "primereact/inputtext";
+import { Dialog } from "primereact/dialog";
 import { Dropdown } from "primereact/dropdown";
-import { DataTable } from "primereact/datatable";
-import { Column } from "primereact/column";
+import { InputText } from "primereact/inputtext";
 import { useHistory, useParams } from "react-router-dom";
 import { handleGetRequest } from "../../services/GetTemplate";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
-import { CommonAttributesEditor, pairsToAttributes, attributesToPairs } from "../../components/CategoryAttributesEditor";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
+import { productService } from "../../services/productService";
+import { PRODUCT_SORT_OPTIONS, sortProducts } from "../../utils/productSorting";
+import ProductExcelGrid from "../../features/products/components/ProductExcelGrid";
+import ProductPasteImportDialog from "../../features/products/components/ProductPasteImportDialog";
+import { MultiSelect } from "primereact/multiselect";
+import { normalizePackSizes } from "../../utils/packSizes";
+
+const SECTION_OPTIONS = [
+    { label: "Dimensions & Specs", value: "dims" },
+    { label: "Content & SEO", value: "content" },
+    { label: "Details (media, related…)", value: "extras" },
+];
 
 const getAuthHeader = () => {
     const token = localStorage.getItem("token");
@@ -22,7 +30,6 @@ const getAuthHeader = () => {
 
 const normalizeText = (value) => String(value || "").trim().toLowerCase();
 const getId = (value) => (typeof value === "object" ? value?._id : value);
-const displayValue = (value) => (value !== undefined && value !== null && value !== "" ? value : "--");
 
 function SubCategory() {
     const [manufacturer, setManufacturers] = useState();
@@ -33,33 +40,26 @@ function SubCategory() {
     useEffect(() => {
         setRole(localStorage.getItem("role"));
     }, []);
-    const [name, setName] = useState("");
-    const [slug, setSlug] = useState("");
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState("");
-    const [gst, setGst] = useState("");
-    const [hsn_code, setHsnCode] = useState("");
-    const [sac_code, setSacCode] = useState("");
-    const [tax_category, setTaxCategory] = useState("Goods");
-    const [delivery_time, setDeliveryTime] = useState("");
-    const [attributePairs, setAttributePairs] = useState([]);
     const [subCategoryProducts, setSubCategoryProducts] = useState([]);
     const [productsLoading, setProductsLoading] = useState(false);
+    const [sortBy, setSortBy] = useState("");
+    const [importOpen, setImportOpen] = useState(false);
+    const [packSizeOpen, setPackSizeOpen] = useState(false);
+    const [newPackSize, setNewPackSize] = useState("");
+    const [savingPackSizes, setSavingPackSizes] = useState(false);
+    const [visibleSections, setVisibleSections] = useState(["dims", "content", "extras"]);
+    const editable = role === "admin" || role === "catalog-manager";
 
-    const categoryLookup = useMemo(() => {
-        return categories.reduce((acc, category) => {
-            if (category?._id) acc[category._id] = category.name;
-            return acc;
-        }, {});
-    }, [categories]);
+    const selectedCategoryObj = useMemo(
+        () => categories.find((cat) => String(cat?._id) === String(selectedCategory)),
+        [categories, selectedCategory],
+    );
+    const packSizes = useMemo(() => normalizePackSizes(manufacturer?.pack_sizes), [manufacturer]);
 
-    const brandLookup = useMemo(() => {
-        return brands.reduce((acc, brand) => {
-            if (brand?._id) acc[brand._id] = brand.name;
-            return acc;
-        }, {});
-    }, [brands]);
+    const sortedProducts = useMemo(() => sortProducts(subCategoryProducts, sortBy), [subCategoryProducts, sortBy]);
 
     const fetchProducts = useCallback(async (payload) => {
         const productsRes = await Axios.post(
@@ -125,41 +125,9 @@ function SubCategory() {
         }
     }, [fetchProducts, findLegacyCategoryMatch]);
 
-    const updateLoadedProductsFromClient = useCallback(async (productFields) => {
-        const productIds = subCategoryProducts.map((product) => product?._id).filter(Boolean);
-        if (!productIds.length || Object.keys(productFields).length === 0) return 0;
-
-        const results = await Promise.allSettled(
-            productIds.map((productId) =>
-                Axios.put(
-                    `${DEV}/product/update`,
-                    { id: productId, ...productFields },
-                    {
-                        headers: {
-                            "Content-Type": "application/json",
-                            ...getAuthHeader(),
-                        },
-                    },
-                ),
-            ),
-        );
-
-        return results.filter((result) => result.status === "fulfilled" && result.value?.data?.success).length;
-    }, [subCategoryProducts]);
-
     const getData = useCallback(async () => {
         const res = await handleGetRequest(`/subcategory/get/${id}`);
         const sub = res?.data;
-        setName(sub?.name ?? "");
-        setSlug(sub?.slug ?? "");
-        setGst(sub?.gst !== undefined && sub?.gst !== null ? sub.gst : "");
-        setHsnCode(sub?.hsn_code ?? "");
-        setSacCode(sub?.sac_code ?? "");
-        setTaxCategory(sub?.tax_category ?? "Goods");
-        setDeliveryTime(sub?.delivery_time ?? "");
-
-        const commonAttrs = sub?.common_attributes || {};
-        setAttributePairs(attributesToPairs(commonAttrs));
 
         const [result, brandResult] = await Promise.all([
             handleGetRequest("/category/all"),
@@ -181,76 +149,6 @@ function SubCategory() {
     const breadItems = [{ label: "Home" }, { label: "SubCategories", url: "/subcategories" }];
     const home = { icon: "pi pi-home", url: "/" };
 
-    const formik = useFormik({
-        initialValues: {
-            name: "",
-            slug: "",
-        },
-
-        onSubmit: async (data) => {
-            if (gst !== "" && gst !== null && gst !== undefined) {
-                const numericGst = Number(gst);
-                if (numericGst < 0 || numericGst > 1) {
-                    toast.error("GST Rate must be a decimal value between 0 and 1 (e.g. 0.18 for 18%)");
-                    return;
-                }
-            }
-            const dat = {
-                name: name,
-                slug: slug,
-                id: id,
-                category: selectedCategory,
-                gst: gst !== "" && gst !== null ? Number(gst) : undefined,
-                hsn_code: hsn_code.trim() || undefined,
-                sac_code: sac_code.trim() || undefined,
-                tax_category: tax_category.trim() || undefined,
-                delivery_time: delivery_time.trim() || undefined,
-                common_attributes: pairsToAttributes(attributePairs),
-            };
-            const res = await handlePutRequest(dat, "/subcategory/update");
-            if (res?.success === true) {
-                const productFields = {
-                    ...(gst !== "" && gst !== null ? { gst: Number(gst) } : {}),
-                    ...(hsn_code.trim() ? { hsn_code: hsn_code.trim() } : {}),
-                    ...(sac_code.trim() ? { sac_code: sac_code.trim() } : {}),
-                    ...(tax_category.trim() ? { tax_category: tax_category.trim() } : {}),
-                    ...(delivery_time.trim() ? { delivery_time: delivery_time.trim() } : {}),
-                };
-                const backendUpdatedCount = res?.data?.productsUpdated;
-                const updatedCount = backendUpdatedCount !== undefined
-                    ? backendUpdatedCount
-                    : await updateLoadedProductsFromClient(productFields);
-                const updatedSubCategory = {
-                    ...manufacturer,
-                    _id: id,
-                    name,
-                    slug,
-                    category: selectedCategory,
-                    gst: gst !== "" && gst !== null ? Number(gst) : undefined,
-                    hsn_code,
-                    sac_code,
-                    tax_category,
-                    delivery_time,
-                };
-                setManufacturers(updatedSubCategory);
-                await fetchSubCategoryProducts(updatedSubCategory, categories);
-                toast.success(
-                    updatedCount !== undefined
-                        ? `Subcategory edited. ${updatedCount} products updated.`
-                        : "subcategory edited",
-                );
-            }
-        },
-    });
-    const isFormFieldValid = (name) => !!(formik.touched[name] && formik.errors[name]);
-    const getFormErrorMessage = (name) => {
-        return isFormFieldValid(name) && <small className="p-error">{formik.errors[name]}</small>;
-    };
-
-    const handleCancel = () => {
-        history.push("/");
-    };
-
     const handleCreateProduct = () => {
         const params = new URLSearchParams();
         if (selectedCategory) params.set("categoryId", selectedCategory);
@@ -259,92 +157,122 @@ function SubCategory() {
         history.push(`/products/create${query ? `?${query}` : ""}`);
     };
 
-    const thumbnailTemplate = (rowData) => {
-        const thumbnailKey = rowData?.media?.thumbnail || rowData?.images?.[0]?.image || rowData?.images?.[0];
-        if (!thumbnailKey) return <i className="pi pi-image" style={{ fontSize: "1.5rem", color: "#b0b3bb" }}></i>;
+    const handleDeleteProduct = async (product) => {
+        const productId = product?._id;
+        if (!productId) {
+            toast.error("Unable to delete product. Missing product id.");
+            return;
+        }
 
-        const imgUrl = String(thumbnailKey).startsWith("http")
-            ? thumbnailKey
-            : `${DEV}/getImage?image=${thumbnailKey}`;
+        const productLabel = [product?.product_id, product?.name].filter(Boolean).join(" - ") || "this product";
+        const confirmed = window.confirm(`Permanently delete ${productLabel}? This cannot be undone.`);
+        if (!confirmed) return;
 
-        return (
-            <img
-                src={imgUrl}
-                alt={rowData?.name || "Product"}
-                style={{ width: "34px", height: "34px", objectFit: "contain", borderRadius: "4px", border: "1px solid #dee2e6" }}
-                onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                }}
-            />
-        );
+        try {
+            const res = await productService.deleteProducts([productId]);
+            if (res?.success) {
+                toast.success("Product deleted permanently.");
+                setSubCategoryProducts((prev) => prev.filter((item) => item?._id !== productId));
+                if (manufacturer?._id) {
+                    await fetchSubCategoryProducts(manufacturer, categories);
+                }
+            } else {
+                toast.error(res?.message || "Failed to delete product.");
+            }
+        } catch (error) {
+            toast.error(error?.response?.data?.message || error?.message || "Failed to delete product.");
+        }
     };
 
-    const productCategoryTemplate = (rowData) => {
-        const category = rowData?.category;
-        const categoryName = typeof category === "object" ? category?.name : categoryLookup[category] || category;
-        return <span>{displayValue(categoryName)}</span>;
+    const savePackSizes = async (nextSizes, successMessage) => {
+        const normalized = normalizePackSizes(nextSizes);
+        setSavingPackSizes(true);
+        try {
+            const res = await handlePutRequest({ id, pack_sizes: normalized }, "/subcategory/update");
+            if (res?.success) {
+                setManufacturers((prev) => ({
+                    ...(prev || {}),
+                    ...(res?.data?.subCategory || {}),
+                    pack_sizes: normalized,
+                }));
+                toast.success(successMessage);
+                return;
+            }
+
+            toast.warn(res?.message || "Unable to update pack sizes.");
+        } finally {
+            setSavingPackSizes(false);
+        }
     };
 
-    const productBrandTemplate = (rowData) => {
-        const brand = rowData?.brand;
-        const brandName = typeof brand === "object" ? brand?.name : brandLookup[brand] || brand;
-        return <span>{displayValue(brandName)}</span>;
+    const handleAddPackSize = async (event) => {
+        event.preventDefault();
+        if (!editable || savingPackSizes) return;
+
+        const num = Number(newPackSize);
+        if (!Number.isFinite(num) || num <= 0) {
+            toast.error("Enter a valid positive pack size.");
+            return;
+        }
+
+        if (packSizes.some((size) => Number(size) === num)) {
+            toast.info(`Pack size ${num} already exists.`);
+            return;
+        }
+
+        await savePackSizes([...packSizes, num], `Pack size ${num} added.`);
+        setNewPackSize("");
     };
 
-    const productGstTemplate = (rowData) => {
-        const gstValue = rowData?.gst;
-        if (gstValue === undefined || gstValue === null || gstValue === "") return <span>--</span>;
-        const numericGst = Number(gstValue);
-        if (Number.isNaN(numericGst)) return <span>{gstValue}</span>;
-        return <span>{numericGst > 0 && numericGst <= 1 ? numericGst * 100 : numericGst}%</span>;
+    const handleRemovePackSize = async (size) => {
+        if (!editable || savingPackSizes) return;
+
+        if (packSizes.length <= 1) {
+            toast.warn("At least one pack size is required.");
+            return;
+        }
+
+        const confirmed = window.confirm(`Remove pack size ${size}? Existing product prices will not be deleted.`);
+        if (!confirmed) return;
+
+        await savePackSizes(packSizes.filter((item) => Number(item) !== Number(size)), `Pack size ${size} removed.`);
     };
-
-    const productHsnTemplate = (rowData) => <span>{displayValue(rowData?.hsn_code)}</span>;
-
-    const productSizeTemplate = (rowData) => <span>{displayValue(rowData?.size_inch || rowData?.size_mm)}</span>;
-
-    const productColorTemplate = (rowData) => <span>{displayValue(rowData?.color)}</span>;
-
-    const productDeliveryTemplate = (rowData) => <span>{displayValue(rowData?.delivery_time)}</span>;
-
-    const productMrpTemplate = (rowData) => {
-        const firstTier = rowData?.priceList?.[0] || rowData?.pricing?.priceList?.[0] || {};
-        const mrp = firstTier.MRP ?? firstTier.mrp ?? firstTier.original_price ?? firstTier.originalPrice ?? rowData?.MRP ?? rowData?.mrp;
-        return <span>{mrp != null ? `Rs. ${mrp}` : "--"}</span>;
-    };
-
-    const productSpTemplate = (rowData) => {
-        const firstTier = rowData?.priceList?.[0] || rowData?.pricing?.priceList?.[0] || {};
-        const sp = firstTier.SP ?? firstTier.sp ?? firstTier.price ?? firstTier.sellingPrice ?? rowData?.SP ?? rowData?.sp ?? rowData?.price;
-        return <span>{sp != null ? `Rs. ${sp}` : "--"}</span>;
-    };
-
-    const productActionTemplate = (rowData) => (
-        role === "admin" || role === "catalog-manager" ? (
-        <Button
-            icon="pi pi-pencil"
-            className="p-button-rounded p-button-text p-button-sm"
-            onClick={() => history.push(`/product/${rowData._id}`)}
-            tooltip="Edit Product"
-            tooltipOptions={{ position: "bottom" }}
-            type="button"
-        />
-        ) : null
-    );
 
     return (
         <>
             <style>{`
                 .subcategory-edit-layout {
                     display: grid;
-                    grid-template-columns: minmax(260px, 0.85fr) minmax(0, 5fr);
+                    grid-template-columns: 1fr;
                     gap: 18px;
                     align-items: start;
+                    margin-top: 12px !important;
+                }
+                body {
+                    overflow: hidden !important;
+                    height: 100vh !important;
+                }
+                .layout-main-container {
+                    height: 100vh !important;
+                    max-height: 100vh !important;
+                    overflow: hidden !important;
+                    padding-top: 5.5rem !important;
+                    padding-bottom: 0.5rem !important;
+                    padding-left: 1.5rem !important;
+                    padding-right: 1.5rem !important;
+                }
+                .layout-main {
+                    height: calc(100vh - 6.5rem) !important;
+                    overflow: hidden !important;
+                }
+                .subcategory-edit-layout .right_section {
+                    width: 100% !important;
+                    min-width: 0;
                 }
                 .subcategory-header-content {
                     display: flex;
                     flex-direction: column;
-                    gap: 10px;
+                    gap: 8px;
                 }
                 .subcategory-header-row {
                     display: flex;
@@ -398,17 +326,25 @@ function SubCategory() {
                     padding: 0;
                     border: none;
                     background: transparent;
+                    min-width: 0;
+                    max-width: 100%;
+                    overflow: hidden;
+                    margin: 0 !important;
                 }
                 .subcategory-products-panel .card {
-                    padding: 0.75rem !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    background: transparent !important;
                 }
                 .subcategory-products-panel .p-datatable {
                     width: 100%;
                 }
                 .subcategory-products-panel .p-datatable-table {
-                    width: 100%;
-                    min-width: 1180px;
-                    table-layout: fixed;
+                    width: max-content !important;
+                    min-width: 100% !important;
+                    table-layout: auto !important;
                 }
                 .subcategory-products-panel .p-datatable-thead > tr > th,
                 .subcategory-products-panel .p-datatable-tbody > tr > td {
@@ -417,9 +353,39 @@ function SubCategory() {
                     vertical-align: middle;
                     line-height: 1.25;
                 }
-                .subcategory-products-panel .p-datatable-wrapper {
-                    max-height: calc(100vh - 205px);
-                    overflow: auto;
+                .pack-size-dialog-form {
+                    display: flex;
+                    align-items: flex-end;
+                    gap: 12px;
+                    margin-bottom: 18px;
+                }
+                .pack-size-dialog-form .p-inputtext {
+                    max-width: 220px;
+                }
+                .pack-size-list {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                    gap: 12px;
+                }
+                .pack-size-item {
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    padding: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    background: #f8fafc;
+                }
+                .pack-size-value {
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #182C5A;
+                }
+                .pack-size-meta {
+                    color: #64748b;
+                    font-size: 13px;
+                    line-height: 1.4;
+                    margin-bottom: 16px;
                 }
                 @media (max-width: 1100px) {
                     .subcategory-edit-layout {
@@ -427,170 +393,146 @@ function SubCategory() {
                     }
                 }
             `}</style>
-            <div className="customer_header__">
-                <div className="left___ subcategory-header-content">
-                    <h2>{manufacturer?.title}</h2>
-                    <div className="subcategory-header-row">
-                        <BreadCrumb model={breadItems} home={home} />
-                    </div>
-                </div>
-            </div>
             <div className="customer_details_section subcategory-edit-layout">
-                <div className="left_section subcategory-form-panel">
-                    <form onSubmit={formik.handleSubmit} className="p-fluid p-mt-2">
-                        <div className="form__">
-                            <div className="form_left">
-                                <div style={{ marginTop: "10px" }}>
-                                    <label htmlFor="createdAt" className={classNames({ "p-error": isFormFieldValid("createdAt") }, "Label__Text")}>
-                                        Slug
-                                    </label>
-                                    <InputText id="createdAt" disabled={true} name="createdAt" value={slug} onChange={(e) => setSlug(e.target.value)} className={classNames({ "p-invalid": isFormFieldValid("createdAt") }, "Input__Round")} />
-
-                                    {getFormErrorMessage("createdAt")}
-                                </div>
-                            </div>
-                            <div className="form_right">
-                                <div style={{ marginTop: "10px" }}>
-                                    <label htmlFor="profile" className={classNames({ "p-error": isFormFieldValid("profile") }, "Label__Text")}>
-                                        Name
-                                    </label>
-                                    <InputText id="profile" name="title" value={name} onChange={(e) => setName(e.target.value)} className={classNames({ "p-invalid": isFormFieldValid("profile") }, "Input__Round")} />
-
-                                    {getFormErrorMessage("profile")}
-                                </div>
-                                <div style={{ display: "flex", flexDirection: "column", marginTop: "10px" }}>
-                                    <label htmlFor="name" className={classNames({ "p-error": isFormFieldValid("name") }, "Label__Text")}>
-                                        Category
-                                    </label>
-                                    <select style={{ marginTop: "10px", height: "30px", border: "1px solid #cecece", borderRadius: "6px" }} value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                                        <option value="" disabled>
-                                            Please select category
-                                        </option>
-                                        {categories?.map((item) => (
-                                            <option key={item._id} value={item._id}>
-                                                {item.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {getFormErrorMessage("name")}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Tax and Fulfillment Sections */}
-                        <div className="subcategory-config-grid" style={{ marginTop: "20px", display: "grid", gridTemplateColumns: "1fr", gap: "14px" }}>
-                            {/* Tax Configuration Card */}
-                            <div className="card" style={{ padding: "1.5rem", borderRadius: "8px", border: "1px solid #dee2e6", margin: 0 }}>
-                                <h5 style={{ fontWeight: 600, color: "#182C5A", marginBottom: "1.25rem", marginTop: 0, display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "16px" }}>
-                                    <i className="pi pi-percentage" style={{ fontSize: "1.1rem" }}></i> Tax Configuration
-                                </h5>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                    <div>
-                                        <label htmlFor="subcategory_gst" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
-                                            GST Rate (Decimal)
-                                        </label>
-                                        <InputText id="subcategory_gst" type="number" min={0} max={1} step="any" value={gst} onChange={(e) => setGst(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
-                                        {gst !== "" && gst !== null && gst !== undefined && (
-                                            <small style={{ display: "block", marginTop: "0.25rem" }}>
-                                                {Number(gst) > 1 || Number(gst) < 0 ? (
-                                                    <span className="p-error">GST rate must be between 0 and 1 (e.g. 0.18 for 18%)</span>
-                                                ) : (
-                                                    <span className="p-text-secondary">Calculated: {Math.round(Number(gst) * 100)}% GST</span>
-                                                )}
-                                            </small>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label htmlFor="subcategory_hsn" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
-                                            HSN Code
-                                        </label>
-                                        <InputText id="subcategory_hsn" value={hsn_code} onChange={(e) => setHsnCode(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="subcategory_sac" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
-                                            SAC Code
-                                        </label>
-                                        <InputText id="subcategory_sac" value={sac_code} onChange={(e) => setSacCode(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="subcategory_tax_cat" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
-                                            Tax Category
-                                        </label>
-                                        <Dropdown id="subcategory_tax_cat" value={tax_category} options={[{ label: "Goods", value: "Goods" }, { label: "Services", value: "Services" }]} onChange={(e) => setTaxCategory(e.value)} placeholder="Select Tax Category" className="Input__Round" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Fulfillment Configuration Card */}
-                            <div className="card" style={{ padding: "1.5rem", borderRadius: "8px", border: "1px solid #dee2e6", margin: 0 }}>
-                                <h5 style={{ fontWeight: 600, color: "#22C55E", marginBottom: "1.25rem", marginTop: 0, display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "16px" }}>
-                                    <i className="pi pi-truck" style={{ fontSize: "1.1rem" }}></i> Fulfillment Configuration
-                                </h5>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                    <div>
-                                        <label htmlFor="subcategory_delivery" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
-                                            Estimated Delivery Time
-                                        </label>
-                                        <InputText id="subcategory_delivery" value={delivery_time} onChange={(e) => setDeliveryTime(e.target.value)} placeholder="e.g. 3-5 business days" className="Input__Round" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Common Attributes Section */}
-                        <div style={{ marginTop: "20px" }}>
-                            <div className="card" style={{ padding: "1.5rem", borderRadius: "8px", border: "1px solid #dee2e6", margin: 0 }}>
-                                <CommonAttributesEditor value={attributePairs} onChange={setAttributePairs} />
-                            </div>
-                        </div>
-
-                        <div className="Down__Btn">
-                            <Button label="Cancel" className="Btn__Transparent" onClick={handleCancel} type="button" />
-                            {(role === "admin" || role === "catalog-manager") && <Button label="Update" className="Btn__Dark" type="submit" />}
-                        </div>
-                    </form>
-                </div>
                 <div className="right_section subcategory-products-panel">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", gap: "12px", flexWrap: "wrap" }}>
-                        <h5 style={{ margin: 0, fontWeight: 600, color: "#182C5A", fontSize: "16px" }}>Products</h5>
-                        {(role === "admin" || role === "catalog-manager") && (
-                        <Button
-                            label="Create Product"
-                            icon="pi pi-plus"
-                            className="Btn__Dark"
-                            type="button"
-                            onClick={handleCreateProduct}
-                        />
-                        )}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px", gap: "12px", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <h4 style={{ margin: 0, fontWeight: 600, color: "#182C5A" }}>{manufacturer?.name || manufacturer?.title}</h4>
+                            <div style={{ transform: "scale(0.9)", transformOrigin: "left center" }}>
+                                <BreadCrumb model={breadItems} home={home} style={{ border: "none", padding: 0, background: "transparent" }} />
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                            <Dropdown
+                                id="product-sort"
+                                value={sortBy}
+                                options={PRODUCT_SORT_OPTIONS}
+                                optionLabel="label"
+                                optionValue="value"
+                                onChange={(event) => setSortBy(event.value)}
+                                placeholder="Sort Products"
+                                style={{ height: "38px", width: "200px", borderRadius: "6px" }}
+                            />
+                            <MultiSelect
+                                value={visibleSections}
+                                options={SECTION_OPTIONS}
+                                onChange={(e) => setVisibleSections(e.value)}
+                                placeholder="Columns"
+                                selectedItemsLabel="{0} sections"
+                                maxSelectedLabels={0}
+                                showClear={false}
+                                style={{ minWidth: 160, height: "38px", borderRadius: "6px" }}
+                                panelStyle={{ fontSize: 13 }}
+                            />
+                            {(role === "admin" || role === "catalog-manager") && (
+                            <>
+                            <Button
+                                label="Pack Sizes"
+                                icon="pi pi-list"
+                                className="p-button-outlined"
+                                type="button"
+                                onClick={() => setPackSizeOpen(true)}
+                                style={{ height: "38px" }}
+                            />
+                            <Button
+                                label="Import from Excel"
+                                icon="pi pi-file-import"
+                                className="p-button-outlined"
+                                type="button"
+                                onClick={() => setImportOpen(true)}
+                                style={{ height: "38px" }}
+                            />
+                            <Button
+                                label="Create Product"
+                                icon="pi pi-plus"
+                                className="Btn__Dark"
+                                type="button"
+                                onClick={handleCreateProduct}
+                                style={{ height: "38px" }}
+                            />
+                            </>
+                            )}
+                        </div>
                     </div>
-                    <div className="card" style={{ marginTop: 0, borderRadius: "8px", border: "1px solid #dee2e6" }}>
-                        <DataTable
-                            value={subCategoryProducts}
+                    <div className="card" style={{ marginTop: 0, borderRadius: "8px", border: "1px solid #dee2e6", padding: "0.5rem", overflowX: "auto", maxWidth: "100%" }}>
+                        <ProductExcelGrid
+                            products={sortedProducts}
+                            brands={brands}
+                            category={selectedCategoryObj}
+                            subCategory={manufacturer}
+                            context={{ categoryId: selectedCategory, subCategoryId: id }}
+                            role={role}
                             loading={productsLoading}
-                            scrollable
-                            scrollHeight="calc(100vh - 205px)"
-                            responsiveLayout="scroll"
+                            onRefetch={() => fetchSubCategoryProducts(manufacturer, categories)}
+                            onDeleteProduct={handleDeleteProduct}
                             emptyMessage="No products found for this subcategory."
-                            className="p-datatable-striped"
-                        >
-                            <Column header="Img" body={thumbnailTemplate} style={{ width: "56px" }} />
-                            <Column field="product_id" header="SKU/ID" style={{ width: "70px", fontWeight: 600 }} />
-                            <Column field="name" header="Name" style={{ width: "120px", textTransform: "capitalize" }} />
-                            <Column field="model" header="Model" style={{ width: "70px" }} />
-                            <Column header="Brand Name" body={productBrandTemplate} style={{ width: "110px" }} />
-                            <Column header="Category Name" body={productCategoryTemplate} style={{ width: "120px" }} />
-                            <Column header="Size" body={productSizeTemplate} style={{ width: "105px" }} />
-                            <Column header="Color" body={productColorTemplate} style={{ width: "78px" }} />
-                            <Column header="GST" body={productGstTemplate} style={{ width: "60px" }} />
-                            <Column header="HSN Code" body={productHsnTemplate} style={{ width: "92px" }} />
-                            <Column header="MRP" body={productMrpTemplate} style={{ width: "86px" }} />
-                            <Column header="SP" body={productSpTemplate} style={{ width: "82px" }} />
-                            <Column header="Delivery" body={productDeliveryTemplate} style={{ width: "115px" }} />
-                            <Column header="Edit" body={productActionTemplate} style={{ width: "56px", textAlign: "center" }} />
-                        </DataTable>
+                            visibleSections={visibleSections}
+                        />
                     </div>
                 </div>
             </div>
+            <ProductPasteImportDialog
+                visible={importOpen}
+                onHide={() => setImportOpen(false)}
+                brands={brands}
+                existingProducts={subCategoryProducts}
+                context={{ categoryId: selectedCategory, subCategoryId: id }}
+                onImported={() => fetchSubCategoryProducts(manufacturer, categories)}
+            />
+            <Dialog
+                visible={packSizeOpen}
+                header="Pack Sizes"
+                style={{ width: "560px", maxWidth: "95vw" }}
+                onHide={() => setPackSizeOpen(false)}
+            >
+                <div className="pack-size-meta">
+                    These values control the pack-size columns shown in this subcategory product grid.
+                    Removing a value hides that column from this configuration; it does not delete existing product pricing data.
+                </div>
+                <form className="pack-size-dialog-form" onSubmit={handleAddPackSize}>
+                    <div>
+                        <label htmlFor="new_pack_size" className="Label__Text" style={{ display: "block", marginBottom: 6 }}>
+                            Add Pack Size
+                        </label>
+                        <InputText
+                            id="new_pack_size"
+                            type="number"
+                            min="1"
+                            step="any"
+                            value={newPackSize}
+                            onChange={(event) => setNewPackSize(event.target.value)}
+                            placeholder="e.g. 25"
+                            className="Input__Round"
+                            disabled={!editable || savingPackSizes}
+                        />
+                    </div>
+                    <Button
+                        label={savingPackSizes ? "Saving" : "Add"}
+                        icon="pi pi-plus"
+                        className="Btn__Dark"
+                        type="submit"
+                        disabled={!editable || savingPackSizes}
+                        style={{ width: "130px", height: "38px" }}
+                    />
+                </form>
+                <div className="pack-size-list">
+                    {packSizes.map((size) => (
+                        <div className="pack-size-item" key={size}>
+                            <span className="pack-size-value">{size}</span>
+                            {editable && (
+                                <Button
+                                    icon="pi pi-trash"
+                                    className="p-button-rounded p-button-danger p-button-text"
+                                    type="button"
+                                    aria-label={`Remove pack size ${size}`}
+                                    onClick={() => handleRemovePackSize(size)}
+                                    disabled={savingPackSizes || packSizes.length <= 1}
+                                />
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </Dialog>
         </>
     );
 }

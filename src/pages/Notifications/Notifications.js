@@ -11,6 +11,7 @@ import { InputSwitch } from "primereact/inputswitch";
 import { Checkbox } from "primereact/checkbox";
 import { AutoComplete } from "primereact/autocomplete";
 import { Tag } from "primereact/tag";
+import { ProgressBar } from "primereact/progressbar";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import moment from "moment";
@@ -123,6 +124,9 @@ function Notifications() {
     const [title, setTitle] = useState("");
     const [bodyText, setBodyText] = useState("");
     const [imageUrl, setImageUrl] = useState("");
+    const [imageFileName, setImageFileName] = useState("");
+    const [imageUploadProgress, setImageUploadProgress] = useState(0);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [channelId, setChannelId] = useState("promotions");
     const [linkType, setLinkType] = useState("none");
     const [linkProduct, setLinkProduct] = useState(null); // { label, value, image }
@@ -131,6 +135,42 @@ function Notifications() {
     const [dataJson, setDataJson] = useState("");
     const [alsoEmail, setAlsoEmail] = useState(false);
     const [sending, setSending] = useState(false);
+
+    const clearNotificationImage = () => {
+        setImageUrl("");
+        setImageFileName("");
+        setImageUploadProgress(0);
+    };
+
+    const handleNotificationImageUpload = async (file) => {
+        if (!file) return;
+        if (!file.type?.startsWith("image/")) {
+            toast.warn("Upload an image file");
+            return;
+        }
+
+        setImageFileName(file.name);
+        setImageUploadProgress(0);
+        setUploadingImage(true);
+        try {
+            const result = await productService.uploadImage(file, (percent) => {
+                setImageUploadProgress(percent);
+            });
+
+            if (!result?.url) {
+                throw new Error("Upload response did not include an image URL");
+            }
+
+            setImageUrl(result.url);
+            setImageUploadProgress(100);
+            toast.success("Image uploaded");
+        } catch (error) {
+            clearNotificationImage();
+            toast.error(`Image upload failed: ${error?.message || "Something went wrong"}`);
+        } finally {
+            setUploadingImage(false);
+        }
+    };
 
     // Type-ahead product search for the "open a product" deep link.
     const searchProducts = async (e) => {
@@ -186,6 +226,8 @@ function Notifications() {
         setTitle("");
         setBodyText("");
         setImageUrl("");
+        setImageFileName("");
+        setImageUploadProgress(0);
         setChannelId("promotions");
         setLinkType("none");
         setLinkProduct(null);
@@ -198,6 +240,10 @@ function Notifications() {
     const sendNotification = async () => {
         if (!title.trim()) {
             toast.warn("Title is required");
+            return;
+        }
+        if (uploadingImage) {
+            toast.warn("Wait for the image upload to finish");
             return;
         }
         const data = buildData();
@@ -311,15 +357,40 @@ function Notifications() {
                                         <InputTextarea value={bodyText} onChange={(e) => setBodyText(e.target.value)} rows={4} className="w-full" disabled={!canWrite} />
                                     </div>
                                     <div className="col-12 md:col-6">
-                                        <label className="block mb-2">Image URL (optional)</label>
+                                        <label className="block mb-2">Image (optional)</label>
                                         <InputText
-                                            value={imageUrl}
-                                            onChange={(e) => setImageUrl(e.target.value)}
-                                            placeholder="https://res.cloudinary.com/.../offer.jpg"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                handleNotificationImageUpload(e.target.files?.[0]);
+                                                e.target.value = "";
+                                            }}
                                             className="w-full"
-                                            disabled={!canWrite}
+                                            disabled={!canWrite || uploadingImage}
                                         />
                                         <small style={{ color: "#94a3b8" }}>Shown as a big picture on the phone.</small>
+                                        {(uploadingImage || imageFileName || imageUrl) && (
+                                            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                                                {(imageFileName || imageUrl) && (
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                                                        <i className="pi pi-image" style={{ color: "#64748b" }} />
+                                                        <span style={{ color: "#475569", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                            {imageFileName || "Selected image"}
+                                                        </span>
+                                                        {imageUrl && !uploadingImage && (
+                                                            <Button
+                                                                icon="pi pi-times"
+                                                                className="p-button-text p-button-sm p-button-danger"
+                                                                tooltip="Remove image"
+                                                                onClick={clearNotificationImage}
+                                                                disabled={!canWrite}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {uploadingImage && <ProgressBar value={imageUploadProgress} style={{ height: 6 }} showValue={false} />}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="col-12 md:col-6">
                                         <label className="block mb-2">Channel</label>
@@ -404,7 +475,7 @@ function Notifications() {
                                         </small>
                                     </div>
                                     <div className="col-12">
-                                        <Button label="Send Notification" icon="pi pi-send" loading={sending} disabled={!canWrite} onClick={sendNotification} />
+                                        <Button label="Send Notification" icon="pi pi-send" loading={sending} disabled={!canWrite || uploadingImage} onClick={sendNotification} />
                                     </div>
                                 </div>
                                 </div>

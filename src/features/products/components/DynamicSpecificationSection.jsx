@@ -1,48 +1,12 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useFormContext, Controller } from "react-hook-form";
 import { useCategories, useSubCategories } from "../../../hooks/useProductQuery";
-import { resolveSpecSchema } from "../../../utils/specificationSchemas";
+import { resolveSpecSchema, humanizeSpecKey, buildSchemaFromCategory } from "../../../utils/specificationSchemas";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
 import classNames from "classnames";
 
-// Units we know how to render as a suffix, e.g. length_mm -> "Length (mm)".
-const UNIT_SUFFIXES = { mm: "mm", inch: "inch", micron: "micron", cm: "cm", gsm: "GSM" };
-
-// Human-readable label for a raw spec key, keeping unit suffixes in parentheses.
-const humanizeSpecKey = (key) => {
-    const parts = String(key).split("_");
-    const last = parts[parts.length - 1];
-    const titleCase = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase());
-    if (UNIT_SUFFIXES[last] && parts.length > 1) {
-        return `${titleCase(parts.slice(0, -1).join(" "))} (${UNIT_SUFFIXES[last]})`;
-    }
-    return titleCase(parts.join(" "));
-};
-
 const hasValue = (v) => v !== undefined && v !== null && v !== "";
-
-// Build the spec form schema from a category's backend `spec_schema`. Returns
-// null when the category hasn't defined one, so the caller can fall back to the
-// legacy hard-coded specificationSchemas.js for un-migrated categories.
-const buildSchemaFromCategory = (category) => {
-    const specSchema = Array.isArray(category?.spec_schema) ? category.spec_schema : [];
-    if (!specSchema.length) return null;
-    return {
-        displayName: `${category?.name || "Category"} Specifications`,
-        fields: specSchema
-            .filter((field) => field && field.key)
-            .map((field) => ({
-                name: field.key,
-                label: field.label || field.key,
-                type: ["text", "number", "select"].includes(field.type) ? field.type : "text",
-                options: Array.isArray(field.options) ? field.options : undefined,
-                required: !!field.required,
-                description: field.unit ? `Unit: ${field.unit}` : undefined,
-                default_value: field.default_value,
-            })),
-    };
-};
 
 // Renders a single spec input (select / number / text) bound to specification.<name>.
 const SpecFieldInput = ({ control, field }) => {

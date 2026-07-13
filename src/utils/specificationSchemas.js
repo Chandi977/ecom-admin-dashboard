@@ -61,3 +61,41 @@ export function resolveSpecSchema(subCategoryName, categoryName) {
 
     return null;
 }
+
+// Units we know how to render as a suffix, e.g. length_mm -> "Length (mm)".
+const UNIT_SUFFIXES = { mm: "mm", inch: "inch", micron: "micron", cm: "cm", gsm: "GSM" };
+
+// Human-readable label for a raw spec key, keeping unit suffixes in parentheses.
+// Shared by the product edit form (DynamicSpecificationSection) and the admin
+// Excel grid so a spec column reads identically in both places.
+export function humanizeSpecKey(key) {
+    const parts = String(key).split("_");
+    const last = parts[parts.length - 1];
+    const titleCase = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase());
+    if (UNIT_SUFFIXES[last] && parts.length > 1) {
+        return `${titleCase(parts.slice(0, -1).join(" "))} (${UNIT_SUFFIXES[last]})`;
+    }
+    return titleCase(parts.join(" "));
+}
+
+// Build a spec form schema from a category's backend `spec_schema`. Returns null
+// when the category hasn't defined one, so callers fall back to the legacy
+// hard-coded specificationSchemas above for un-migrated categories.
+export function buildSchemaFromCategory(category) {
+    const specSchema = Array.isArray(category?.spec_schema) ? category.spec_schema : [];
+    if (!specSchema.length) return null;
+    return {
+        displayName: `${category?.name || "Category"} Specifications`,
+        fields: specSchema
+            .filter((field) => field && field.key)
+            .map((field) => ({
+                name: field.key,
+                label: field.label || field.key,
+                type: ["text", "number", "select"].includes(field.type) ? field.type : "text",
+                options: Array.isArray(field.options) ? field.options : undefined,
+                required: !!field.required,
+                description: field.unit ? `Unit: ${field.unit}` : undefined,
+                default_value: field.default_value,
+            })),
+    };
+}
