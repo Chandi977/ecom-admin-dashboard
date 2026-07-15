@@ -7,6 +7,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { toast } from "react-toastify";
 import { productService } from "../../../services/productService";
+import { readTabularFileAsText } from "../../../utils/readTabularFile";
 import {
     parsePastedTable,
     groupRowsToProducts,
@@ -30,11 +31,17 @@ export const ProductPasteImportDialog = ({
     onImported,
 }) => {
     const [text, setText] = useState("");
+    const [packSizesText, setPackSizesText] = useState("1, 5, 10");
     const [targetCategoryId, setTargetCategoryId] = useState(context.categoryId || "");
     const [targetSubCategoryId, setTargetSubCategoryId] = useState(context.subCategoryId || "");
     const [committing, setCommitting] = useState(false);
     const [progress, setProgress] = useState(null);
     const fileRef = useRef(null);
+
+    const packSizes = useMemo(
+        () => packSizesText.split(",").map((s) => s.trim()).filter((s) => s !== ""),
+        [packSizesText],
+    );
 
     const brandLookup = useMemo(
         () => brands.reduce((acc, b) => { if (b?.name) acc[String(b.name).toLowerCase()] = b._id; return acc; }, {}),
@@ -55,15 +62,17 @@ export const ProductPasteImportDialog = ({
     );
 
     const parsed = useMemo(() => {
-        if (!text.trim()) return { unmappedHeaders: [], items: [] };
-        const { rows, unmappedHeaders } = parsePastedTable(text);
+        if (!text.trim()) return { unmappedHeaders: [], items: [], tierBlockCount: 0 };
+        const { rows, unmappedHeaders, tierBlockCount } = parsePastedTable(text, { packSizes });
         const groups = groupRowsToProducts(rows);
         const items = groups.map((group) =>
             buildImportPayload(group, { brandLookup, existingByProductId, context: effectiveContext }),
         );
-        return { unmappedHeaders, items };
-    }, [text, brandLookup, existingByProductId, effectiveContext]);
+        return { unmappedHeaders, items, tierBlockCount };
+    }, [text, packSizes, brandLookup, existingByProductId, effectiveContext]);
 
+    const isWide = parsed.tierBlockCount > 1;
+    const packSizeMismatch = isWide && packSizes.length < parsed.tierBlockCount;
     const validItems = parsed.items.filter((i) => i.errors.length === 0);
     const invalidCount = parsed.items.length - validItems.length;
     const targetSubs = useMemo(
@@ -74,8 +83,15 @@ export const ProductPasteImportDialog = ({
     const handleFile = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const content = await file.text();
-        setText(content);
+        try {
+            const content = await readTabularFileAsText(file);
+            setText(content);
+            if (!content.trim()) toast.warn("That file looked empty.");
+        } catch (err) {
+            toast.error(err?.message || "Could not read that file.");
+        } finally {
+            e.target.value = ""; // allow re-selecting the same file
+        }
     };
 
     const handleCommit = async () => {
@@ -142,8 +158,10 @@ export const ProductPasteImportDialog = ({
             maximizable
         >
             <p style={{ fontSize: 13, color: "#475569", marginTop: 0 }}>
-                Paste rows copied straight from your Excel sheet (with the header row), or upload a CSV.
-                Rows that share the same <b>product id</b> merge into one product with a pack size each.
+                Paste rows copied straight from your Excel sheet (with the header row), or upload an
+                {" "}<b>.xlsx</b> / CSV file. Rows that share the same <b>product id</b> merge into one
+                product with a pack size each. Sheets that repeat <b>MRP / local SP / Stock / Wt</b>{" "}
+                columns per pack size (wide layout) are expanded automatically — just enter the pack sizes.
             </p>
 
             {requireTarget && (
@@ -171,10 +189,32 @@ export const ProductPasteImportDialog = ({
             />
 
             <div style={{ display: "flex", gap: 10, alignItems: "center", margin: "10px 0" }}>
-                <input ref={fileRef} type="file" accept=".csv,.tsv,.txt" onChange={handleFile} style={{ display: "none" }} />
-                <Button label="Upload CSV/TSV" icon="pi pi-file" className="p-button-outlined p-button-sm" onClick={() => fileRef.current?.click()} type="button" />
+                <input ref={fileRef} type="file" accept=".xlsx,.xlsm,.csv,.tsv,.txt" onChange={handleFile} style={{ display: "none" }} />
+                <Button label="Upload Excel / CSV" icon="pi pi-file-excel" className="p-button-outlined p-button-sm" onClick={() => fileRef.current?.click()} type="button" />
                 {text && <Button label="Clear" icon="pi pi-times" className="p-button-text p-button-sm" onClick={() => setText("")} type="button" />}
             </div>
+
+            {isWide && (
+                <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 6, padding: "10px 12px", marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, color: "#1e40af", marginBottom: 6 }}>
+                        <i className="pi pi-table" /> Wide layout detected — {parsed.tierBlockCount} price blocks per row.
+                        Enter the pack size for each block, in order (comma separated).
+                    </div>
+                    <InputTextarea
+                        value={packSizesText}
+                        onChange={(e) => setPackSizesText(e.target.value)}
+                        rows={1}
+                        placeholder="1, 5, 10"
+                        style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }}
+                        autoResize={false}
+                    />
+                    {packSizeMismatch && (
+                        <div style={{ fontSize: 12, color: "#dc2626", marginTop: 6 }}>
+                            <i className="pi pi-exclamation-triangle" /> {parsed.tierBlockCount} blocks but only {packSizes.length} pack size{packSizes.length === 1 ? "" : "s"} entered — the remaining tiers will be skipped.
+                        </div>
+                    )}
+                </div>
+            )}
 
             {parsed.unmappedHeaders.length > 0 && (
                 <div style={{ fontSize: 12, color: "#b45309", marginBottom: 8 }}>

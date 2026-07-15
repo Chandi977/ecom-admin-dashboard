@@ -55,6 +55,7 @@
         "zod": "^3.25.76"
     },
     "scripts": {
+        "start": "vite",
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview"

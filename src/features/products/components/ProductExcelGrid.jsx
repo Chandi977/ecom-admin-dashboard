@@ -29,6 +29,7 @@ import {
     isSpecNumeric,
 } from "../../../utils/productGrid";
 import { normalizePackSizes } from "../../../utils/packSizes";
+import { parseLabelModel } from "../../../utils/labelVariants";
 
 const canEdit = (role) => role === "admin" || role === "catalog-manager";
 
@@ -169,7 +170,8 @@ export const ProductExcelGrid = ({
     }, [workingProducts, category, subCategory, isCorrugated, isPaperBag, isPolyBag, isLabel]);
 
     const rows = useMemo(() => {
-        return workingProducts.map((wp) => {
+        const mapped = workingProducts.map((wp) => {
+            const labelParsed = parseLabelModel(wp.model);
             const row = {
                 rowKey: wp.__id,
                 productId: wp.__id,
@@ -179,6 +181,16 @@ export const ProductExcelGrid = ({
                 brand: getEntityId(wp.brand) ?? "",
                 name: wp.name ?? "",
                 model: wp.model ?? "",
+                // Quantity variants ("CL_65x70_250/400/500") are separate DB
+                // products but one real product; base_model is the rowspan
+                // grouping key that merges their Model cell. Rows whose model
+                // has no "_<qty>" suffix get a per-row key so unrelated rows
+                // (e.g. empty models) never merge.
+                base_model: labelParsed?.baseModel ?? (wp.model || `__row_${wp.__id}`),
+                base_model_display: labelParsed?.baseModel ?? wp.model ?? "",
+                // Read-only, parsed from the model's "_<qty>" suffix (convention:
+                // "CL_65x70_250" = 250 labels per roll); label_in_roll as fallback.
+                label_qty: labelParsed?.labelQty ?? wp.label_in_roll ?? "",
                 size_inch: wp.size_inch ?? "",
                 size_mm: wp.size_mm ?? "",
                 color: wp.color ?? "",
@@ -215,7 +227,23 @@ export const ProductExcelGrid = ({
 
             return row;
         });
-    }, [workingProducts, specColumns, activePackSizes]);
+
+        if (!isLabel) return mapped;
+
+        // Rowspan grouping only merges cells on ADJACENT rows, so variants of a
+        // base model must sit together: groups keep the parent's ordering (first
+        // appearance), quantities sort ascending within a group (mirrors the
+        // storefront, where the lowest quantity represents the family).
+        const firstSeen = new Map();
+        mapped.forEach((row, index) => {
+            if (!firstSeen.has(row.base_model)) firstSeen.set(row.base_model, index);
+        });
+        return [...mapped].sort((a, b) => {
+            const groupDiff = firstSeen.get(a.base_model) - firstSeen.get(b.base_model);
+            if (groupDiff !== 0) return groupDiff;
+            return (Number(a.label_qty) || 0) - (Number(b.label_qty) || 0);
+        });
+    }, [workingProducts, specColumns, activePackSizes, isLabel]);
 
     const enqueueSave = useCallback((id, task) => {
         const prev = saveQueues.current[id] || Promise.resolve();
@@ -566,6 +594,7 @@ export const ProductExcelGrid = ({
                         <Column key="brand" header="Brand" rowSpan={2} style={{ minWidth: 120 }} />,
                         <Column key="name" header="Product Title" rowSpan={2} style={{ minWidth: 170, textTransform: "capitalize" }} />,
                         <Column key="model" header="Model" rowSpan={2} style={{ minWidth: 80 }} />,
+                        ...(isLabel ? [<Column key="label_qty" header="Label Qty" rowSpan={2} className="grid-num" style={{ minWidth: 74 }} />] : []),
                         <Column key="slug" header="Slug" rowSpan={2} style={{ minWidth: 150 }} />,
                         ...(showCategoryColumns ? [
                             <Column key="cat" header="Category" rowSpan={2} style={{ minWidth: 110 }} />,
@@ -632,7 +661,7 @@ export const ProductExcelGrid = ({
                 </Row>
             </ColumnGroup>
         );
-    }, [activePackSizes, specColumns, showCategoryColumns, editable, showSection, isCorrugated, isPaperBag, isPolyBag, hideColor]);
+    }, [activePackSizes, specColumns, showCategoryColumns, editable, showSection, isCorrugated, isPaperBag, isPolyBag, isLabel, hideColor]);
 
     return (
         <>
@@ -682,6 +711,8 @@ export const ProductExcelGrid = ({
                 .product-excel-grid .p-datatable-tbody > tr:hover > td.grid-tier-cell { background: #fff7e6; }
                 /* Numbers read right-aligned. */
                 .product-excel-grid td.grid-num, .product-excel-grid th.grid-num { text-align: right; }
+                /* Merged Model cell spanning a label's quantity variants. */
+                .product-excel-grid .p-datatable-tbody > tr > td[rowspan] { font-weight: 600; }
                 /* Editable cells hint they're clickable. */
                 .product-excel-grid .p-datatable-tbody > tr > td.p-editable-column { cursor: cell; }
                 .product-excel-grid .p-datatable-tbody > tr > td.p-editable-column:hover { box-shadow: inset 0 0 0 1px #c7d2fe; }
@@ -747,18 +778,35 @@ export const ProductExcelGrid = ({
                 }
             `}</style>
             {editable && (savingCount > 0 || savedAt) ? (
-                <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
-                    <div style={{ fontSize: 12.5, display: "flex", alignItems: "center", gap: 6 }}>
-                        {savingCount > 0 ? (
-                            <span style={{ color: "#b45309", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                                <i className="pi pi-spin pi-spinner" style={{ fontSize: 12 }} /> Saving…
-                            </span>
-                        ) : (
-                            <span style={{ color: "#16a34a", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                                <i className="pi pi-check-circle" style={{ fontSize: 12 }} /> All changes saved
-                            </span>
-                        )}
-                    </div>
+                <div style={{
+                    position: "fixed",
+                    bottom: "24px",
+                    right: "24px",
+                    zIndex: 9999,
+                    backgroundColor: savingCount > 0 ? "#fef3c7" : "#dcfce7",
+                    color: savingCount > 0 ? "#b45309" : "#15803d",
+                    border: savingCount > 0 ? "1px solid #f59e0b" : "1px solid #22c55e",
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.05)",
+                    borderRadius: "9999px",
+                    padding: "8px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    pointerEvents: "none"
+                }}>
+                    {savingCount > 0 ? (
+                        <>
+                            <i className="pi pi-spin pi-spinner" style={{ fontSize: 13, color: "#d97706" }} />
+                            <span>Saving changes…</span>
+                        </>
+                    ) : (
+                        <>
+                            <i className="pi pi-check-circle" style={{ fontSize: 13, color: "#16a34a" }} />
+                            <span>All changes saved</span>
+                        </>
+                    )}
                 </div>
             ) : null}
             <div className="product-excel-grid">
@@ -769,6 +817,7 @@ export const ProductExcelGrid = ({
                     emptyMessage={emptyMessage}
                     className="p-datatable-sm p-datatable-gridlines"
                     headerColumnGroup={headerGroup}
+                    {...(isLabel ? { rowGroupMode: "rowspan", groupRowsBy: "base_model" } : {})}
                     {...editorProps}
                 >
                     <Column field="images" className="grid-sticky-img" style={{ width: 56, minWidth: 56, maxWidth: 56, textAlign: "center" }} body={imageBody} />
@@ -778,8 +827,20 @@ export const ProductExcelGrid = ({
                         body={brandBody} {...cellEditProps(brandEditor)} />
                     <Column field="name" style={{ minWidth: 170, textTransform: "capitalize" }}
                         body={longTextBody("name")} {...cellEditProps(textEditor)} />
-                    <Column field="model" style={{ minWidth: 80 }}
-                        body={productBody("model")} {...cellEditProps(textEditor)} />
+                    {isLabel ? (
+                        // Merged (rowspan) across quantity variants of one base
+                        // model; read-only here — the full per-variant model
+                        // stays editable on the product edit page.
+                        <Column field="base_model" style={{ minWidth: 80 }}
+                            body={productBody("base_model_display")} />
+                    ) : (
+                        <Column field="model" style={{ minWidth: 80 }}
+                            body={productBody("model")} {...cellEditProps(textEditor)} />
+                    )}
+                    {isLabel && (
+                        <Column field="label_qty" className="grid-num" style={{ minWidth: 74 }}
+                            body={productBody("label_qty")} />
+                    )}
                     <Column field="slug" style={{ minWidth: 150 }}
                         body={longTextBody("slug")} {...cellEditProps(textEditor)} />
 

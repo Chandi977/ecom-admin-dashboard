@@ -224,12 +224,14 @@ const HEADER_ALIASES = {
     lmm: "length_mm", lengthmm: "length_mm",
     bmm: "breadth_mm", breadthmm: "breadth_mm", widthmm: "breadth_mm",
     hmm: "height_mm", heightmm: "height_mm",
+    sizemm: "size_mm", sizemmhxl: "size_mm", sizemmhl: "size_mm", sizemmlxh: "size_mm",
+    sizeinch: "size_inch", sizeinches: "size_inch", sizeincheshxl: "size_inch", sizeinchhxl: "size_inch", sizeincheshl: "size_inch",
     hsncode: "hsn_code", hsn: "hsn_code",
     gst: "gst",
     packsize: "number", pack: "number", packqty: "number", quantity: "number", qty: "number",
     mrp: "original_price", originalprice: "original_price",
     localsp: "price", sp: "price", sellingprice: "price", price: "price",
-    weight: "pack_weight", packweight: "pack_weight",
+    weight: "pack_weight", packweight: "pack_weight", wt: "pack_weight",
     stock: "stock_quantity", stockquantity: "stock_quantity",
     stockavailable: "availableStock", available: "availableStock", availablestock: "availableStock",
     reviewedon: "reviewed_on", reviewed: "reviewed_on", reviewdate: "reviewed_on",
@@ -245,11 +247,50 @@ const normalizeHeader = (h) => String(h || "").toLowerCase().replace(/[^a-z0-9]/
 
 const STRING_FIELDS = new Set(["product_id", "brand", "name", "hsn_code", "reviewed_on", "size_inch", "size_mm", "material", "color", "print", "adhesive", "label_in_roll", "category", "sub_category"]);
 
-// Parse pasted TSV (Excel) or CSV text into { headers, unmappedHeaders, rows }
-// where each row is an object keyed by internal field name.
-export const parsePastedTable = (text) => {
+// Tier-level fields (one pack-size tier's pricing/stock). When these column
+// headers repeat across a single header row, the sheet is in "wide" layout:
+// several pack sizes laid out side by side on one product line.
+const TIER_HEADER_FIELDS = new Set(["original_price", "price", "stock_quantity", "pack_weight"]);
+
+// Coerce one raw cell onto a target object under its internal field name.
+const assignCell = (target, field, raw) => {
+    if (raw === undefined || raw === "") return;
+    if (field === "gst") target.gst = normalizeGstToDecimal(raw);
+    else if (STRING_FIELDS.has(field)) target[field] = String(raw).trim();
+    else target[field] = parseLooseNumber(raw);
+};
+
+// Split the tier-level header columns into blocks (one block == one pack tier).
+// A single MRP/SP/Stock/Wt set is one block (tall layout — one tier per row).
+// Each repeat of an already-seen tier field starts a new block (wide layout —
+// e.g. MRP|SP|Stock|Wt|MRP|SP|Stock|Wt|... => 2+ blocks).
+const computeTierBlocks = (headerFields) => {
+    const blocks = [];
+    let current = null;
+    let seen = null;
+    headerFields.forEach((field, index) => {
+        if (!field || !TIER_HEADER_FIELDS.has(field)) return;
+        if (!current || seen.has(field)) {
+            current = [];
+            seen = new Set();
+            blocks.push(current);
+        }
+        current.push({ field, index });
+        seen.add(field);
+    });
+    return blocks;
+};
+
+// Parse pasted TSV (Excel) or CSV text into
+// { headers, unmappedHeaders, rows, tierBlockCount }, one row object per pack
+// tier keyed by internal field name.
+//
+// In tall layout each source line is one tier already. In wide layout each line
+// fans out into one row per tier block; since a wide sheet has no pack-size
+// column, sizes come from opts.packSizes (index-aligned to the blocks).
+export const parsePastedTable = (text, { packSizes = [] } = {}) => {
     const lines = String(text || "").replace(/\r/g, "").split("\n").filter((l) => l.trim() !== "");
-    if (lines.length < 2) return { headers: [], unmappedHeaders: [], rows: [] };
+    if (lines.length < 2) return { headers: [], unmappedHeaders: [], rows: [], tierBlockCount: 0 };
 
     const delimiter = lines[0].includes("\t") ? "\t" : ",";
     const split = (line) => line.split(delimiter).map((c) => c.trim());
@@ -258,21 +299,40 @@ export const parsePastedTable = (text) => {
     const headerFields = rawHeaders.map((h) => HEADER_ALIASES[normalizeHeader(h)] || null);
     const unmappedHeaders = rawHeaders.filter((h, i) => !headerFields[i]);
 
-    const rows = lines.slice(1).map((line) => {
+    const blocks = computeTierBlocks(headerFields);
+    const wide = blocks.length > 1;
+
+    const rows = [];
+    lines.slice(1).forEach((line) => {
         const cells = split(line);
-        const row = {};
+
+        if (!wide) {
+            const row = {};
+            headerFields.forEach((field, i) => { if (field) assignCell(row, field, cells[i]); });
+            rows.push(row);
+            return;
+        }
+
+        // Wide layout: product-level fields are shared across the line; emit one
+        // row per tier block, tagged with the matching pack size.
+        const base = {};
         headerFields.forEach((field, i) => {
-            if (!field) return;
-            const raw = cells[i];
-            if (raw === undefined || raw === "") return;
-            if (field === "gst") row.gst = normalizeGstToDecimal(raw);
-            else if (STRING_FIELDS.has(field)) row[field] = String(raw).trim();
-            else row[field] = parseLooseNumber(raw);
+            if (!field || TIER_HEADER_FIELDS.has(field)) return;
+            assignCell(base, field, cells[i]);
         });
-        return row;
+        blocks.forEach((block, bi) => {
+            const row = { ...base };
+            block.forEach(({ field, index }) => assignCell(row, field, cells[index]));
+            const size = packSizes[bi];
+            if (hasValue(size)) row.number = parseLooseNumber(size) ?? size;
+            // Skip a tier with no pricing at all (product with fewer sizes filled).
+            if (hasValue(row.price) || hasValue(row.original_price) || hasValue(row.stock_quantity)) {
+                rows.push(row);
+            }
+        });
     });
 
-    return { headers: rawHeaders, unmappedHeaders, rows };
+    return { headers: rawHeaders, unmappedHeaders, rows, tierBlockCount: blocks.length };
 };
 
 const PRODUCT_LEVEL_IMPORT_FIELDS = [
