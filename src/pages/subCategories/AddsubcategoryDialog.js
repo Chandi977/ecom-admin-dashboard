@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useFormik } from "formik";
 import classNames from "classnames";
+import { toast } from "react-toastify";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
@@ -17,7 +18,6 @@ function AddsubcategoryDialog({ onsuccess }) {
     const [hsn_code, setHsnCode] = useState("");
     const [sac_code, setSacCode] = useState("");
     const [tax_category, setTaxCategory] = useState("Goods");
-    const [delivery_time, setDeliveryTime] = useState("");
     const [attributePairs, setAttributePairs] = useState([]);
 
     const getCategories = useCallback(async () => {
@@ -35,6 +35,13 @@ function AddsubcategoryDialog({ onsuccess }) {
         },
 
         onSubmit: async (data) => {
+            if (gst !== "" && gst !== null && gst !== undefined) {
+                const numericGst = Number(gst);
+                if (numericGst < 0 || numericGst > 1) {
+                    toast.error("GST Rate must be a decimal value between 0 and 1 (e.g. 0.18 for 18%)");
+                    return;
+                }
+            }
             const dat = {
                 name: data.name,
                 category: selectedCategory,
@@ -42,7 +49,6 @@ function AddsubcategoryDialog({ onsuccess }) {
                 hsn_code: hsn_code.trim() || undefined,
                 sac_code: sac_code.trim() || undefined,
                 tax_category: tax_category.trim() || undefined,
-                delivery_time: delivery_time.trim() || undefined,
                 common_attributes: pairsToAttributes(attributePairs),
             };
             await dispatch(handlePostRequest(dat, "/subcategory/create", true, true));
@@ -88,7 +94,7 @@ function AddsubcategoryDialog({ onsuccess }) {
 
                     {/* Tax and Fulfillment Sections */}
                     <div className="p-field col-12 md:col-12">
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "10px", marginBottom: "15px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "20px", marginTop: "10px", marginBottom: "15px" }}>
                             {/* Tax Configuration Card */}
                             <div className="card" style={{ padding: "1.5rem", borderRadius: "8px", border: "1px solid #dee2e6", margin: 0 }}>
                                 <h5 style={{ fontWeight: 600, color: "#182C5A", marginBottom: "1.25rem", marginTop: 0, display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "16px" }}>
@@ -97,9 +103,18 @@ function AddsubcategoryDialog({ onsuccess }) {
                                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                     <div>
                                         <label htmlFor="subcategory_gst" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
-                                            GST Rate (%)
+                                            GST Rate (Decimal)
                                         </label>
-                                        <InputText id="subcategory_gst" type="number" value={gst} onChange={(e) => setGst(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
+                                        <InputText id="subcategory_gst" type="number" min={0} max={1} step="any" value={gst} onChange={(e) => setGst(e.target.value)} placeholder="Inherit from Category" className="Input__Round" />
+                                        {gst !== "" && gst !== null && gst !== undefined && (
+                                            <small style={{ display: "block", marginTop: "0.25rem" }}>
+                                                {Number(gst) > 1 || Number(gst) < 0 ? (
+                                                    <span className="p-error">GST rate must be between 0 and 1 (e.g. 0.18 for 18%)</span>
+                                                ) : (
+                                                    <span className="p-text-secondary">Calculated: {Math.round(Number(gst) * 100)}% GST</span>
+                                                )}
+                                            </small>
+                                        )}
                                     </div>
                                     <div>
                                         <label htmlFor="subcategory_hsn" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
@@ -118,21 +133,6 @@ function AddsubcategoryDialog({ onsuccess }) {
                                             Tax Category
                                         </label>
                                         <Dropdown id="subcategory_tax_cat" value={tax_category} options={[{ label: "Goods", value: "Goods" }, { label: "Services", value: "Services" }]} onChange={(e) => setTaxCategory(e.value)} placeholder="Select Tax Category" className="Input__Round" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Fulfillment Configuration Card */}
-                            <div className="card" style={{ padding: "1.5rem", borderRadius: "8px", border: "1px solid #dee2e6", margin: 0 }}>
-                                <h5 style={{ fontWeight: 600, color: "#22C55E", marginBottom: "1.25rem", marginTop: 0, display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "16px" }}>
-                                    <i className="pi pi-truck" style={{ fontSize: "1.1rem" }}></i> Fulfillment Configuration
-                                </h5>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                    <div>
-                                        <label htmlFor="subcategory_delivery" className="Label__Text" style={{ display: "block", marginBottom: "4px" }}>
-                                            Estimated Delivery Time
-                                        </label>
-                                        <InputText id="subcategory_delivery" value={delivery_time} onChange={(e) => setDeliveryTime(e.target.value)} placeholder="e.g. 3-5 business days" className="Input__Round" />
                                     </div>
                                 </div>
                             </div>

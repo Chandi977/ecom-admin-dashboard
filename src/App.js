@@ -53,10 +53,9 @@ import Product from "./pages/products/Product";
 import { ProductCreate } from "./features/products/ProductCreate";
 import Deals from "./pages/deals/Deals";
 import Deal from "./pages/deals/Deal";
-import CustomPackaging from "./pages/custom-packaging/customPackaging";
-import CustomersData from "./pages/customer-query/customer";
-import ContactData from "./pages/mainWebsiteContact/contact";
-import NotifyData from "./pages/Notify/notify";
+import Enquiries from "./pages/enquiries/Enquiries";
+import LeadsCRM from "./pages/leads/LeadsCRM";
+import LeadDetail from "./pages/leads/LeadDetail";
 import AllAdmin from "./pages/Admin/adminTable";
 import PinCodes from "./pages/Pincode/pincode";
 import PinCodeUpdate from "./pages/Pincode/pinCodeUpdate";
@@ -223,12 +222,10 @@ const App = () => {
         { label: "Coupon", icon: "pi pi-tags", to: "/coupon", roles: ["admin"] },
         { label: "Product", icon: "pi pi-box", to: "/products", roles: ["admin", "catalog-manager"] },
         { label: "Orders", icon: "pi pi-shopping-cart", to: "/orders", roles: ["admin", "catalog-manager"] },
-        { label: "Customers Query", icon: "pi pi-envelope", to: "/data/customer", roles: ["admin", "catalog-manager"] },
-        { label: "Custom Packaging", icon: "pi pi-pencil", to: "/custom-packaging", roles: ["admin", "catalog-manager"] },
-        { label: "Contact Form Main Website", icon: "pi pi-phone", to: "/data/contact", roles: ["admin", "catalog-manager"] },
-        { label: "Notify", icon: "pi pi-pencil", to: "/notify", roles: ["admin", "catalog-manager"] },
+        { label: "Enquiries", icon: "pi pi-inbox", to: "/enquiries", roles: ["admin", "catalog-manager"] },
+        { label: "Leads CRM", icon: "pi pi-briefcase", to: "/leads", roles: ["admin", "catalog-manager"] },
         { label: "Notifications", icon: "pi pi-bell", to: "/notifications", roles: ["admin", "catalog-manager"] },
-        { label: "Analytics", icon: "pi pi-chart-line", to: "/analytics", roles: ["admin"] },
+        { label: "Analytics", icon: "pi pi-chart-line", to: "/analytics", roles: ["admin", "catalog-manager"] },
         { label: "Demand Signals", icon: "pi pi-chart-bar", to: "/demand-signals", roles: ["admin"] },
     ];
 
@@ -284,10 +281,13 @@ const App = () => {
                                 <ProtectedRoute exact path="/orderdetail/:id" component={OrderDetail} allowedRoles={["admin", "catalog-manager"]} />
 
                                 {/* Customer Data & Queries - Admin / catalog-manager (read-only) */}
-                                <ProtectedRoute exact path="/data/customer" component={CustomersData} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/data/contact" component={ContactData} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/custom-packaging" component={CustomPackaging} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/notify" component={NotifyData} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/enquiries" component={Enquiries} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/data/customer" component={Enquiries} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/data/contact" component={Enquiries} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/leads" component={LeadsCRM} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/leads/:id" component={LeadDetail} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/custom-packaging" component={Enquiries} allowedRoles={["admin", "catalog-manager"]} />
+                                <ProtectedRoute exact path="/notify" component={Notifications} allowedRoles={["admin", "catalog-manager"]} />
                                 <ProtectedRoute exact path="/notifications" component={Notifications} allowedRoles={["admin", "catalog-manager"]} />
 
                                 {/* Configuration - Admin / catalog-manager (read-only) */}
@@ -297,7 +297,7 @@ const App = () => {
                                 <ProtectedRoute exact path="/coupon/:id" component={CouponUpdate} allowedRoles={["admin"]} />
 
                                 {/* Analytics - Admin only */}
-                                <ProtectedRoute exact path="/analytics" component={Analytics} allowedRoles={["admin"]} />
+                                <ProtectedRoute exact path="/analytics" component={Analytics} allowedRoles={["admin", "catalog-manager"]} />
                                 <ProtectedRoute exact path="/demand-signals" component={DemandSignals} allowedRoles={["admin"]} />
 
                                 {/* Legacy/Misc pages - Admin only */}

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { toast } from "react-toastify";
+import { DEV } from "./constants";
 import { loadingAction } from "../redux/loadingAction";
 import { handleAuthFailure, isAuthFailureStatus } from "../utils/authSession";
 
@@ -11,7 +12,7 @@ export const handleDeleteRequest =
             if (isShowLoad) dispatch(loadingAction(true));
             const response = await axios({
                 method: "DELETE",
-                url: `${"http://13.232.176.80/api" + url}`,
+                url: `${DEV + url}`,
                 data: data,
                 headers: {
                     "Content-Type": "application/json",

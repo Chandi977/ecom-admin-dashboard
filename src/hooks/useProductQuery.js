@@ -57,6 +57,19 @@ export function useProduct(id) {
     );
 }
 
+export function useAllProducts() {
+    return useQuery(
+        [...productKeys.all, "all-lite"],
+        async () => {
+            const res = await handleGetRequest("/product/all");
+            return Array.isArray(res?.data) ? res.data : [];
+        },
+        {
+            staleTime: 5 * 60 * 1000,
+        }
+    );
+}
+
 export function useBrands() {
     return useQuery(
         productKeys.brands(),

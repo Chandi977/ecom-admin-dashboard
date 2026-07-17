@@ -4,7 +4,7 @@ import { Column } from "primereact/column";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
 
-function CustomersData() {
+function CustomersData({ embedded = false }) {
     const [manufacturers, setManufacturers] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -41,6 +41,36 @@ function CustomersData() {
         );
     };
 
+    const content = (
+        <div className={embedded ? "" : "card"}>
+            {loading ? (
+                <p>Loading data...</p>
+            ) : manufacturers.length > 0 ? (
+                <DataTable
+                    filterDisplay="row"
+                    className="datatable-responsive"
+                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
+                    emptyMessage="No List found."
+                    paginator={true}
+                    responsiveLayout="scroll"
+                    value={manufacturers}
+                    rows={6}
+                >
+                    <Column field="name" header="Name" />
+                    <Column field="email" header="Email" />
+                    <Column field="phone_no" header="Phone No." />
+                    <Column field="message" header="Message" />
+                    <Column field="createdAt" header="Created At" body={dateTemplate} />
+                </DataTable>
+            ) : (
+                <p>No customer data found.</p>
+            )}
+        </div>
+    );
+
+    if (embedded) return content;
+
     return (
         <div className="Page__Header" style={{ display: "flex", flexDirection: "column" }}>
             <div>
@@ -48,33 +78,7 @@ function CustomersData() {
             </div>
             <div className="grid">
                 <div className="col-12">
-                    <div className="card">
-                        {loading ? (
-                            <p>Loading data...</p>
-                        ) : manufacturers.length > 0 ? (
-                            <>
-                                <DataTable
-                                    filterDisplay="row"
-                                    className="datatable-responsive"
-                                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                                    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
-                                    emptyMessage="No List found."
-                                    paginator={true}
-                                    responsiveLayout="scroll"
-                                    value={manufacturers}
-                                    rows={6}
-                                >
-                                    <Column field="name" header=" Name" />
-                                    <Column field="email" header="Email" />
-                                    <Column field="phone_no" header="Phone No." />
-                                    <Column field="message" header="Message" />
-                                    <Column field="createdAt" header="CreatedAt" body={dateTemplate} />
-                                </DataTable>
-                            </>
-                        ) : (
-                            <p>No customer data found.</p>
-                        )}
-                    </div>
+                    {content}
                 </div>
             </div>
         </div>

@@ -45,14 +45,14 @@ export const ProductDetailsDialog = ({
                             <p><strong>GST Rate:</strong> {product.gst || 18}%</p>
                             <p><strong>Delivery Time:</strong> {product.deliveryTime || "N/A"}</p>
                             <p><strong>Featured Flags:</strong> {product.top_product ? "Top Product" : ""} {product.deal_product ? "Deal of the Day" : ""}</p>
-                            <p><strong>About / Highlights:</strong> {product.aboutItem || "N/A"}</p>
-                            <p><strong>Usage & Care:</strong> {product.usage || "N/A"}</p>
+                            <p><strong>About the Item / Highlights:</strong> {product.aboutItem || "N/A"}</p>
+                            <p><strong>Usage & Care Instructions:</strong> {product.usage || "N/A"}</p>
                         </div>
                     </div>
                     {product.description && (
                         <>
                             <Divider />
-                            <strong>Description:</strong>
+                            <strong>Product Description:</strong>
                             <div style={{ padding: "0.5rem", background: "#f8f9fa", borderRadius: "6px", overflowY: "auto", maxHeight: "150px", border: "1px solid #dee2e6" }} dangerouslySetInnerHTML={{ __html: product.description }} />
                         </>
                     )}

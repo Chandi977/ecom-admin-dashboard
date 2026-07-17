@@ -1,162 +1,264 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
 import { Button } from "primereact/button";
-import { Link } from "react-router-dom";
-import { DataTable } from "primereact/datatable";
+import { Checkbox } from "primereact/checkbox";
 import { Column } from "primereact/column";
-import { handleGetRequest } from "../../services/GetTemplate";
+import { DataTable } from "primereact/datatable";
+import { Dropdown } from "primereact/dropdown";
+import { InputText } from "primereact/inputtext";
+import { Tag } from "primereact/tag";
+import { useHistory, useLocation } from "react-router-dom";
 import moment from "moment";
-import { handlePostRequest } from "../../services/PostTemplate";
-import { useDispatch } from "react-redux";
-import { toast } from "react-toastify";
-import Axios from "axios";
-import { DEV } from "../../services/constants";
-import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
+import { handleGetRequest } from "../../services/GetTemplate";
 
-const MIN_FILTER_LENGTH = 2;
-const FILTER_DEBOUNCE_MS = 300;
+const ADMIN_ACTIVITY_ROLES = "admin,catalog-manager";
+
+const METHOD_OPTIONS = [
+    { label: "All write methods", value: "" },
+    { label: "POST", value: "POST" },
+    { label: "PUT", value: "PUT" },
+    { label: "PATCH", value: "PATCH" },
+    { label: "DELETE", value: "DELETE" },
+    { label: "GET", value: "GET" },
+];
+
+const ROLE_OPTIONS = [
+    { label: "Admin staff", value: "" },
+    { label: "Admin", value: "admin" },
+    { label: "Catalog Manager", value: "catalog-manager" },
+];
+
+const STATUS_OPTIONS = [
+    { label: "All statuses", value: "" },
+    { label: "Success", value: "success" },
+    { label: "Errors", value: "error" },
+    { label: "200", value: "200" },
+    { label: "201", value: "201" },
+    { label: "400", value: "400" },
+    { label: "401", value: "401" },
+    { label: "403", value: "403" },
+    { label: "500", value: "500" },
+];
+
+const statusSeverity = (statusCode) => {
+    if (statusCode >= 500) return "danger";
+    if (statusCode >= 400) return "warning";
+    return "success";
+};
+
+const methodSeverity = (method) => {
+    if (method === "DELETE") return "danger";
+    if (method === "POST") return "success";
+    if (method === "PUT" || method === "PATCH") return "warning";
+    return "info";
+};
 
 function Logs() {
-    const [selectedRow, setselectedRow] = useState([]);
-    const breadItems = [{ label: "Home" }, { label: "Logs" }];
+    const breadItems = [{ label: "Home" }, { label: "Activity Logs" }];
+    const home = { icon: "pi pi-home", url: "/" };
+    const history = useHistory();
+    const location = useLocation();
+
+    const queryFilters = useMemo(() => {
+        const params = new URLSearchParams(location.search);
+        return {
+            userId: params.get("userId") || "",
+            userName: params.get("userName") || "",
+            role: params.get("role") || "",
+        };
+    }, [location.search]);
+
     const [logs, setLogs] = useState([]);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
-    const [rows, setRows] = useState(10);
-    const [isFiltering, setIsFiltering] = useState(false);
+    const [rows, setRows] = useState(20);
+    const [loading, setLoading] = useState(false);
+    const [filters, setFilters] = useState({
+        userId: queryFilters.userId,
+        userName: queryFilters.userName,
+        role: queryFilters.role,
+        method: "",
+        status: "",
+        writes: true,
+    });
+
+    useEffect(() => {
+        setSkip(0);
+        setFilters((current) => ({
+            ...current,
+            userId: queryFilters.userId,
+            userName: queryFilters.userName,
+            role: queryFilters.role,
+        }));
+    }, [queryFilters]);
 
     const getData = useCallback(async () => {
         const params = {
-            skip: skip,
+            skip,
             limit: rows,
         };
-        const result = await handleGetRequest("/allLogss", params);
-        const total = await handleGetRequest("/countlogss");
-        setTotal(total?.data);
-        setLogs(result?.data);
-    }, [rows, skip]);
+
+        if (filters.userId) params.userId = filters.userId;
+        if (filters.userName.trim()) params.userName = filters.userName.trim();
+        if (filters.role) {
+            params.role = filters.role;
+        } else {
+            params.roles = ADMIN_ACTIVITY_ROLES;
+        }
+        if (filters.method) params.method = filters.method;
+        if (filters.status === "success") params.success = "true";
+        if (filters.status === "error") params.success = "false";
+        if (filters.status && !["success", "error"].includes(filters.status)) params.status = filters.status;
+        if (filters.writes) params.writes = "true";
+
+        setLoading(true);
+        const result = await handleGetRequest("/activity/logs", params);
+        setLogs(result?.data?.items || []);
+        setTotal(result?.data?.total || 0);
+        setLoading(false);
+    }, [filters, rows, skip]);
 
     useEffect(() => {
-        if (!isFiltering) {
-            getData();
-        }
-    }, [getData, isFiltering]);
-
-    const dispatch = useDispatch();
-
-    const home = { icon: "pi pi-home", url: "https://www.primefaces.org/primereact/showcase" };
-    const handledClicked = () => {
-        const selectedId = selectedRow.map((val, index) => {
-            return val?._id;
-        });
-        const data = {
-            id: selectedId,
-        };
-        dispatch(handlePostRequest(data, "/deleteLogs", true, true));
         getData();
-        toast.success("logs deleted.");
-        window.location.reload();
-    };
+    }, [getData]);
 
-    const dateTemplate = (rowData) => {
-        return <p>{moment(rowData?.createdAt).format("DD/MM/YYYY")}</p>;
-    };
-
-    const linktmeplate = (rowData) => {
-        return <Link to={rowData?.link}>{rowData?.link}</Link>;
-    };
-
-    const idTmeplate = (rowData) => {
-        return <p>{rowData?._id.substring(1, 6)}</p>;
-    };
-
-    const [values, setValues] = useState({
-        id: "",
-        title: "",
-        link: "",
-    });
-
-    const handleApplyFilter = async (value, names) => {
-        const trimmed = (value || "").trim();
-        if (!trimmed || trimmed.length < MIN_FILTER_LENGTH) {
-            setIsFiltering(false);
-            setSkip(0);
-            return;
-        }
-        setIsFiltering(true);
+    const updateFilter = (key, value) => {
         setSkip(0);
-        const result = await Axios.get(DEV + "/searchLogs", {
-            params: {
-                [names]: trimmed,
-            },
-        });
-        const filteredLogs = result?.data?.data || [];
-        setLogs(filteredLogs);
-        setTotal(filteredLogs.length);
+        setFilters((current) => ({ ...current, [key]: value }));
     };
 
-    const debouncedApplyFilter = useDebouncedCallback(handleApplyFilter, FILTER_DEBOUNCE_MS);
-
-    const handleFilter = (name) => {
-        return (
-            <input
-                style={{
-                    width: "100%",
-                    height: "37px",
-                    borderRadius: "5px",
-                    border: "1px solid #cecece",
-                }}
-                value={values[name]}
-                onChange={(e) => {
-                    const nextValue = e.target.value;
-                    setValues((prev) => ({ ...prev, [name]: nextValue }));
-                    debouncedApplyFilter(nextValue, name);
-                }}
-            ></input>
-        );
+    const clearFocusedUser = () => {
+        history.replace("/logs");
+        setSkip(0);
+        setFilters((current) => ({ ...current, userId: "", userName: "", role: "" }));
     };
 
     const onPageChange = useCallback((event) => {
         setSkip(event.first);
         setRows(event.rows);
     }, []);
+
+    const userTemplate = (rowData) => {
+        const label = rowData?.userName || (rowData?.userId ? rowData.userId.substring(0, 8) : "-");
+        return (
+            <div>
+                <div style={{ fontWeight: 600 }}>{label}</div>
+                {rowData?.userRole ? <Tag value={rowData.userRole} style={{ fontSize: "0.7rem" }} /> : null}
+            </div>
+        );
+    };
+
+    const whenTemplate = (rowData) => (
+        <div style={{ whiteSpace: "nowrap" }}>
+            <div>{moment(rowData?.createdAt).format("DD-MM-YYYY")}</div>
+            <div style={{ color: "#6b7280", fontSize: "0.85rem" }}>{moment(rowData?.createdAt).format("hh:mm:ss A")}</div>
+        </div>
+    );
+
+    const methodTemplate = (rowData) => (
+        <Tag severity={methodSeverity(rowData?.method)} value={rowData?.method || "-"} style={{ fontFamily: "monospace", fontSize: "0.72rem" }} />
+    );
+
+    const actionTemplate = (rowData) => <span style={{ fontWeight: 600 }}>{rowData?.action || rowData?.method || "-"}</span>;
+
+    const detailsTemplate = (rowData) => {
+        if (rowData?.detail) return <span>{rowData.detail}</span>;
+        if (rowData?.resourceId) return <span style={{ color: "#6b7280" }}>ID: {String(rowData.resourceId).substring(0, 32)}</span>;
+        return <span style={{ color: "#9ca3af" }}>-</span>;
+    };
+
+    const routeTemplate = (rowData) => (
+        <span style={{ color: "#4b5563", fontFamily: "monospace", fontSize: "0.82rem" }}>{rowData?.route || rowData?.path || "-"}</span>
+    );
+
+    const statusTemplate = (rowData) => <Tag severity={statusSeverity(rowData?.statusCode)} value={rowData?.statusCode || "-"} />;
+
     return (
         <>
             <div className="Page__Header">
                 <div>
-                    <h2>Logs</h2>
+                    <h2>Activity Logs</h2>
                     <BreadCrumb model={breadItems} home={home} />
                 </div>
-                <div className="Top__Btn">
-                    <Button icon="pi pi-trash" iconPos="right" onClick={handledClicked} className="Btn__DarkDelete" style={{ width: "240px" }} />
-                </div>
+                {(filters.userId || queryFilters.userName) && (
+                    <div className="Top__Btn">
+                        <Button label="Show All Staff Logs" icon="pi pi-filter-slash" onClick={clearFocusedUser} className="Btn__DarkAdd" style={{ width: "220px" }} />
+                    </div>
+                )}
             </div>
+
             <div className="grid">
                 <div className="col-12">
                     <div className="card">
+                        <div className="grid" style={{ alignItems: "center", marginBottom: 10 }}>
+                            <div className="col-12 md:col-3">
+                                <span className="p-input-icon-left" style={{ width: "100%" }}>
+                                    <i className="pi pi-user" />
+                                    <InputText
+                                        value={filters.userName}
+                                        onChange={(e) => updateFilter("userName", e.target.value)}
+                                        placeholder="Search staff name"
+                                        style={{ width: "100%" }}
+                                    />
+                                </span>
+                            </div>
+                            <div className="col-12 md:col-2">
+                                <Dropdown
+                                    value={filters.role}
+                                    options={ROLE_OPTIONS}
+                                    onChange={(e) => updateFilter("role", e.value)}
+                                    placeholder="Role"
+                                    style={{ width: "100%" }}
+                                />
+                            </div>
+                            <div className="col-12 md:col-2">
+                                <Dropdown
+                                    value={filters.method}
+                                    options={METHOD_OPTIONS}
+                                    onChange={(e) => updateFilter("method", e.value)}
+                                    placeholder="Method"
+                                    style={{ width: "100%" }}
+                                />
+                            </div>
+                            <div className="col-12 md:col-2">
+                                <Dropdown
+                                    value={filters.status}
+                                    options={STATUS_OPTIONS}
+                                    onChange={(e) => updateFilter("status", e.value)}
+                                    placeholder="Status"
+                                    style={{ width: "100%" }}
+                                />
+                            </div>
+                            <div className="col-12 md:col-3" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <Checkbox inputId="writesOnlyLogs" checked={filters.writes} onChange={(e) => updateFilter("writes", e.checked)} />
+                                <label htmlFor="writesOnlyLogs">Changes only</label>
+                            </div>
+                        </div>
+
                         <DataTable
-                            filterDisplay="row"
                             className="datatable-responsive"
-                            lazy={!isFiltering}
+                            lazy
+                            loading={loading}
                             paginator
                             first={skip}
                             rows={rows}
-                            rowsPerPageOptions={[10, 20, 50]}
+                            rowsPerPageOptions={[20, 50, 100]}
                             totalRecords={total}
                             onPage={onPageChange}
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
-                            emptyMessage="No List found."
+                            emptyMessage="No activity logs found."
                             responsiveLayout="scroll"
                             value={logs}
-                            selection={selectedRow}
-                            onSelectionChange={(e) => setselectedRow(e.value)}
                         >
-                            <Column selectionMode="multiple" style={{ width: "3em" }} />
-                            <Column filter body={idTmeplate} header="ID" filterElement={() => handleFilter("id")} />
-                            <Column filter field="title" header="Title" filterElement={() => handleFilter("title")} />
-                            <Column filter body={linktmeplate} header="Links" filterElement={() => handleFilter("link")} />
-                            <Column filter header="Created On" body={dateTemplate} />
+                            <Column header="When" body={whenTemplate} style={{ minWidth: "150px" }} />
+                            <Column header="Who" body={userTemplate} style={{ minWidth: "180px" }} />
+                            <Column header="Method" body={methodTemplate} style={{ width: "100px" }} />
+                            <Column header="Action" body={actionTemplate} style={{ minWidth: "170px" }} />
+                            <Column header="Details" body={detailsTemplate} style={{ minWidth: "260px" }} />
+                            <Column header="Route" body={routeTemplate} style={{ minWidth: "220px" }} />
+                            <Column header="Status" body={statusTemplate} style={{ width: "90px" }} />
+                            <Column header="Time" body={(rowData) => `${Math.round(rowData?.durationMs || 0)} ms`} style={{ width: "90px" }} />
                         </DataTable>
                     </div>
                 </div>

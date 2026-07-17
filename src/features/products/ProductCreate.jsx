@@ -149,11 +149,11 @@ export const ProductCreate = () => {
                 basePrice: values.pricing.basePrice,
                 priceList: values.pricing.priceList.map(tier => ({
                     number: tier.number,
-                    sellingPrice: tier.sellingPrice,
-                    originalPrice: tier.originalPrice,
+                    price: tier.sellingPrice,
+                    original_price: tier.originalPrice,
                     discount: tier.discount,
-                    packWeight: tier.packWeight,
-                    stockQuantity: tier.stockQuantity,
+                    pack_weight: tier.packWeight,
+                    stock_quantity: tier.stockQuantity,
                 })),
             },
             inventory: {
@@ -278,7 +278,7 @@ export const ProductCreate = () => {
                             style={{ width: "120px", borderRadius: "6px" }}
                             disabled={isSubmitting || createMutation.isLoading}
                         />
-                        {role === "admin" || role === "catalog-manager" && (
+                        {(role === "admin" || role === "catalog-manager") && (
                         <Button
                             type="submit"
                             label={isSubmitting || createMutation.isLoading ? "Saving..." : "Save Product"}

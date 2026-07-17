@@ -120,7 +120,7 @@ function Brand() {
                             <p>ID:</p>
                             <p>&nbsp;{brand_id}</p>
                         </div>
-                        {role === "admin" || role === "catalog-manager" && (
+                        {(role === "admin" || role === "catalog-manager") && (
                         <Dropzone onDrop={(acceptedFiles) => handleUpload(acceptedFiles[0])}>
                             {({ getRootProps, getInputProps }) => (
                                 <div {...getRootProps()}>
@@ -185,7 +185,7 @@ function Brand() {
 
                         <div className="Down__Btn">
                             <Button label="Cancel" className="Btn__Transparent" onClick={handleCancel} />
-                            {role === "admin" || role === "catalog-manager" && <Button label="Update" className="Btn__Dark" />}
+                            {(role === "admin" || role === "catalog-manager") && <Button label="Update" className="Btn__Dark" />}
                         </div>
                     </form>
                 </div>

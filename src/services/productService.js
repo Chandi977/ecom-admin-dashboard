@@ -76,6 +76,17 @@ export const productService = {
         return response.data;
     },
 
+    async deleteProductImages(keys) {
+        const payload = { keys: Array.isArray(keys) ? keys : [keys] };
+        const response = await axios.post(`${DEV}/product/image/delete`, payload, {
+            headers: {
+                "Content-Type": "application/json",
+                ...getAuthHeader(),
+            },
+        });
+        return response.data;
+    },
+
     async uploadImage(file, onProgress) {
         const formData = new FormData();
         formData.append("image", file);

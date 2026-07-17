@@ -71,7 +71,7 @@ function Categories() {
     const actionBodyTemplate = (rowData) => {
         return (
             <div>
-                {role === "admin" || role === "catalog-manager" && (
+                {(role === "admin" || role === "catalog-manager") && (
                 <Button className="p-button-rounded mr-2 Elipse_Icon" onClick={() => history.push(`/category/${rowData?._id}`)}>
                     <FaPen />
                 </Button>
@@ -108,17 +108,22 @@ function Categories() {
         );
     };
 
-    const handleDelete = () => {
-        const selectedId = selectedRow.map((val, index) => {
-            return val?._id;
-        });
+    const handleDelete = async () => {
+        if (selectedRow.length === 0) {
+            toast.warn("Select at least one category to delete.");
+            return;
+        }
+
         const data = {
-            id: selectedId,
+            id: selectedRow.map((val) => val?._id),
         };
-        dispatch(handlePostRequest(data, "/category/delete", true, true));
-        getBrands();
+        const res = await dispatch(handlePostRequest(data, "/category/delete", true, true));
+        // handlePostRequest already surfaces the error toast on failure.
+        if (!res?.success) return;
+
         toast.success("Category Deleted.");
-        window.location.reload();
+        setselectedRow([]);
+        await getBrands();
     };
 
     const onsuccess = () => {
@@ -202,7 +207,7 @@ function Categories() {
                     </h2>
                     {/* <BreadCrumb model={breadItems} home={home} /> */}
                 </div>
-                {role === "admin" || role === "catalog-manager" && (
+                {(role === "admin" || role === "catalog-manager") && (
                     <div className="Top__Btn">
                         <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
                         {can("category:delete") && <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />}

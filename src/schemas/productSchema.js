@@ -6,7 +6,7 @@ export const priceListItemSchema = z.object({
     originalPrice: z.preprocess((val) => (val === "" || val === undefined) ? undefined : Number(val), z.number().positive("Original price must be greater than 0").optional()),
     discount: z.preprocess((val) => (val === "" || val === undefined) ? 0 : Number(val), z.number().min(0, "Discount cannot be negative").max(100, "Discount cannot exceed 100%").optional()),
     packWeight: z.preprocess((val) => (val === "" || val === undefined) ? undefined : Number(val), z.number().positive("Weight must be positive").optional()),
-    stockQuantity: z.preprocess((val) => Number(val), z.number().min(0, "Stock quantity cannot be negative")),
+    stockQuantity: z.preprocess((val) => (val === "" || val === undefined || val === null) ? 0 : Number(val), z.number().min(0, "Stock quantity cannot be negative")),
 });
 
 export const overviewFieldSchema = z.object({
@@ -27,8 +27,13 @@ export const productFormSchema = z.object({
     // becomes undefined here (not 0) so it is omitted from the payload downstream.
     gst: z.preprocess(
         (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
-        z.number().min(0, "GST cannot be negative").optional(),
+        z.number().min(0, "GST cannot be negative").max(1, "GST must be a decimal value between 0 and 1 (e.g. 0.18 for 18%)").optional(),
     ),
+    // Identity + tax/compliance fields (persisted as first-class product columns).
+    model: z.string().optional(),
+    hsn_code: z.string().optional(),
+    sac_code: z.string().optional(),
+    tax_category: z.string().optional(),
     // Per-product overrides for category common fields (key -> value). Blank
     // entries are stripped before submit so the product inherits those defaults.
     common_overrides: z.record(z.any()).optional(),
@@ -52,7 +57,7 @@ export const productFormSchema = z.object({
     }),
 
     inventory: z.object({
-        availableStock: z.preprocess((val) => Number(val), z.number().min(0, "Available stock cannot be negative")),
+        availableStock: z.preprocess((val) => (val === "" || val === undefined || val === null) ? 0 : Number(val), z.number().min(0, "Available stock cannot be negative")),
         reservedStock: z.preprocess((val) => (val === "" || val === undefined) ? 0 : Number(val), z.number().min(0, "Reserved stock cannot be negative").default(0)),
         minimumStock: z.preprocess((val) => (val === "" || val === undefined) ? 0 : Number(val), z.number().min(0, "Minimum stock cannot be negative").default(0)),
         warehouse: z.string().optional(),

@@ -10,6 +10,7 @@ import { handlePostRequest } from "../../services/PostTemplate";
 import AddcategoryDialog from "./AddsubcategoryDialog";
 import { FaPen, FaTrash } from "react-icons/fa";
 import { can } from "../../rbac/permissions";
+import { DEV } from "../../services/constants";
 
 const CATEGORY_ORDER = ["main", "rollabel", "packpro"];
 
@@ -33,6 +34,7 @@ const sortSubCategories = (items = []) =>
 function SubCategories() {
     const [showDialog, setShowDialog] = useState(false);
     const [manufacturers, setManufacturers] = useState([]);
+    const [deletingId, setDeletingId] = useState(null);
     const dispatch = useDispatch();
     const history = useHistory();
     const [role, setRole] = useState("");
@@ -64,21 +66,34 @@ function SubCategories() {
         getBrands();
     }, [getBrands]);
 
-    const handleDelete = (subcategoryId) => {
+    const handleDelete = async (subcategoryId) => {
         if (!subcategoryId) {
             toast.info("Select a subcategory to delete.");
             return;
         }
+        const subcategory = manufacturers.find((item) => item?._id === subcategoryId);
+        const label = subcategory?.name || "this subcategory";
+        if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
+
         const data = { id: [subcategoryId] };
-        dispatch(handlePostRequest(data, "/subcategory/delete", true, true));
-        getBrands();
-        toast.success("Subcategory deleted.");
+        setDeletingId(subcategoryId);
+        try {
+            const res = await dispatch(handlePostRequest(data, "/subcategory/delete", true, false));
+            if (res?.success) {
+                setManufacturers((prev) => prev.filter((item) => item?._id !== subcategoryId));
+                await getBrands();
+                toast.success("Subcategory deleted.");
+            } else {
+                toast.warn(res?.message || "Unable to delete subcategory.");
+            }
+        } finally {
+            setDeletingId(null);
+        }
     };
 
     const onsuccess = () => {
         onHideFaq();
         toast.success("subcategory added");
-        setShowDialog(false);
         window.location.reload();
     };
 
@@ -100,95 +115,118 @@ function SubCategories() {
                     gap: 24px;
                     margin-top: 24px;
                 }
-                .subcat-card {
-                    background: #fff;
-                    border-radius: 16px;
-                    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-                    padding: 24px 22px;
-                    min-width: 260px;
-                    max-width: 320px;
+                .layout-main .subcat-card {
+                    --subcat-accent: #0c4e9c;
+                    --subcat-bg-accent: #e9f3f8;
+                    --subcat-color-accent: #0c4e9c;
+                    background: #fff !important;
+                    border-radius: 16px !important;
+                    border: 2px solid var(--subcat-accent) !important;
+                    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
+                    padding: 28px 22px;
+                    min-width: 240px;
+                    max-width: 300px;
+                    flex: 1 1 240px;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     position: relative;
-                    border: 3px solid #F6F6F6;
-                    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+                    cursor: pointer;
+                    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
                 }
-                .subcat-card:hover {
-                    transform: translateY(-6px) scale(1.02);
-                    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
-                    border-color: #e3f2fd;
+                .layout-main .subcat-card:hover {
+                    transform: translateY(-2px) !important;
+                    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08) !important;
+                    border-color: var(--subcat-accent) !important;
                 }
                 .subcat-avatar {
-                    width: 64px;
-                    height: 64px;
+                    width: 72px;
+                    height: 72px;
                     border-radius: 50%;
-                    background: #e3f2fd;
+                    background: var(--subcat-bg-accent) !important;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     font-size: 2.2rem;
-                    color: #1976d2;
-                    margin-bottom: 14px;
+                    color: var(--subcat-color-accent) !important;
+                    margin-bottom: 16px;
+                    overflow: hidden;
+                    border: 1px solid #e2e8f0;
+                    transition: transform 0.22s ease;
+                }
+                .subcat-card:hover .subcat-avatar {
+                    transform: scale(1.08);
+                }
+                .subcat-avatar img {
+                    width: 125%;
+                    height: 125%;
+                    object-fit: contain;
+                    border-radius: 50%;
                 }
                 .subcat-info {
                     text-align: center;
-                    margin-bottom: 12px;
+                    margin-bottom: 4px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 6px;
                 }
                 .subcat-info .subcat-name {
                     font-weight: 700;
-                    font-size: 1.18rem;
-                    color: #222;
-                }
-                .subcat-info .subcat-slug {
-                    color: #888;
-                    font-size: 1.01rem;
+                    font-size: 1.25rem;
+                    color: #0f172a;
                 }
                 .subcat-info .subcat-category {
-                    color: #22c55e;
-                    font-size: 1.01rem;
-                    font-weight: 600;
+                    color: #10b981;
+                    font-size: 0.9rem;
+                    font-weight: 700;
+                    background: #ecfdf5;
+                    padding: 2px 10px;
+                    border-radius: 9999px;
                 }
                 .subcat-info .subcat-date {
-                    color: #b0b3bb;
-                    font-size: 0.98rem;
+                    color: #94a3b8;
+                    font-size: 0.8rem;
+                    font-weight: 500;
                 }
-                .subcat-actions {
-                    display: flex;
-                    gap: 18px;
-                    margin-top: 10px;
-                }
-                .subcat-action-btn {
-                    background: #e3f2fd;
+                .subcat-delete-btn {
+                    position: absolute;
+                    top: 12px;
+                    right: 12px;
+                    background: #fef2f2;
+                    color: #dc2626;
                     border-radius: 50%;
-                    width: 38px;
-                    height: 38px;
+                    width: 32px;
+                    height: 32px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     cursor: pointer;
-                    border: none;
-                    transition: background 0.2s;
-                    position: relative;
+                    border: 1px solid #fee2e2;
+                    transition: all 0.2s ease;
+                    z-index: 10;
                 }
-                .subcat-action-btn:hover {
-                    background: #bbdefb;
+                .subcat-delete-btn:hover {
+                    background: #dc2626;
+                    color: #fff;
+                    border-color: #dc2626;
+                    transform: scale(1.08);
                 }
-                .subcat-action-btn .tooltip {
+                .subcat-delete-btn .tooltip {
                     display: none;
                     position: absolute;
-                    top: 44px;
+                    top: 38px;
                     left: 50%;
                     transform: translateX(-50%);
                     background: #222;
                     color: #fff;
-                    padding: 6px 14px;
-                    border-radius: 7px;
-                    font-size: 0.95rem;
-                    z-index: 10;
+                    padding: 6px 12px;
+                    border-radius: 6px;
+                    font-size: 0.85rem;
+                    z-index: 11;
                     white-space: nowrap;
                 }
-                .subcat-action-btn:hover .tooltip {
+                .subcat-delete-btn:hover .tooltip {
                     display: block;
                 }
             `}</style>
@@ -211,33 +249,56 @@ function SubCategories() {
                 )}
             </div>
             <div className="subcat-cards-container mb-4">
-                {manufacturers.map((subcat, idx) => (
-                    <div className="subcat-card" key={subcat._id || idx}>
-                        <div className="subcat-avatar">
-                            <i className="pi pi-tags" />
-                        </div>
-                        <div className="subcat-info">
-                            <div className="subcat-name">{subcat.name || "-"}</div>
-                            {/* <div className="subcat-slug">{subcat.slug || "-"}</div> */}
-                            <div className="subcat-category">{subcat.categoryName || subcat.category?.name || "-"}</div>
-                            <div className="subcat-date">{moment(subcat.createdAt).format("DD/MM/YYYY")}</div>
-                        </div>
-                        <div className="subcat-actions">
-                            {role === "admin" || role === "catalog-manager" && (
-                            <button className="subcat-action-btn" onClick={() => history.push(`/subcategory/${subcat._id}`)}>
-                                <FaPen style={{ color: "#1976d2", fontSize: "1.3rem" }} />
-                                <span className="tooltip">Edit SubCategory</span>
-                            </button>
-                            )}
+                {manufacturers.map((subcat, idx) => {
+                    const thumbnailKey = subcat.productImage;
+                    const imgUrl = thumbnailKey
+                        ? (String(thumbnailKey).startsWith("http")
+                            ? thumbnailKey
+                            : `${DEV}/getImage?image=${thumbnailKey}`)
+                        : null;
+
+                    return (
+                        <div
+                            className="subcat-card"
+                            key={subcat._id || idx}
+                            onClick={() => history.push(`/subcategory/${subcat._id}`)}
+                        >
                             {can("subcategory:delete") && (
-                                <button className="subcat-action-btn" onClick={() => handleDelete(subcat._id)}>
-                                    <FaTrash style={{ color: "red", fontSize: "1.3rem" }} />
+                                <button
+                                    className="subcat-delete-btn"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete(subcat._id);
+                                    }}
+                                    type="button"
+                                    disabled={deletingId === subcat._id}
+                                >
+                                    <FaTrash style={{ fontSize: "1.1rem" }} />
                                     <span className="tooltip">Delete SubCategory</span>
                                 </button>
                             )}
+                            <div className="subcat-avatar">
+                                {imgUrl ? (
+                                    <img
+                                        src={imgUrl}
+                                        alt={subcat.name}
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = "none";
+                                            const tagIcon = e.currentTarget.nextSibling;
+                                            if (tagIcon) tagIcon.style.display = "block";
+                                        }}
+                                    />
+                                ) : null}
+                                <i className="pi pi-tags" style={{ display: imgUrl ? "none" : "block" }} />
+                            </div>
+                            <div className="subcat-info">
+                                <div className="subcat-name">{subcat.name || "-"}</div>
+                                <div className="subcat-category">{subcat.categoryName || subcat.category?.name || "-"}</div>
+                                <div className="subcat-date">{moment(subcat.createdAt).format("DD/MM/YYYY")}</div>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </>
     );

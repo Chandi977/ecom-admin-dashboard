@@ -42,11 +42,11 @@ function AllAdmin() {
         const data = {
             id: [value?._id],
         };
-        console.log(data);
-        dispatch(handlePostRequest(data, "/deleteUser", true, true));
-        getData();
-        toast.success("users deleted.");
-        window.location.reload();
+        const res = await dispatch(handlePostRequest(data, "/deleteUser", true, true));
+        if (res && res !== "error" && res.success) {
+            toast.success("User deleted.");
+            getData();
+        }
     };
 
     const handledClicked = () => {
@@ -70,7 +70,6 @@ function AllAdmin() {
         onHideCustomerDialog();
         toast.success("user added.");
         getData();
-        window.location.reload();
     };
 
     console.log(users);
@@ -83,83 +82,116 @@ function AllAdmin() {
                     gap: 24px;
                     margin-top: 24px;
                 }
-                .admin-card {
-                    background: #fff;
-                    border-radius: 16px;
-                    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+                .layout-main .admin-card {
+                    --admin-accent: #0c4e9c;
+                    --admin-bg-accent: #e9f3f8;
+                    --admin-color-accent: #0c4e9c;
+                    background: #fff !important;
+                    border-radius: 16px !important;
+                    border: 2px solid var(--admin-accent) !important;
+                    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
                     padding: 24px 22px;
-                    min-width: 260px;
-                    max-width: 320px;
+                    min-width: 240px;
+                    max-width: 300px;
+                    flex: 1 1 240px;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     position: relative;
-                    border: 3px solid #F6F6F6;
-                    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+                    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
                 }
-                .admin-card:hover {
-                    transform: translateY(-6px) scale(1.02);
-                    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
-                    border-color: #e3f2fd;
+                .layout-main .admin-card:hover {
+                    transform: translateY(-2px) !important;
+                    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08) !important;
+                    border-color: var(--admin-accent) !important;
                 }
                 .admin-avatar {
-                    width: 64px;
-                    height: 64px;
+                    width: 56px;
+                    height: 56px;
                     border-radius: 50%;
-                    background: #e3f2fd;
+                    background: var(--admin-bg-accent) !important;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 2.2rem;
-                    color: #1976d2;
-                    margin-bottom: 14px;
+                    font-size: 1.6rem;
+                    color: var(--admin-color-accent) !important;
+                    margin-bottom: 16px;
+                    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+                    transition: transform 0.22s ease;
+                }
+                .admin-card:hover .admin-avatar {
+                    transform: scale(1.1);
                 }
                 .admin-info {
                     text-align: center;
-                    margin-bottom: 12px;
+                    margin-bottom: 16px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 6px;
+                    width: 100%;
                 }
                 .admin-info .admin-name {
                     font-weight: 700;
-                    font-size: 1.18rem;
-                    color: #222;
+                    font-size: 1.25rem;
+                    color: #0f172a;
                 }
                 .admin-info .admin-email {
-                    color: #888;
-                    font-size: 1.01rem;
+                    color: #64748b;
+                    font-size: 0.95rem;
+                    background: #f1f5f9;
+                    padding: 2px 10px;
+                    border-radius: 9999px;
+                    font-weight: 500;
+                    word-break: break-all;
+                    max-width: 100%;
                 }
                 .admin-info .admin-contact {
-                    color: #1976d2;
-                    font-size: 1.01rem;
-                }
-                .admin-info .admin-role {
-                    color: #22c55e;
-                    font-size: 1.01rem;
+                    color: #0c4e9c;
+                    font-size: 0.95rem;
                     font-weight: 600;
                 }
                 .admin-info .admin-date {
-                    color: #b0b3bb;
-                    font-size: 0.98rem;
+                    color: #94a3b8;
+                    font-size: 0.8rem;
+                    font-weight: 500;
                 }
                 .admin-actions {
                     display: flex;
-                    gap: 18px;
-                    margin-top: 10px;
+                    gap: 12px;
+                    margin-top: auto;
+                    border-top: 1px solid #f1f5f9;
+                    padding-top: 14px;
+                    width: 100%;
+                    justify-content: center;
                 }
                 .admin-action-btn {
-                    background: #e3f2fd;
-                    border-radius: 50%;
-                    width: 38px;
-                    height: 38px;
+                    border-radius: 8px;
+                    width: 36px;
+                    height: 36px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     cursor: pointer;
-                    border: none;
-                    transition: background 0.2s;
+                    border: 1px solid transparent;
+                    transition: all 0.2s ease;
                     position: relative;
                 }
-                .admin-action-btn:hover {
-                    background: #bbdefb;
+                .admin-action-edit {
+                    background: #eff6ff;
+                    color: #2563eb;
+                }
+                .admin-action-edit:hover {
+                    background: #2563eb;
+                    color: #fff;
+                }
+                .admin-action-delete {
+                    background: #fef2f2;
+                    color: #dc2626;
+                }
+                .admin-action-delete:hover {
+                    background: #dc2626;
+                    color: #fff;
                 }
                 .admin-action-btn .tooltip {
                     display: none;
@@ -179,7 +211,7 @@ function AllAdmin() {
                     display: block;
                 }
             `}</style>
-            <Dialog visible={showDialog} header="Add Customer" style={{ width: "750px" }} onHide={() => setShowDialog(false)}>
+            <Dialog visible={showDialog} header="Add Admin / Catalog Manager" style={{ width: "750px" }} onHide={() => setShowDialog(false)}>
                 <CustomerDialog onHideCustomerDialog={onHideCustomerDialog} handlesuccess={handlesuccess} />
             </Dialog>
 
@@ -209,16 +241,15 @@ function AllAdmin() {
                             <div className="admin-name">{admin.first_name || "-"}</div>
                             <div className="admin-email">{admin.email_address || "-"}</div>
                             <div className="admin-contact">{admin.mobile_number || "-"}</div>
-                            {/* <div className="admin-role">{admin.role || "Admin"}</div> */}
                             <div className="admin-date">{moment(admin.createdAt).format("DD/MM/YYYY")}</div>
                         </div>
                         <div className="admin-actions">
-                            <button className="admin-action-btn" onClick={() => history.push(`/customer/${admin._id}`)}>
-                                <i className="pi pi-pencil" style={{ color: "#1976d2", fontSize: "1.3rem" }}></i>
+                            <button className="admin-action-btn admin-action-edit" onClick={() => history.push(`/customer/${admin._id}`)}>
+                                <i className="pi pi-pencil" style={{ fontSize: "1.1rem" }}></i>
                                 <span className="tooltip">Edit Admin</span>
                             </button>
-                            <button className="admin-action-btn" onClick={() => handleDelete(admin)}>
-                                <i className="pi pi-trash" style={{ color: "red", fontSize: "1.3rem" }}></i>
+                            <button className="admin-action-btn admin-action-delete" onClick={() => handleDelete(admin)}>
+                                <i className="pi pi-trash" style={{ fontSize: "1.1rem" }}></i>
                                 <span className="tooltip">Delete Admin</span>
                             </button>
                         </div>

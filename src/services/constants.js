@@ -1,8 +1,5 @@
-export const DEV =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-    ? "http://localhost:5000/premind/api"
-    : "https://server.prempackaging.com/premind/api";
+const normalizeApiBaseUrl = (url) => String(url || "").replace(/\/+$/, "");
 
-
-// export const DEV = "https://server.prempackaging.com/premind/api/";
+export const DEV = normalizeApiBaseUrl(
+    import.meta.env.VITE_API_BASE_URL || "https://307h8lvv-5000.inc1.devtunnels.ms/premind/api",
+);

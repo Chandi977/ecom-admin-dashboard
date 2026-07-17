@@ -135,24 +135,24 @@ const Dashboard = () => {
     const { basicOptions } = getLightTheme();
     return (
         <>
-            <div className="dashboard-cards" style={{ display: "flex", gap: "24px", marginBottom: "32px", marginTop: "16px", flexWrap: "wrap" }}>
+            <div className="dashboard-cards-grid">
                 {/* Total Orders Card */}
-                <div className="dashboard-card" style={{ flex: 1, background: "#fff", borderRadius: "14px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: "24px 18px", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: "220px", marginBottom: "18px" }}>
+                <div className="dashboard-card-item col-layout">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontWeight: 600, fontSize: "1.15rem", color: "#222" }}>Total Orders</span>
                         <span
                             style={{ position: "relative", cursor: "pointer" }}
                             onMouseEnter={(e) => {
                                 const tip = e.currentTarget.querySelector(".tooltip");
-                                tip.style.display = "block";
+                                if (tip) tip.style.display = "block";
                             }}
                             onMouseLeave={(e) => {
                                 const tip = e.currentTarget.querySelector(".tooltip");
-                                tip.style.display = "none";
+                                if (tip) tip.style.display = "none";
                             }}
                         >
                             <i className="pi pi-info-circle" style={{ color: "#ff6b6b", fontSize: "1.3rem" }}></i>
-                            <span className="tooltip" style={{ display: "none", position: "absolute", top: "28px", left: "-20px", background: "#222", color: "#fff", padding: "6px 14px", borderRadius: "7px", fontSize: "0.95rem", zIndex: 10 }}>
+                            <span className="tooltip" style={{ display: "none", position: "absolute", top: "28px", left: "-20px", background: "#222", color: "#fff", padding: "6px 14px", borderRadius: "7px", fontSize: "0.95rem", zIndex: 10, whiteSpace: "nowrap" }}>
                                 Total orders placed
                             </span>
                         </span>
@@ -172,22 +172,22 @@ const Dashboard = () => {
                     </div>
                 </div>
                 {/* Repeat Purchase Rate Card */}
-                <div className="dashboard-card" style={{ flex: 1, background: "#fff", borderRadius: "14px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: "24px 18px", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: "220px", marginBottom: "18px" }}>
+                <div className="dashboard-card-item col-layout">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontWeight: 600, fontSize: "1.15rem", color: "#222" }}>Repeat Purchase Rate</span>
                         <span
                             style={{ position: "relative", cursor: "pointer" }}
                             onMouseEnter={(e) => {
                                 const tip = e.currentTarget.querySelector(".tooltip");
-                                tip.style.display = "block";
+                                if (tip) tip.style.display = "block";
                             }}
                             onMouseLeave={(e) => {
                                 const tip = e.currentTarget.querySelector(".tooltip");
-                                tip.style.display = "none";
+                                if (tip) tip.style.display = "none";
                             }}
                         >
                             <i className="pi pi-info-circle" style={{ color: "#22c55e", fontSize: "1.3rem" }}></i>
-                            <span className="tooltip" style={{ display: "none", position: "absolute", top: "28px", left: "-20px", background: "#222", color: "#fff", padding: "6px 14px", borderRadius: "7px", fontSize: "0.95rem", zIndex: 10 }}>
+                            <span className="tooltip" style={{ display: "none", position: "absolute", top: "28px", left: "-20px", background: "#222", color: "#fff", padding: "6px 14px", borderRadius: "7px", fontSize: "0.95rem", zIndex: 10, whiteSpace: "nowrap" }}>
                                 Repeat Purchase Rate (calculated every 6 months)
                             </span>
                         </span>
@@ -204,22 +204,22 @@ const Dashboard = () => {
                     </div>
                 </div>
                 {/* Total User Accounts Card */}
-                <div className="dashboard-card" style={{ flex: 1, background: "#fff", borderRadius: "14px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: "24px 18px", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: "220px", marginBottom: "18px" }}>
+                <div className="dashboard-card-item col-layout">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontWeight: 600, fontSize: "1.15rem", color: "#222" }}>Total User Accounts</span>
                         <span
                             style={{ position: "relative", cursor: "pointer" }}
                             onMouseEnter={(e) => {
                                 const tip = e.currentTarget.querySelector(".tooltip");
-                                tip.style.display = "block";
+                                if (tip) tip.style.display = "block";
                             }}
                             onMouseLeave={(e) => {
                                 const tip = e.currentTarget.querySelector(".tooltip");
-                                tip.style.display = "none";
+                                if (tip) tip.style.display = "none";
                             }}
                         >
                             <i className="pi pi-info-circle" style={{ color: "#facc15", fontSize: "1.3rem" }}></i>
-                            <span className="tooltip" style={{ display: "none", position: "absolute", top: "28px", left: "-20px", background: "#222", color: "#fff", padding: "6px 14px", borderRadius: "7px", fontSize: "0.95rem", zIndex: 10 }}>
+                            <span className="tooltip" style={{ display: "none", position: "absolute", top: "28px", left: "-20px", background: "#222", color: "#fff", padding: "6px 14px", borderRadius: "7px", fontSize: "0.95rem", zIndex: 10, whiteSpace: "nowrap" }}>
                                 New users registered
                             </span>
                         </span>
@@ -239,70 +239,62 @@ const Dashboard = () => {
                     </div>
                 </div>
                 {/* Delivery Time Card */}
-                <div className="dashboard-card" style={{ flex: 1, background: "#fff", borderRadius: "14px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: "24px 18px", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: "220px", marginBottom: "18px" }}>
+                <div className="dashboard-card-item col-layout">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontWeight: 600, fontSize: "1.15rem", color: "#222" }}>Average Delivery Time</span>
                         <span
                             style={{ position: "relative", cursor: "pointer" }}
                             onMouseEnter={(e) => {
                                 const tip = e.currentTarget.querySelector(".tooltip");
-                                tip.style.display = "block";
+                                if (tip) tip.style.display = "block";
                             }}
                             onMouseLeave={(e) => {
                                 const tip = e.currentTarget.querySelector(".tooltip");
-                                tip.style.display = "none";
+                                if (tip) tip.style.display = "none";
                             }}
                         >
                             <i className="pi pi-info-circle" style={{ color: "#38bdf8", fontSize: "1.3rem" }}></i>
-                            <span className="tooltip" style={{ display: "none", position: "absolute", top: "28px", left: "-20px", background: "#222", color: "#fff", padding: "6px 14px", borderRadius: "7px", fontSize: "0.95rem", zIndex: 10 }}>
+                            <span className="tooltip" style={{ display: "none", position: "absolute", top: "28px", left: "-20px", background: "#222", color: "#fff", padding: "6px 14px", borderRadius: "7px", fontSize: "0.95rem", zIndex: 10, whiteSpace: "nowrap" }}>
                                 Average Delivery Time
                             </span>
                         </span>
                     </div>
                     <div style={{ marginTop: "18px" }}>
-                        {/* <span style={{ background: "#38bdf8", color: "#fff", fontWeight: 600, borderRadius: "16px", padding: "4px 14px", fontSize: "1rem", marginRight: "8px" }}>
-                            5.7% <span style={{ fontSize: "0.9em" }}>↘</span>
-                        </span> */}
                         <div style={{ fontWeight: 700, fontSize: "2rem", color: "#222", marginTop: "8px" }}>{stats?.satisfaction ? `${stats.satisfaction}%` : "3 Days"}</div>
-                        {/* <div style={{ color: "#b0b3bb", fontSize: "1rem" }}>Since last month</div> */}
                         <div style={{ width: "100%", height: "7px", background: "#eaf6fb", borderRadius: "6px", marginTop: "14px" }}>
                             <div style={{ width: "94%", height: "100%", background: "#38bdf8", borderRadius: "6px" }}></div>
                         </div>
                     </div>
                 </div>
                 {/* Brands Card */}
-                <div className="dashboard-card" style={{ flex: 1, background: "#fff", borderRadius: "14px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: "24px 18px", display: "flex", flexDirection: "column", alignItems: "center", minWidth: "220px", marginBottom: "18px" }}>
+                <div className="dashboard-card-item center-layout">
                     <i className="pi pi-circle" style={{ fontSize: "2.2rem", color: "#36A2EB", marginBottom: "10px" }} />
                     <span style={{ fontWeight: 600, fontSize: "1.08rem", color: "#222" }}>Total Available Brands</span>
                     <span style={{ fontWeight: 700, fontSize: "1.7rem", color: "#222", marginTop: "8px" }}>{stats?.brands}</span>
                 </div>
                 {/* Categories Card */}
-                <div className="dashboard-card" style={{ flex: 1, background: "#fff", borderRadius: "14px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: "24px 18px", display: "flex", flexDirection: "column", alignItems: "center", minWidth: "220px", marginBottom: "18px" }}>
+                <div className="dashboard-card-item center-layout">
                     <i className="pi pi-circle" style={{ fontSize: "2.2rem", color: "#FFCE56", marginBottom: "10px" }} />
                     <span style={{ fontWeight: 600, fontSize: "1.08rem", color: "#222" }}>Total Available Categories</span>
                     <span style={{ fontWeight: 700, fontSize: "1.7rem", color: "#222", marginTop: "8px" }}>{stats?.categories}</span>
                 </div>
                 {/* Sub-categories Card */}
-                <div className="dashboard-card" style={{ flex: 1, background: "#fff", borderRadius: "14px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: "24px 18px", display: "flex", flexDirection: "column", alignItems: "center", minWidth: "220px", marginBottom: "18px" }}>
+                <div className="dashboard-card-item center-layout">
                     <i className="pi pi-car" style={{ fontSize: "2.2rem", color: "#4BC0C0", marginBottom: "10px" }} />
                     <span style={{ fontWeight: 600, fontSize: "1.08rem", color: "#222" }}>Total Available Sub-categories</span>
                     <span style={{ fontWeight: 700, fontSize: "1.7rem", color: "#222", marginTop: "8px" }}>{stats?.subcategories}</span>
                 </div>
                 {/* Products Card */}
-                <div className="dashboard-card" style={{ flex: 1, background: "#fff", borderRadius: "14px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: "24px 18px", display: "flex", flexDirection: "column", alignItems: "center", minWidth: "220px", marginBottom: "18px" }}>
+                <div className="dashboard-card-item center-layout">
                     <i className="pi pi-box" style={{ fontSize: "2.2rem", color: "#9966FF", marginBottom: "10px" }} />
                     <span style={{ fontWeight: 600, fontSize: "1.08rem", color: "#222" }}>Total Listed Products</span>
                     <span style={{ fontWeight: 700, fontSize: "1.7rem", color: "#222", marginTop: "8px" }}>{stats?.products}</span>
                 </div>
             </div>
 
-            <div className="container-fluid mt-5">
-                <div className="row">
-                    <div className="col-md-12">
-                        <h3 style={{ textAlign: "center" }}>Monthly New Users</h3>
-                        <Chart type="bar" data={basicData} options={basicOptions} />
-                    </div>
-                </div>
+            <div className="card mt-5" style={{ padding: "2rem" }}>
+                <h3 style={{ textAlign: "center", marginBottom: "1.5rem", fontWeight: 700, fontSize: "1.5rem", color: "#222" }}>Monthly New Users</h3>
+                <Chart type="bar" data={basicData} options={basicOptions} />
             </div>
 
             {/* <div className="graphs_section">

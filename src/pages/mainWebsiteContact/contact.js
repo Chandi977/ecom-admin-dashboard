@@ -4,7 +4,7 @@ import { Column } from "primereact/column";
 import Axios from "axios";
 import moment from "moment/moment";
 
-function ContactData() {
+function ContactData({ embedded = false }) {
     const [manufacturers, setManufacturers] = useState([]);
 
     useEffect(() => {
@@ -22,6 +22,41 @@ function ContactData() {
         // console.log(manufacturers);
     }, []);
 
+    const content = (
+        <div className={embedded ? "" : "card"}>
+            {manufacturers.length > 0 ? (
+                <DataTable
+                    className="datatable-responsive"
+                    value={manufacturers}
+                    paginator={true}
+                    PaginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
+                    emptyMessage="No List found."
+                    rows={6}
+                >
+                    <Column field="name" header="Name" />
+                    <Column field="email" header="Email" />
+                    <Column field="phone_no" header="Phone No." />
+                    <Column field="message" header="Message" />
+                    <Column
+                        field="createdAt"
+                        header="Created At"
+                        body={(rowData) => (
+                            <div>
+                                <p>{moment(rowData.createdAt).format("DD-MM-YY")}</p>
+                                <p>{moment(rowData.createdAt).format("hh:mm a")}</p>
+                            </div>
+                        )}
+                    />
+                </DataTable>
+            ) : (
+                <p>Loading data...</p>
+            )}
+        </div>
+    );
+
+    if (embedded) return content;
+
     return (
         <div className="Page__Header" style={{ display: "flex", flexDirection: "column" }}>
             <div>
@@ -29,43 +64,7 @@ function ContactData() {
             </div>
             <div className="grid">
                 <div className="col-12">
-                    <div className="card">
-                        {manufacturers.length > 0 ? (
-                            <div>
-                                <DataTable
-                                    className="datatable-responsive"
-                                    value={manufacturers}
-                                    paginator={true}
-                                    PaginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                                    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
-                                    emptyMessage="No List found."
-                                    rows={6} // Adjust the number of rows per page as needed
-                                >
-                                    <Column field="name" header="Name" />
-                                    <Column field="email" header="Email" />
-                                    <Column field="phone_no" header="Phone No." />
-                                    <Column field="message" header="Message" />
-                                    <Column
-                                        field="createdAt"
-                                        header="CreatedAt"
-                                        body={(rowData) => (
-                                            <div>
-                                                <p>{moment(rowData.createdAt).format("DD-MM-YY")}</p>
-                                                <p>{moment(rowData.createdAt).format("hh:mm a")}</p>
-                                            </div>
-                                        )}
-                                    />
-                                </DataTable>
-                                {/* <Paginator
-                                    first={0}
-                                    rows={6} 
-                                    totalRecords={manufacturers.length}
-                                /> */}
-                            </div>
-                        ) : (
-                            <p>Loading data...</p>
-                        )}
-                    </div>
+                    {content}
                 </div>
             </div>
         </div>

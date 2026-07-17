@@ -10,6 +10,7 @@ import { handlePostRequest } from "../../services/PostTemplate";
 import AddbrandDialog from "./AddbrandDialog";
 import { FaSort } from "react-icons/fa";
 
+
 function Brands() {
     const [showDialog, setShowDialog] = useState(false);
     const [manufacturers, setManufacturers] = useState([]);
@@ -78,74 +79,109 @@ function Brands() {
         gap: 24px;
         margin-top: 24px;
     }
-    .brand-card {
-        background: #fff;
-        border-radius: 16px;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    .layout-main .brand-card {
+        --brand-accent: #0c4e9c;
+        --brand-bg-accent: #e9f3f8;
+        --brand-color-accent: #0c4e9c;
+        background: #fff !important;
+        border-radius: 16px !important;
+        border: 2px solid var(--brand-accent) !important;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
         padding: 24px 22px;
-        min-width: 260px;
-        max-width: 320px;
+        min-width: 240px;
+        max-width: 300px;
+        flex: 1 1 240px;
         display: flex;
         flex-direction: column;
         align-items: center;
         position: relative;
-        border: 3px solid #F6F6F6;
-        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
-    .brand-card:hover {
-        transform: translateY(-6px) scale(1.02);
-        box-shadow: 0 8px 28px rgba(0,0,0,0.12);
-        border-color: #e3f2fd;
+    .layout-main .brand-card:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08) !important;
+        border-color: var(--brand-accent) !important;
     }
     .brand-avatar {
-        width: 64px;
-        height: 64px;
+        width: 56px;
+        height: 56px;
         border-radius: 50%;
-        background: #e3f2fd;
+        background: var(--brand-bg-accent) !important;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 2.2rem;
-        color: #1976d2;
-        margin-bottom: 14px;
+        font-size: 1.6rem;
+        color: var(--brand-color-accent) !important;
+        margin-bottom: 16px;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+        transition: transform 0.22s ease;
+    }
+    .brand-card:hover .brand-avatar {
+        transform: scale(1.1);
     }
     .brand-info {
         text-align: center;
-        margin-bottom: 12px;
+        margin-bottom: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
     }
     .brand-info .brand-name {
         font-weight: 700;
-        font-size: 1.18rem;
-        color: #222;
+        font-size: 1.25rem;
+        color: #0f172a;
     }
     .brand-info .brand-slug {
-        color: #888;
-        font-size: 1.01rem;
+        color: #64748b;
+        font-size: 0.95rem;
+        background: #f1f5f9;
+        padding: 2px 10px;
+        border-radius: 9999px;
+        font-weight: 500;
     }
     .brand-info .brand-date {
-        color: #b0b3bb;
-        font-size: 0.98rem;
+        color: #94a3b8;
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-top: 2px;
     }
     .brand-actions {
         display: flex;
-        gap: 18px;
-        margin-top: 10px;
+        gap: 12px;
+        margin-top: auto;
+        border-top: 1px solid #f1f5f9;
+        padding-top: 14px;
+        width: 100%;
+        justify-content: center;
     }
     .brand-action-btn {
-        background: #e3f2fd;
-        border-radius: 50%;
-        width: 38px;
-        height: 38px;
+        border-radius: 8px;
+        width: 36px;
+        height: 36px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        border: none;
-        transition: background 0.2s;
+        border: 1px solid transparent;
+        transition: all 0.2s ease;
         position: relative;
     }
-    .brand-action-btn:hover {
-        background: #bbdefb;
+    .brand-action-edit {
+        background: #eff6ff;
+        color: #2563eb;
+    }
+    .brand-action-edit:hover {
+        background: #2563eb;
+        color: #fff;
+    }
+    .brand-action-delete {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+    .brand-action-delete:hover {
+        background: #dc2626;
+        color: #fff;
     }
     .brand-action-btn .tooltip {
         display: none;
@@ -217,7 +253,7 @@ function Brands() {
                         )}
                     </div>
                 </div>
-                {role === "admin" || role === "catalog-manager" && (
+                {(role === "admin" || role === "catalog-manager") && (
                     <div className="Top__Btn">
                         <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
                         <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />
@@ -225,32 +261,34 @@ function Brands() {
                 )}
             </div>
             <div className="brand-cards-container mb-4">
-                {sortedManufacturers.map((brand, idx) => (
-                    <div className="brand-card" key={brand._id || idx}>
-                        <div className="brand-avatar">
-                            <i className="pi pi-tag" />
+                {sortedManufacturers.map((brand, idx) => {
+                    return (
+                        <div className="brand-card" key={brand._id || idx}>
+                            <div className="brand-avatar">
+                                <i className="pi pi-tag" />
+                            </div>
+                            <div className="brand-info">
+                                <div className="brand-name">{brand.name || "-"}</div>
+                                <div className="brand-slug">{brand.slug || "-"}</div>
+                                <div className="brand-date">{moment(brand.createdAt).format("DD/MM/YYYY")}</div>
+                            </div>
+                            <div className="brand-actions">
+                                {(role === "admin" || role === "catalog-manager") && (
+                                <>
+                                <button className="brand-action-btn brand-action-edit" onClick={() => history.push(`/brand/${brand._id}`)}>
+                                    <i className="pi pi-pencil" style={{ fontSize: "1.1rem" }}></i>
+                                    <span className="tooltip">Edit Brand</span>
+                                </button>
+                                <button className="brand-action-btn brand-action-delete" onClick={() => handleDelete(brand._id)}>
+                                    <i className="pi pi-trash" style={{ fontSize: "1.1rem" }}></i>
+                                    <span className="tooltip">Delete Brand</span>
+                                </button>
+                                </>
+                                )}
+                            </div>
                         </div>
-                        <div className="brand-info">
-                            <div className="brand-name">{brand.name || "-"}</div>
-                            <div className="brand-slug">{brand.slug || "-"}</div>
-                            <div className="brand-date">{moment(brand.createdAt).format("DD/MM/YYYY")}</div>
-                        </div>
-                        <div className="brand-actions">
-                            {role === "admin" || role === "catalog-manager" && (
-                            <>
-                            <button className="brand-action-btn" onClick={() => history.push(`/brand/${brand._id}`)}>
-                                <i className="pi pi-pencil" style={{ color: "#1976d2", fontSize: "1.3rem" }}></i>
-                                <span className="tooltip">Edit Brand</span>
-                            </button>
-                            <button className="brand-action-btn" onClick={() => handleDelete(brand._id)}>
-                                <i className="pi pi-trash" style={{ color: "red", fontSize: "1.3rem" }}></i>
-                                <span className="tooltip">Delete Brand</span>
-                            </button>
-                            </>
-                            )}
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </>
     );

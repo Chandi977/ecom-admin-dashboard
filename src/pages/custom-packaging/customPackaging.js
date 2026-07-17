@@ -4,7 +4,7 @@ import { Column } from "primereact/column";
 import Axios from "axios";
 import { DEV } from "../../services/constants";
 
-function CustomPackaging() {
+function CustomPackaging({ embedded = false }) {
     const [manufacturers, setManufacturers] = useState([]);
 
     useEffect(() => {
@@ -23,6 +23,35 @@ function CustomPackaging() {
         // console.log(manufacturers);
     }, []);
 
+    const content = (
+        <div className={embedded ? "" : "card"}>
+            {manufacturers.length > 0 ? (
+                <DataTable
+                    className="datatable-responsive"
+                    value={manufacturers}
+                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
+                    emptyMessage="No List found."
+                    paginator={true}
+                    responsiveLayout="scroll"
+                    rows={6}
+                >
+                    <Column field="company_name" header="Company Name" />
+                    <Column field="product_category" header="Product Category" />
+                    <Column field="moq" header="MOQ" />
+                    <Column field="rich_text" header="Rich Text" />
+                    <Column field="contact_person_name" header="Contact Person Name" />
+                    <Column field="contact_person_mobile_number" header="Contact Person Mobile Number" />
+                    <Column field="contact_person_email" header="Contact Person Email" />
+                </DataTable>
+            ) : (
+                <p>Loading data...</p>
+            )}
+        </div>
+    );
+
+    if (embedded) return content;
+
     return (
         <div className="Page__Header" style={{ display: "flex", flexDirection: "column" }}>
             <div>
@@ -30,30 +59,7 @@ function CustomPackaging() {
             </div>
             <div className="grid">
                 <div className="col-12">
-                    <div className="card">
-                        {manufacturers.length > 0 ? (
-                            <DataTable
-                                className="datatable-responsive"
-                                value={manufacturers}
-                                paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                                currentPageReportTemplate="Showing {first} to {last} of {totalRecords} Records"
-                                emptyMessage="No List found."
-                                paginator={true}
-                                responsiveLayout="scroll"
-                                rows={6}
-                            >
-                                <Column field="company_name" header="Company Name" />
-                                <Column field="product_category" header="Product Category" />
-                                <Column field="moq" header="MOQ" />
-                                <Column field="rich_text" header="Rich Text" />
-                                <Column field="contact_person_name" header="Contact Person Name" />
-                                <Column field="contact_person_mobile_number" header="Contact Person Mobile Number" />
-                                <Column field="contact_person_email" header="Contact Person Email" />
-                            </DataTable>
-                        ) : (
-                            <p>Loading data...</p>
-                        )}
-                    </div>
+                    {content}
                 </div>
             </div>
         </div>
