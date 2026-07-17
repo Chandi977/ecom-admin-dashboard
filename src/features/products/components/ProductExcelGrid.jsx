@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { ColumnGroup } from "primereact/columngroup";
@@ -35,6 +35,9 @@ const canEdit = (role) => role === "admin" || role === "catalog-manager";
 
 const NUMERIC_PRODUCT_FIELDS = new Set(["gst", "availableStock"]);
 
+const MIN_GRID_HEIGHT = 280;
+const GRID_BOTTOM_GUTTER = 8;
+
 const toWorking = (product) => ({
     ...product,
     __id: getEntityId(product?._id) || product?._id,
@@ -63,6 +66,25 @@ export const ProductExcelGrid = ({
     const [savedAt, setSavedAt] = useState(null);
     const showSection = useCallback((s) => visibleSections.includes(s), [visibleSections]);
     const saveQueues = useRef({});
+    const gridRef = useRef(null);
+    const [gridHeight, setGridHeight] = useState(null);
+
+    // The sheet's own scrollbars sit on its bottom/right edges, so the element has to end
+    // inside the viewport or the horizontal scrollbar is unreachable. Page chrome above and
+    // below varies by route and toolbar wrapping, so measure it instead of hardcoding.
+    useLayoutEffect(() => {
+        const measure = () => {
+            const el = gridRef.current;
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const docTop = rect.top + window.scrollY;
+            const belowGrid = Math.max(0, document.documentElement.scrollHeight - (rect.bottom + window.scrollY));
+            setGridHeight(Math.max(MIN_GRID_HEIGHT, window.innerHeight - docTop - belowGrid - GRID_BOTTOM_GUTTER));
+        };
+        measure();
+        window.addEventListener("resize", measure);
+        return () => window.removeEventListener("resize", measure);
+    }, []);
     const configuredPackSizes = useMemo(
         () => normalizePackSizes(subCategory?.pack_sizes, []),
         [subCategory],
@@ -669,10 +691,36 @@ export const ProductExcelGrid = ({
                 .product-excel-grid {
                     width: 100%;
                     max-width: 100%;
-                    height: calc(100vh - 210px);
+                    /* Fallback only; the real height is measured against the viewport at runtime. */
+                    height: calc(100vh - 300px);
+                    min-height: ${MIN_GRID_HEIGHT}px;
                     overflow: auto;
+                    overscroll-behavior-x: contain;
                     border: 1px solid #dee2e6;
                     border-radius: 6px;
+                }
+                .product-excel-grid::-webkit-scrollbar {
+                    width: 14px;
+                    height: 14px;
+                }
+                .product-excel-grid::-webkit-scrollbar-track {
+                    background: #f1f5f9;
+                }
+                .product-excel-grid::-webkit-scrollbar-thumb {
+                    background: #94a3b8;
+                    border: 3px solid #f1f5f9;
+                    border-radius: 8px;
+                }
+                .product-excel-grid::-webkit-scrollbar-thumb:hover {
+                    background: #64748b;
+                }
+                /* The admin-wide card styling in App.scss puts overflow:hidden on every
+                   .p-datatable, which would clip this sheet's width away before the scroll
+                   container below ever sees it. Keep .product-excel-grid the only scroller. */
+                .product-excel-grid .p-datatable,
+                .product-excel-grid .p-datatable-wrapper {
+                    overflow: visible !important;
+                    border-radius: 0 !important;
                 }
                 .product-excel-grid .p-datatable-table { min-width: max-content; }
                 .product-excel-grid .p-datatable-thead > tr:nth-child(1) > th {
@@ -809,7 +857,7 @@ export const ProductExcelGrid = ({
                     )}
                 </div>
             ) : null}
-            <div className="product-excel-grid">
+            <div className="product-excel-grid" ref={gridRef} style={gridHeight ? { height: `${gridHeight}px` } : undefined}>
                 <DataTable
                     value={rows}
                     dataKey="rowKey"

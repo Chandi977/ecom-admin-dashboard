@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BreadCrumb } from "primereact/breadcrumb";
+import { Button } from "primereact/button";
 import { TabView, TabPanel } from "primereact/tabview";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -7,8 +8,13 @@ import { Chart } from "primereact/chart";
 import { Dropdown } from "primereact/dropdown";
 import { Checkbox } from "primereact/checkbox";
 import { Tag } from "primereact/tag";
+import { InputText } from "primereact/inputtext";
 import moment from "moment";
+import { useHistory } from "react-router-dom";
 import { handleGetRequest } from "../../services/GetTemplate";
+
+const ADMIN_ACTIVITY_ROLES = "admin,catalog-manager";
+const ADMIN_ACTIVITY_ROLE_SET = new Set(ADMIN_ACTIVITY_ROLES.split(","));
 
 const WINDOW_OPTIONS = [
     { label: "Last 24 hours", value: 1 },
@@ -18,6 +24,7 @@ const WINDOW_OPTIONS = [
 
 const fmtMs = (ms) => (ms == null ? "-" : `${Math.round(ms)} ms`);
 const pct = (n) => `${(Number(n || 0) * 100).toFixed(1)}%`;
+const actorName = (row) => row?._id?.userName || (row?._id?.userId ? row._id.userId.substring(0, 8) : "Unknown user");
 
 function StatCard({ label, value, sub, color }) {
     return (
@@ -34,10 +41,11 @@ function StatCard({ label, value, sub, color }) {
 function Observability() {
     const [days, setDays] = useState(7);
     const [summary, setSummary] = useState(null);
+    const history = useHistory();
 
     const load = useCallback(async () => {
         const from = moment().subtract(days, "days").toISOString();
-        const res = await handleGetRequest("/activity/summary", { from });
+        const res = await handleGetRequest("/activity/summary", { from, roles: ADMIN_ACTIVITY_ROLES });
         setSummary(res?.data || null);
     }, [days]);
 
@@ -86,6 +94,14 @@ function Observability() {
     }, [summary]);
 
     const endpointError = (row) => <Tag severity={row.errorCount > 0 ? "danger" : "success"} value={`${row.errorCount} err`} />;
+    const byAdminUser = (summary?.byUser || []).filter((row) => ADMIN_ACTIVITY_ROLE_SET.has(row?._id?.role));
+    const openUserLogs = (row) => {
+        const params = new URLSearchParams();
+        if (row?._id?.userId) params.set("userId", row._id.userId);
+        if (row?._id?.userName) params.set("userName", row._id.userName);
+        if (row?._id?.role) params.set("role", row._id.role);
+        history.push(`/logs?${params.toString()}`);
+    };
 
     return (
         <>
@@ -139,12 +155,14 @@ function Observability() {
                 </div>
                 <div className="col-12 md:col-6">
                     <div className="card">
-                        <h5>Activity by role</h5>
-                        <DataTable value={summary?.byRole || []} responsiveLayout="scroll" emptyMessage="No role activity.">
-                            <Column header="Role" body={(r) => <Tag value={r._id || "unknown"} />} />
+                        <h5>Activity by user name</h5>
+                        <DataTable value={byAdminUser} responsiveLayout="scroll" emptyMessage="No admin staff activity.">
+                            <Column header="User name" body={(r) => <span style={{ fontWeight: 600 }}>{actorName(r)}</span>} sortable sortField="_id.userName" />
+                            <Column header="Role" body={(r) => <Tag value={r._id?.role || "unknown"} />} />
                             <Column header="Total calls" field="calls" sortable />
                             <Column header="Changes (writes)" field="writes" sortable />
                             <Column header="Errors" body={(r) => <Tag severity={r.errorCount > 0 ? "danger" : "success"} value={r.errorCount} />} />
+                            <Column header="Logs" body={(r) => <Button icon="pi pi-list" className="p-button-text p-button-sm" onClick={() => openUserLogs(r)} tooltip="View logs" />} style={{ width: 80 }} />
                         </DataTable>
                     </div>
                 </div>
@@ -153,26 +171,20 @@ function Observability() {
     );
 }
 
-const ROLE_FILTER_OPTIONS = [
-    { label: "All roles", value: "" },
-    { label: "Admin", value: "admin" },
-    { label: "Catalog Manager", value: "catalog-manager" },
-    { label: "Customer", value: "user" },
-];
-
 function AuditTrail() {
     const [logs, setLogs] = useState([]);
     const [total, setTotal] = useState(0);
     const [skip, setSkip] = useState(0);
     const [rows, setRows] = useState(20);
     // Default to writes-only so the trail answers "who changed what".
-    const [filters, setFilters] = useState({ method: "", role: "", status: "", writes: true });
+    const [filters, setFilters] = useState({ method: "", userName: "", status: "", writes: true });
 
     const load = useCallback(async () => {
         const params = { skip, limit: rows };
+        params.roles = ADMIN_ACTIVITY_ROLES;
         if (filters.writes) params.writes = "true";
         if (filters.method) params.method = filters.method;
-        if (filters.role) params.role = filters.role;
+        if (filters.userName.trim()) params.userName = filters.userName.trim();
         if (filters.status) params.status = filters.status;
         const res = await handleGetRequest("/activity/logs", params);
         setLogs(res?.data?.items || []);
@@ -219,13 +231,15 @@ function AuditTrail() {
         <div className="card">
             <div className="grid" style={{ marginBottom: 8, alignItems: "center" }}>
                 <div className="col-6 md:col-3">
-                    <Dropdown
-                        value={filters.role}
-                        onChange={(e) => { setSkip(0); setFilters((f) => ({ ...f, role: e.value })); }}
-                        options={ROLE_FILTER_OPTIONS}
-                        placeholder="Role"
-                        style={{ width: "100%" }}
-                    />
+                    <span className="p-input-icon-left" style={{ width: "100%" }}>
+                        <i className="pi pi-user" />
+                        <InputText
+                            value={filters.userName}
+                            onChange={(e) => { setSkip(0); setFilters((f) => ({ ...f, userName: e.target.value })); }}
+                            placeholder="Search user name"
+                            style={{ width: "100%" }}
+                        />
+                    </span>
                 </div>
                 <div className="col-6 md:col-3">
                     <Dropdown

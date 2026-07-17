@@ -108,17 +108,22 @@ function Categories() {
         );
     };
 
-    const handleDelete = () => {
-        const selectedId = selectedRow.map((val, index) => {
-            return val?._id;
-        });
+    const handleDelete = async () => {
+        if (selectedRow.length === 0) {
+            toast.warn("Select at least one category to delete.");
+            return;
+        }
+
         const data = {
-            id: selectedId,
+            id: selectedRow.map((val) => val?._id),
         };
-        dispatch(handlePostRequest(data, "/category/delete", true, true));
-        getBrands();
+        const res = await dispatch(handlePostRequest(data, "/category/delete", true, true));
+        // handlePostRequest already surfaces the error toast on failure.
+        if (!res?.success) return;
+
         toast.success("Category Deleted.");
-        window.location.reload();
+        setselectedRow([]);
+        await getBrands();
     };
 
     const onsuccess = () => {

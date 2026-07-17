@@ -87,22 +87,18 @@ function AddCoupon({ onsuccess }) {
         validationSchema,
         onSubmit: async (data) => {
             const dat = {
-                type: data.type,
-                name: data.name,
                 couponCode: data.couponCode,
-                productType: data.productType,
-                brand: selectedBrand,
-                category: selectedCategory,
-                noOfUse: "single",
-                discountPrice: parseInt(data.discountPrice),
-                discountPercentage: parseInt(data.discountPercentage),
-                minimumOrderValue: parseInt(data.minimumOrderValue),
-                maxDiscountCap: parseInt(data.maxDiscountCap),
-                startDate: data.startDate,
-                endDate: data.endDate,
+                description: data.name,
+                discountType: data.discountPercentage ? "percentage" : "fixed",
+                discountValue: parseInt(data.discountPercentage || data.discountPrice || 0),
+                maxDiscount: parseInt(data.maxDiscountCap || 0),
+                minOrderValue: parseInt(data.minimumOrderValue || 0),
+                validFrom: data.startDate,
+                validTo: data.endDate,
+                usageLimit: 1,
+                appliesTo: data.productType || "all",
             };
             await dispatch(handlePostRequest(dat, "/coupon/create", true, true));
-            // console.log("coupon code",dat)
             onsuccess();
         },
     });

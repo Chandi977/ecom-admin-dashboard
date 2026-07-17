@@ -374,10 +374,6 @@ export const ProductList = () => {
                     align-items: start;
                 }
                 .product-catalog-sidebar {
-                    background: #fff;
-                    border: 1px solid #e5e7eb;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
                     padding: 14px;
                     position: sticky;
                     top: 84px;
@@ -549,7 +545,7 @@ export const ProductList = () => {
             </div>
 
             <div className="product-catalog-layout">
-                <aside className="product-catalog-sidebar" aria-label="Product catalog">
+                <aside className="card product-catalog-sidebar" aria-label="Product catalog">
                     <div className="product-catalog-sidebar-title">
                         <h3>Product</h3>
                         <Button
@@ -613,14 +609,12 @@ export const ProductList = () => {
                         <span>{catalogPath}</span>
                     </div>
                     <div
+                        className="card"
                         style={{
                             display: "flex",
                             flexWrap: "wrap",
                             gap: "1rem",
                             padding: "1.25rem",
-                            background: "#fff",
-                            borderRadius: "8px",
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
                             marginBottom: "1.5rem",
                         }}
                     >

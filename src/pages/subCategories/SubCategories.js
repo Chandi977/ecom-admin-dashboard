@@ -94,7 +94,6 @@ function SubCategories() {
     const onsuccess = () => {
         onHideFaq();
         toast.success("subcategory added");
-        setShowDialog(false);
         window.location.reload();
     };
 
@@ -116,86 +115,101 @@ function SubCategories() {
                     gap: 24px;
                     margin-top: 24px;
                 }
-                .subcat-card {
-                    background: #fff;
-                    border-radius: 16px;
-                    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+                .layout-main .subcat-card {
+                    --subcat-accent: #0c4e9c;
+                    --subcat-bg-accent: #e9f3f8;
+                    --subcat-color-accent: #0c4e9c;
+                    background: #fff !important;
+                    border-radius: 16px !important;
+                    border: 2px solid var(--subcat-accent) !important;
+                    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
                     padding: 28px 22px;
-                    min-width: 260px;
-                    max-width: 320px;
+                    min-width: 240px;
+                    max-width: 300px;
+                    flex: 1 1 240px;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     position: relative;
-                    border: 3px solid #F6F6F6;
                     cursor: pointer;
-                    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+                    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
                 }
-                .subcat-card:hover {
-                    transform: translateY(-6px) scale(1.02);
-                    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
-                    border-color: #e3f2fd;
+                .layout-main .subcat-card:hover {
+                    transform: translateY(-2px) !important;
+                    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08) !important;
+                    border-color: var(--subcat-accent) !important;
                 }
                 .subcat-avatar {
-                    width: 80px;
-                    height: 80px;
+                    width: 72px;
+                    height: 72px;
                     border-radius: 50%;
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
+                    background: var(--subcat-bg-accent) !important;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 2.5rem;
-                    color: #1976d2;
-                    margin-bottom: 14px;
+                    font-size: 2.2rem;
+                    color: var(--subcat-color-accent) !important;
+                    margin-bottom: 16px;
                     overflow: hidden;
+                    border: 1px solid #e2e8f0;
+                    transition: transform 0.22s ease;
+                }
+                .subcat-card:hover .subcat-avatar {
+                    transform: scale(1.08);
                 }
                 .subcat-avatar img {
-                    width: 100%;
-                    height: 100%;
+                    width: 125%;
+                    height: 125%;
                     object-fit: contain;
                     border-radius: 50%;
                 }
                 .subcat-info {
                     text-align: center;
                     margin-bottom: 4px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 6px;
                 }
                 .subcat-info .subcat-name {
                     font-weight: 700;
-                    font-size: 1.18rem;
-                    color: #222;
-                }
-                .subcat-info .subcat-slug {
-                    color: #888;
-                    font-size: 1.01rem;
+                    font-size: 1.25rem;
+                    color: #0f172a;
                 }
                 .subcat-info .subcat-category {
-                    color: #22c55e;
-                    font-size: 1.01rem;
-                    font-weight: 600;
+                    color: #10b981;
+                    font-size: 0.9rem;
+                    font-weight: 700;
+                    background: #ecfdf5;
+                    padding: 2px 10px;
+                    border-radius: 9999px;
                 }
                 .subcat-info .subcat-date {
-                    color: #b0b3bb;
-                    font-size: 0.98rem;
+                    color: #94a3b8;
+                    font-size: 0.8rem;
+                    font-weight: 500;
                 }
                 .subcat-delete-btn {
                     position: absolute;
                     top: 12px;
                     right: 12px;
-                    background: #fee2e2;
+                    background: #fef2f2;
+                    color: #dc2626;
                     border-radius: 50%;
-                    width: 34px;
-                    height: 34px;
+                    width: 32px;
+                    height: 32px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     cursor: pointer;
-                    border: none;
-                    transition: background 0.2s, transform 0.2s;
+                    border: 1px solid #fee2e2;
+                    transition: all 0.2s ease;
                     z-index: 10;
                 }
                 .subcat-delete-btn:hover {
-                    background: #fecaca;
+                    background: #dc2626;
+                    color: #fff;
+                    border-color: #dc2626;
                     transform: scale(1.08);
                 }
                 .subcat-delete-btn .tooltip {
@@ -259,7 +273,7 @@ function SubCategories() {
                                     type="button"
                                     disabled={deletingId === subcat._id}
                                 >
-                                    <FaTrash style={{ color: "red", fontSize: "1.1rem" }} />
+                                    <FaTrash style={{ fontSize: "1.1rem" }} />
                                     <span className="tooltip">Delete SubCategory</span>
                                 </button>
                             )}

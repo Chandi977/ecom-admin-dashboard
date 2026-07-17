@@ -21,6 +21,7 @@ import { handlePutRequest } from "../../services/PutTemplate";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { productService } from "../../services/productService";
 import { can } from "../../rbac/permissions";
+import { NotificationRequests } from "../Notify/notify";
 import { EmailPreview, PushPreview } from "./NotificationPreview";
 
 const channelSeverity = { email: "info", push: "warning", inapp: "success" };
@@ -52,6 +53,36 @@ const CHANNEL_OPTIONS = [
     { label: "Offers & Promotions", value: "promotions" },
     { label: "Order Updates", value: "orders" },
 ];
+
+const NOTIFICATIONS_PAGE_CSS = `
+.notifications-page {
+    align-items: stretch !important;
+    width: 100%;
+}
+.notifications-page-title {
+    width: 100%;
+}
+.notifications-grid {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+}
+.notifications-grid > .col-12 {
+    padding-left: 0;
+    padding-right: 0;
+}
+.notifications-card {
+    width: 100%;
+    margin-bottom: 0;
+}
+.notifications-card .p-tabview,
+.notifications-card .p-tabview-panels,
+.notifications-card .p-tabview-panel,
+.notifications-card .p-datatable,
+.notifications-card .p-datatable-wrapper {
+    width: 100%;
+}
+`;
 
 // Best-effort pick of a product's primary image across possible shapes.
 const productImage = (p) =>
@@ -289,16 +320,25 @@ function Notifications() {
     const dateTemplate = (row) => moment(row.createdAt).format("DD-MM-YY hh:mm a");
 
     return (
-        <div className="Page__Header" style={{ display: "flex", flexDirection: "column" }}>
-            <div>
+        <div className="Page__Header notifications-page" style={{ display: "flex", flexDirection: "column" }}>
+            <style>{NOTIFICATIONS_PAGE_CSS}</style>
+            <div className="notifications-page-title">
                 <h2>Notifications</h2>
                 {!canWrite && <p style={{ color: "#94a3b8" }}>You have read-only access to notifications.</p>}
             </div>
 
-            <div className="grid">
+            <div className="grid notifications-grid">
                 <div className="col-12">
-                    <div className="card">
+                    <div className="card notifications-card">
                         <TabView>
+                            {/* ---------- Notify requests ---------- */}
+                            <TabPanel header="Notify Requests">
+                                <p style={{ color: "#64748b", marginBottom: 12 }}>
+                                    Product notification requests submitted by customers from the storefront.
+                                </p>
+                                <NotificationRequests embedded />
+                            </TabPanel>
+
                             {/* ---------- Templates ---------- */}
                             <TabPanel header="Templates">
                                 <p style={{ color: "#64748b", marginBottom: 12 }}>

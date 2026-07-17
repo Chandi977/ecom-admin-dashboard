@@ -25,20 +25,19 @@ function Coupons() {
     const handledClicked = () => {
         setShowDialog(true);
     };
-    const getBrands = useCallback(async () => {
+    const getCoupon = useCallback(async () => {
         const params = {
             skip: skip,
             limit: rows,
         };
         const res = await handleGetRequest("/coupon/get/all", params);
         const total = await handleGetRequest("/coupon/count");
-        // console.log("res", res);
         setManufacturers(res?.data);
         setTotal(total?.data);
     }, [rows, skip]);
     useEffect(() => {
-        getBrands();
-    }, [getBrands]);
+        getCoupon();
+    }, [getCoupon]);
     const handleActionButton = (e, rowData) => {
         e.preventDefault();
         history.push(`/coupon/${rowData?._id}`);
@@ -70,7 +69,7 @@ function Coupons() {
             id: selectedId,
         };
         dispatch(handlePostRequest(data, "/coupon/delete", true, true));
-        getBrands();
+        getCoupon();
         toast.success("Coupon Deleted.");
         window.location.reload();
     };

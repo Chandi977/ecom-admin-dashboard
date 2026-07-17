@@ -247,27 +247,16 @@ function SubCategory() {
                     gap: 18px;
                     align-items: start;
                     margin-top: 12px !important;
-                }
-                body {
-                    overflow: hidden !important;
-                    height: 100vh !important;
-                }
-                .layout-main-container {
-                    height: 100vh !important;
-                    max-height: 100vh !important;
-                    overflow: hidden !important;
-                    padding-top: 5.5rem !important;
-                    padding-bottom: 0.5rem !important;
-                    padding-left: 1.5rem !important;
-                    padding-right: 1.5rem !important;
-                }
-                .layout-main {
-                    height: calc(100vh - 6.5rem) !important;
-                    overflow: hidden !important;
+                    padding: 1.5rem !important;
+                    box-sizing: border-box !important;
+                    max-width: 100% !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
                 }
                 .subcategory-edit-layout .right_section {
                     width: 100% !important;
-                    min-width: 0;
+                    min-width: 0 !important;
+                    max-width: 100% !important;
                 }
                 .subcategory-header-content {
                     display: flex;
@@ -328,7 +317,7 @@ function SubCategory() {
                     background: transparent;
                     min-width: 0;
                     max-width: 100%;
-                    overflow: hidden;
+                    overflow: visible !important;
                     margin: 0 !important;
                 }
                 .subcategory-products-panel .card {
@@ -454,7 +443,7 @@ function SubCategory() {
                             )}
                         </div>
                     </div>
-                    <div className="card" style={{ marginTop: 0, borderRadius: "8px", border: "1px solid #dee2e6", padding: "0.5rem", overflowX: "auto", maxWidth: "100%" }}>
+                    <div className="card" style={{ marginTop: 0, borderRadius: "8px", border: "1px solid #dee2e6", padding: "0.5rem", overflowX: "auto", width: "100%", display: "block" }}>
                         <ProductExcelGrid
                             products={sortedProducts}
                             brands={brands}

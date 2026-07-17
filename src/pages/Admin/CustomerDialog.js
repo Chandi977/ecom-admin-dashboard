@@ -6,9 +6,10 @@ import { InputText } from "primereact/inputtext";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
+import { toast } from "react-toastify";
 
 const CustomerDialog = ({ onHideCustomerDialog, handlesuccess }) => {
-    const [role, setRole] = useState();
+    const [role, setRole] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const dispatch = useDispatch();
@@ -26,9 +27,19 @@ const CustomerDialog = ({ onHideCustomerDialog, handlesuccess }) => {
         },
 
         onSubmit: async (data) => {
-            data.role = role;
-            await dispatch(handlePostRequest(data, "/signup", true, true));
-            handlesuccess();
+            if (!role) {
+                toast.error("Please select a role.");
+                return;
+            }
+            if (data.password !== data.confirmPassword) {
+                toast.error("Password and confirm password do not match.");
+                return;
+            }
+            const { confirmPassword, ...payload } = data;
+            const res = await dispatch(handlePostRequest({ ...payload, role }, "/signup", true, true));
+            if (res && res !== "error" && res.success) {
+                handlesuccess();
+            }
         },
     });
     const isFormFieldValid = (name) => !!(formik.touched[name] && formik.errors[name]);

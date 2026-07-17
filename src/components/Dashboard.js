@@ -292,13 +292,9 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            <div className="container-fluid mt-5">
-                <div className="row">
-                    <div className="col-md-12">
-                        <h3 style={{ textAlign: "center" }}>Monthly New Users</h3>
-                        <Chart type="bar" data={basicData} options={basicOptions} />
-                    </div>
-                </div>
+            <div className="card mt-5" style={{ padding: "2rem" }}>
+                <h3 style={{ textAlign: "center", marginBottom: "1.5rem", fontWeight: 700, fontSize: "1.5rem", color: "#222" }}>Monthly New Users</h3>
+                <Chart type="bar" data={basicData} options={basicOptions} />
             </div>
 
             {/* <div className="graphs_section">
