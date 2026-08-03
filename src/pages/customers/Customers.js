@@ -16,6 +16,7 @@ import { AiTwotoneDelete } from "react-icons/ai";
 import { FaPen } from "react-icons/fa";
 import { exportJsonToExcel } from "../../utils/exportToExcel";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
+import { can } from "../../rbac/permissions";
 
 const MIN_FILTER_LENGTH = 2;
 const FILTER_DEBOUNCE_MS = 300;
@@ -31,7 +32,8 @@ function Customers() {
     const [users, setUsers] = useState([]);
     const [customers, setCustomers] = useState([]);
     const history = useHistory();
-    const [role, setRole] = useState("");
+    // Creating, editing and deleting user accounts all go through user:write.
+    const canWrite = can("user:write");
     const [values, setValues] = useState({
         name: "",
         email: "",
@@ -61,11 +63,11 @@ function Customers() {
         }
     }, [getData, isFiltering]);
 
-    useEffect(() => {
-        setRole(localStorage.getItem("role"));
-    }, []);
-
     const handleDelete = async (value) => {
+        if (!canWrite) {
+            toast.info("You do not have permission to delete users.");
+            return;
+        }
         const data = {
             id: [value?._id],
         };
@@ -79,7 +81,7 @@ function Customers() {
     const actionBodyTemplate = (rowData) => {
         return (
             <div style={{ display: "flex", alignItems: "center" }}>
-                {role === "admin" && (
+                {canWrite && (
                 <>
                 <div style={{ position: "relative" }}>
                     <Button
@@ -121,8 +123,7 @@ function Customers() {
         );
     };
     const handledClicked = () => {
-        const role = localStorage.getItem("role");
-        if (role === "admin") {
+        if (canWrite) {
             setShowDialog(true);
         } else {
             toast.info("You are not authorized to add customer");
@@ -134,6 +135,10 @@ function Customers() {
     };
 
     const handledDelete = () => {
+        if (!canWrite) {
+            toast.info("You do not have permission to delete users.");
+            return;
+        }
         const selectedId = selectedRow.map((val, index) => {
             return val?._id;
         });
@@ -300,13 +305,14 @@ function Customers() {
             <div className="Page__Header">
                 <div>
                     <h2 style={{ fontWeight: 700, fontSize: "2rem", marginBottom: 4, color: "#222" }}>Users ({total})</h2>
+                    {!canWrite && <small style={{ color: "#94a3b8" }}>Read-only for your role — account changes need the user permission.</small>}
                     {/* <BreadCrumb model={breadItems} home={home} /> */}
                 </div>
                 <div className="Top__Btn">
-                    {role === "admin" && (
+                    {canWrite && (
                     <Button label="Add New User" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "140px" }} />
                     )}
-                    {role === "admin" && (
+                    {canWrite && (
                     <Button icon="pi pi-trash" iconPos="right" onClick={handledDelete} className="Btn__DarkDelete" style={{ width: "140px" }} />
                     )}
                     <Button label="Download Users List" className="buttonsaaa" onClick={() => exportJsonToExcel({ data: users, fileName: "users" })} />

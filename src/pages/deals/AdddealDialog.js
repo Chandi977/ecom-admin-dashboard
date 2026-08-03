@@ -4,13 +4,17 @@ import classNames from "classnames";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { useDispatch } from "react-redux";
+import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { handleGetRequest } from "../../services/GetTemplate";
+import { can } from "../../rbac/permissions";
 
 function AdddealDialog({ onsuccess }) {
     const dispatch = useDispatch();
     const [products, setProducts] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState("");
+    // /deal/create is gated on deal:write.
+    const canWrite = can("deal:write");
 
     const getData = useCallback(async () => {
         const dat = await handleGetRequest("/product/all");
@@ -31,6 +35,10 @@ function AdddealDialog({ onsuccess }) {
         },
 
         onSubmit: async (data) => {
+            if (!canWrite) {
+                toast.info("You do not have permission to create deals.");
+                return;
+            }
             const dat = {
                 meta_title: data.meta_title,
                 meta_description: data.meta_description,
@@ -121,7 +129,12 @@ function AdddealDialog({ onsuccess }) {
                     </div>
                 </div>
                 <div className="Down__Btn">
-                    <Button label="Create Deal" className="Btn__Dark" type="submit" />
+                    {!canWrite && (
+                        <small className="p-text-secondary" style={{ marginRight: "1rem" }}>
+                            Read-only for your role — creating deals needs the deal permission.
+                        </small>
+                    )}
+                    <Button label="Create Deal" className="Btn__Dark" type="submit" disabled={!canWrite} />
                 </div>
             </form>
         </>

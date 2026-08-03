@@ -3,10 +3,14 @@ import { Link } from "react-router-dom";
 import classNames from "classnames";
 import { Helmet } from "react-helmet";
 import { useHistory } from "react-router-dom";
+import { usePermissions } from "./hooks/usePermissions";
 
 export const AppTopbar = (props) => {
     const name = localStorage.getItem("user");
-    const role = localStorage.getItem("role");
+    // Role label comes from ROLE_LABELS via usePermissions so the badge reads
+    // "Catalog Manager" rather than the raw "catalog-manager" key.
+    const { role, label } = usePermissions();
+    const roleLabel = label || role || "-";
     const history = useHistory();
     const handleSignout = () => {
         localStorage.removeItem("user");
@@ -119,9 +123,12 @@ export const AppTopbar = (props) => {
                             <span style={{ color: "#888" }}>UID:</span> <b style={{ color: "#1976d2" }}>{name}</b>
                         </p>
                         <p style={{ margin: 0, fontSize: "0.98rem", color: "#222" }}>
-                            <span style={{ color: "#888" }}>Role:</span> <b style={{ color: "#E92227" }}>{role}</b>
+                            <span style={{ color: "#888" }}>Role:</span> <b style={{ color: "#E92227" }}>{roleLabel}</b>
                         </p>
                     </div>
+                    <span className="role_chip" title={`Signed in as ${roleLabel}`} style={{ marginLeft: "14px", padding: "4px 12px", borderRadius: "9999px", background: "#e9f3f8", border: "1px solid #cfe3f0", color: "#0c4e9c", fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
+                        {roleLabel}
+                    </span>
                 </div>
                 <div className="shadow-lg" style={{ marginLeft: "20px", marginRight: "10px", cursor: "pointer", backgroundColor: "#E92227", color: "white", borderRadius: "12px", padding: "10px 18px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }} onClick={handleSignout}>
                     <b style={{ display: "flex", alignItems: "center", gap: "8px" }}>

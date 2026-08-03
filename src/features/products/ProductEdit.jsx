@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { productFormSchema } from "../../schemas/productSchema";
+import { productFormSchema, seoOnlyProductFormSchema } from "../../schemas/productSchema";
 import { useProduct, useUpdateProduct } from "../../hooks/useProductQuery";
 import { Accordion, AccordionTab } from "primereact/accordion";
 import { Button } from "primereact/button";
@@ -16,15 +16,17 @@ import { DynamicSpecificationSection } from "./components/DynamicSpecificationSe
 import { SEOSection } from "./components/SEOSection";
 import { FieldVisibilitySection } from "./components/FieldVisibilitySection";
 import { RelatedProductsSection } from "./components/RelatedProductsSection";
+import { can, isSeoOnlyRole } from "../../rbac/permissions";
 
 export const ProductEdit = () => {
     const { id } = useParams();
     const history = useHistory();
-    const [role, setRole] = useState("");
-
-    useEffect(() => {
-        setRole(localStorage.getItem("role"));
-    }, []);
+    // The SEO role can save this form, but PUT /product/update strips everything
+    // outside SEO_PRODUCT_FIELDS (id, slug, meta_*, overview_fields, seo). Showing
+    // the other sections as editable would look like a bug, so they are omitted.
+    const canUpdate = can("product:update");
+    const seoOnly = isSeoOnlyRole();
+    const canSave = canUpdate || seoOnly;
 
     const { data: apiResponse, isLoading, isError } = useProduct(id);
     const updateMutation = useUpdateProduct();
@@ -37,7 +39,10 @@ export const ProductEdit = () => {
     const home = { icon: "pi pi-home", url: "/" };
 
     const methods = useForm({
-        resolver: zodResolver(productFormSchema),
+        // SEO-only users validate against the relaxed schema: the full one demands a
+        // thumbnail, a gallery image and a pricing tier, which they cannot supply
+        // because those sections are hidden from them. See seoOnlyProductFormSchema.
+        resolver: zodResolver(seoOnly ? seoOnlyProductFormSchema : productFormSchema),
         mode: "onBlur",
     });
 
@@ -268,11 +273,20 @@ export const ProductEdit = () => {
         );
     }
 
-    const errorCount = Object.keys(errors).length + 
-        (errors.media ? 1 : 0) + 
-        (errors.pricing ? 1 : 0) + 
-        (errors.inventory ? 1 : 0) + 
+    const errorCount = Object.keys(errors).length +
+        (errors.media ? 1 : 0) +
+        (errors.pricing ? 1 : 0) +
+        (errors.inventory ? 1 : 0) +
         (errors.seo ? 1 : 0);
+
+    // Validation covers the whole product, so an SEO-only user can still be
+    // blocked by a section that is hidden from them. Name those sections.
+    const hiddenSectionErrors = [
+        errors.media && "images",
+        errors.pricing && "pricing",
+        errors.inventory && "inventory",
+        errors.specification && "specifications",
+    ].filter(Boolean);
 
     return (
         <FormProvider {...methods}>
@@ -284,32 +298,61 @@ export const ProductEdit = () => {
                     </div>
                 </div>
 
+                {seoOnly && (
+                    <div
+                        className="card"
+                        style={{ background: "#f8fafc", border: "1px solid #dee2e6", borderRadius: "8px", padding: "1rem 1.25rem", marginBottom: "1.5rem" }}
+                    >
+                        <span style={{ fontWeight: 600, color: "#334155", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <i className="pi pi-info-circle" style={{ color: "#2196F3" }} />
+                            SEO editing mode
+                        </span>
+                        <small className="p-text-secondary" style={{ display: "block", marginTop: "0.35rem" }}>
+                            You can edit the SEO section and the product slug. Pricing, inventory, media,
+                            specifications, field visibility and related products belong to the catalog team and are
+                            hidden here — the server discards them for your role anyway.
+                        </small>
+                    </div>
+                )}
+
                 <div className="card" style={{ background: "#fff", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", padding: "1.5rem", marginBottom: "1.5rem" }}>
                     <Accordion multiple activeIndex={[0]}>
                         <AccordionTab header="Section 1: Basic Information">
-                            <BasicInfoSection />
+                            <BasicInfoSection readOnly={seoOnly} />
                         </AccordionTab>
+                        {!seoOnly && (
                         <AccordionTab header="Section 2: Product Images & Media">
                             <MediaUploadSection />
                         </AccordionTab>
+                        )}
+                        {!seoOnly && (
                         <AccordionTab header="Section 3: Pricing & Quantity Tiers">
                             <PricingSection />
                         </AccordionTab>
+                        )}
+                        {!seoOnly && (
                         <AccordionTab header="Section 4: Inventory Management">
                             <InventorySection />
                         </AccordionTab>
+                        )}
+                        {!seoOnly && (
                         <AccordionTab header="Section 5: Dimensions & Dynamic Specifications">
                             <DynamicSpecificationSection />
                         </AccordionTab>
+                        )}
                         <AccordionTab header="Section 6: Search Engine Optimization (SEO)">
                             <SEOSection />
                         </AccordionTab>
+                        {!seoOnly && (
                         <AccordionTab header="Section 7: Storefront Field Visibility">
                             <FieldVisibilitySection />
                         </AccordionTab>
+                        )}
+                        {!seoOnly && (
                         <AccordionTab header="Section 8: Related Products & Buy It With">
                             <RelatedProductsSection />
                         </AccordionTab>
+                        )}
                     </Accordion>
                 </div>
 
@@ -335,7 +378,12 @@ export const ProductEdit = () => {
                         {errorCount > 0 && (
                             <span style={{ color: "#ef4444", fontWeight: 600, fontSize: "13px", display: "flex", alignItems: "center", gap: "0.25rem" }}>
                                 <i className="pi pi-exclamation-circle"></i>
-                                Please fix {errorCount} validation error(s) before saving.
+                                {/* The form validates the whole product, including the
+                                    hidden non-SEO sections — say so rather than pointing
+                                    an SEO user at fields they cannot see. */}
+                                {seoOnly && hiddenSectionErrors.length > 0
+                                    ? `This product is incomplete outside SEO (${hiddenSectionErrors.join(", ")}). A catalog editor has to fill that in before it can be saved.`
+                                    : `Please fix ${errorCount} validation error(s) before saving.`}
                             </span>
                         )}
                         {errorCount === 0 && isDirty && (
@@ -354,13 +402,13 @@ export const ProductEdit = () => {
                             style={{ width: "120px", borderRadius: "6px" }}
                             disabled={isSubmitting || updateMutation.isLoading}
                         />
-                        {(role === "admin" || role === "catalog-manager") && (
+                        {canSave && (
                         <Button
                             type="submit"
-                            label={isSubmitting || updateMutation.isLoading ? "Saving..." : "Save Changes"}
+                            label={isSubmitting || updateMutation.isLoading ? "Saving..." : seoOnly ? "Save SEO Changes" : "Save Changes"}
                             className="p-button-primary"
                             icon={isSubmitting || updateMutation.isLoading ? "pi pi-spin pi-spinner" : "pi pi-save"}
-                            style={{ width: "150px", borderRadius: "6px" }}
+                            style={{ width: seoOnly ? "190px" : "150px", borderRadius: "6px" }}
                             disabled={isSubmitting || updateMutation.isLoading}
                         />
                         )}

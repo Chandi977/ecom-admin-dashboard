@@ -4,7 +4,7 @@ import { useFormContext, Controller } from "react-hook-form";
 import { useBrands, useCategories, useSubCategories } from "../../../hooks/useProductQuery";
 import { FormInputText, FormDropdown, FormCheckbox, FormInputTextArea, FormInputNumber } from "../../../components/FormControls";
 import Editor from "../../../components/SafeRichTextEditor";
-import { EditorState, ContentState } from "draft-js";
+import { EditorState, ContentState, convertToRaw } from "draft-js";
 import draftToHtml from "draftjs-to-html";
 import htmlToDraft from "html-to-draftjs";
 
@@ -13,7 +13,9 @@ const humanizeKey = (key) =>
         .replace(/_/g, " ")
         .replace(/\b\w/g, (char) => char.toUpperCase());
 
-export const BasicInfoSection = () => {
+// `readOnly` locks every field the SEO role may not change. The slug stays
+// editable because it is SEO-owned (SEO_PRODUCT_FIELDS in the backend rbac config).
+export const BasicInfoSection = ({ readOnly = false }) => {
     const { control, watch, setValue, getValues } = useFormContext();
     const { data: brands, isLoading: loadingBrands } = useBrands();
     const { data: categories, isLoading: loadingCategories } = useCategories();
@@ -123,32 +125,44 @@ export const BasicInfoSection = () => {
 
     const handleEditorChange = (state) => {
         setEditorState(state);
-        const html = draftToHtml(state.getCurrentContent());
+        const html = draftToHtml(convertToRaw(state.getCurrentContent()));
         setValue("description", html, { shouldDirty: true });
     };
 
     return (
         <div className="p-fluid p-formgrid grid">
+            {readOnly && (
+                <div className="p-field col-12" style={{ marginBottom: "0.5rem" }}>
+                    <small className="p-text-secondary">
+                        Read-only for the SEO role — only the slug below is yours to change. The SEO section stays fully editable.
+                    </small>
+                </div>
+            )}
+
             <FormInputText
                 name="name"
                 label="Product Name"
                 placeholder="e.g. Kraft Paper Bags"
                 required
+                disabled={readOnly}
             />
-            
+
             <FormInputText
                 name="product_id"
                 label="SKU / Product ID"
                 placeholder="e.g. KPB-001"
                 required
+                disabled={readOnly}
             />
 
             <FormInputText
                 name="model"
                 label="Model / Variant Name"
                 placeholder="e.g. D2"
+                disabled={readOnly}
             />
 
+            {/* Slug is SEO-owned — never locked by `readOnly`. */}
             <FormInputText
                 name="slug"
                 label="Slug / SEO Route"
@@ -165,6 +179,7 @@ export const BasicInfoSection = () => {
                 placeholder="Select Brand"
                 loading={loadingBrands}
                 required
+                disabled={readOnly}
             />
 
             <FormDropdown
@@ -176,6 +191,7 @@ export const BasicInfoSection = () => {
                 placeholder="Select Category"
                 loading={loadingCategories}
                 required
+                disabled={readOnly}
             />
 
             <FormDropdown
@@ -186,7 +202,7 @@ export const BasicInfoSection = () => {
                 optionValue="_id"
                 placeholder={selectedCategoryId ? "Select Sub-Category" : "Please select category first"}
                 loading={loadingSubCategories}
-                disabled={!selectedCategoryId}
+                disabled={readOnly || !selectedCategoryId}
             />
 
             <FormInputNumber
@@ -197,18 +213,21 @@ export const BasicInfoSection = () => {
                 max={1}
                 step="any"
                 description={gstDescription}
+                disabled={readOnly}
             />
 
             <FormInputText
                 name="hsn_code"
                 label="HSN Code"
                 placeholder={rawProduct?.hsn_code ? `${rawProduct.hsn_code}` : "e.g. 48191010"}
+                disabled={readOnly}
             />
 
             <FormInputText
                 name="sac_code"
                 label="SAC Code"
                 placeholder="e.g. 998812 (for services)"
+                disabled={readOnly}
             />
 
             <FormDropdown
@@ -221,12 +240,14 @@ export const BasicInfoSection = () => {
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Select tax category"
+                disabled={readOnly}
             />
 
             <FormInputText
                 name="deliveryTime"
                 label="Estimated Delivery Time"
                 placeholder="e.g. 3-5 working days"
+                disabled={readOnly}
             />
 
             {commonAttributeKeys.length > 0 && (
@@ -248,6 +269,7 @@ export const BasicInfoSection = () => {
                     name={`common_overrides.${key}`}
                     label={humanizeKey(key)}
                     placeholder={`${commonAttributes[key]} (inherited)`}
+                    disabled={readOnly}
                 />
             ))}
 
@@ -255,12 +277,14 @@ export const BasicInfoSection = () => {
                 name="top_product"
                 label="Featured Top Product"
                 description="Show this product in top merchandising grids"
+                disabled={readOnly}
             />
 
             <FormCheckbox
                 name="deal_product"
                 label="Deal of the Day"
                 description="Mark this product as a special deal item"
+                disabled={readOnly}
             />
 
             <FormInputTextArea
@@ -268,6 +292,7 @@ export const BasicInfoSection = () => {
                 label="About Item / Highlights"
                 placeholder="Bullet points or short key highlights about the item"
                 rows={2}
+                disabled={readOnly}
             />
 
             <FormInputTextArea
@@ -275,17 +300,20 @@ export const BasicInfoSection = () => {
                 label="Usage & Care Instructions"
                 placeholder="e.g. Recommended for dry items, store in a cool place"
                 rows={2}
+                disabled={readOnly}
             />
 
             <div className="p-field col-12" style={{ marginBottom: "1.5rem" }}>
                 <label className="Label__Text" style={{ display: "block", marginBottom: "0.5rem", fontWeight: 500 }}>
                     Detailed Product Description
                 </label>
-                <div style={{ border: "1px solid #cecece", borderRadius: "6px", overflow: "hidden", minHeight: "260px", background: "#fff" }}>
+                <div style={{ border: "1px solid #cecece", borderRadius: "6px", overflow: "hidden", minHeight: "260px", background: readOnly ? "#f8fafc" : "#fff" }}>
                     <Editor
                         editorStyle={{ height: "200px", padding: "0 10px" }}
                         editorState={editorState}
                         onEditorStateChange={handleEditorChange}
+                        readOnly={readOnly}
+                        toolbarHidden={readOnly}
                     />
                 </div>
             </div>

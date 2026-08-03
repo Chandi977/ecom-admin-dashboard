@@ -6,6 +6,7 @@ import { InputTextarea } from "primereact/inputtextarea";
 import { Dropdown } from "primereact/dropdown";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
+import { can } from "../../rbac/permissions";
 
 const postJson = (data, url) => handlePostRequest(data, url, false, false)(() => {});
 
@@ -28,6 +29,8 @@ const EMPTY = {
 export default function LeadCreate({ visible, onHide, onCreated }) {
     const [form, setForm] = useState(EMPTY);
     const [saving, setSaving] = useState(false);
+    // /lead/admin-create is gated on contact:write.
+    const canWrite = can("contact:write");
     const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
     const close = () => {
@@ -36,6 +39,10 @@ export default function LeadCreate({ visible, onHide, onCreated }) {
     };
 
     const submit = async () => {
+        if (!canWrite) {
+            toast.info("You do not have permission to create leads.");
+            return;
+        }
         if (!form.name.trim()) {
             toast.warn("Name is required");
             return;
@@ -65,7 +72,7 @@ export default function LeadCreate({ visible, onHide, onCreated }) {
     const footer = (
         <div>
             <Button label="Cancel" className="p-button-text" onClick={close} />
-            <Button label="Create lead" icon="pi pi-check" onClick={submit} loading={saving} />
+            <Button label="Create lead" icon="pi pi-check" onClick={submit} loading={saving} disabled={!canWrite} />
         </div>
     );
 
@@ -75,6 +82,11 @@ export default function LeadCreate({ visible, onHide, onCreated }) {
                 Manually record a lead (phone enquiry, referral, walk-in…). No email is sent — the contact is not
                 notified. Add the email if you have it; you can run the deliverability check later.
             </p>
+            {!canWrite && (
+                <p style={{ color: "#b42318", marginTop: 0 }}>
+                    Read-only for your role — creating leads needs the contact permission.
+                </p>
+            )}
             <div className="p-fluid formgrid grid">
                 <div className="field col-12 md:col-6">
                     <label>Name *</label>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { TabView, TabPanel } from "primereact/tabview";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -29,7 +29,7 @@ const channelSeverity = { email: "info", push: "warning", inapp: "success" };
 const AUDIENCE_OPTIONS = [
     { label: "All customers", value: "all" },
     { label: "By role", value: "role" },
-    { label: "Specific user IDs", value: "users" },
+    { label: "Specific users", value: "users" },
 ];
 
 const ROLE_OPTIONS = [
@@ -81,6 +81,79 @@ const NOTIFICATIONS_PAGE_CSS = `
 .notifications-card .p-datatable,
 .notifications-card .p-datatable-wrapper {
     width: 100%;
+}
+.recipient-picker {
+    width: 100%;
+}
+.recipient-picker .p-autocomplete-multiple-container {
+    width: 100%;
+    min-height: 46px;
+    padding: 0.35rem 0.5rem;
+    gap: 0.35rem;
+}
+.recipient-picker .p-autocomplete-token {
+    max-width: 100%;
+}
+.recipient-picker .p-autocomplete-token-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.recipient-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+    padding: 0.2rem 0;
+}
+.recipient-option-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 0.2rem;
+}
+.recipient-option-name {
+    color: #1f2937;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.recipient-option-meta {
+    color: #64748b;
+    font-size: 0.78rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.recipient-option-id {
+    color: #64748b;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.72rem;
+}
+.recipient-option-side {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.15rem;
+}
+.recipient-option-role {
+    color: #475569;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.recipient-picker-help {
+    display: block;
+    min-height: 1.15rem;
+    margin-top: 0.4rem;
+    color: #64748b;
+}
+.recipient-picker-help.is-error {
+    color: #b42318;
 }
 `;
 
@@ -151,7 +224,10 @@ function Notifications() {
     /* ----------------------------- Send ----------------------------- */
     const [audience, setAudience] = useState("all");
     const [role, setRole] = useState("user");
-    const [userIds, setUserIds] = useState("");
+    const [selectedRecipients, setSelectedRecipients] = useState([]);
+    const [recipientSuggestions, setRecipientSuggestions] = useState([]);
+    const [recipientSearchStatus, setRecipientSearchStatus] = useState("idle");
+    const recipientSearchRequestRef = useRef(0);
     const [title, setTitle] = useState("");
     const [bodyText, setBodyText] = useState("");
     const [imageUrl, setImageUrl] = useState("");
@@ -220,6 +296,86 @@ function Notifications() {
         }
     };
 
+    const searchNotificationRecipients = async (event) => {
+        const query = String(event?.query || "").trim();
+        const requestId = ++recipientSearchRequestRef.current;
+        if (query.length < 2) {
+            setRecipientSuggestions([]);
+            setRecipientSearchStatus("idle");
+            return;
+        }
+
+        setRecipientSearchStatus("loading");
+        try {
+            const res = await handleGetRequest("/notification/recipients", { q: query, limit: 20 });
+            if (!res?.success) {
+                if (requestId !== recipientSearchRequestRef.current) return;
+                setRecipientSuggestions([]);
+                setRecipientSearchStatus("error");
+                return;
+            }
+            const users = Array.isArray(res?.data) ? res.data : [];
+            const selectedIds = new Set(selectedRecipients.map((recipient) => recipient.value));
+            const suggestions = users
+                .map((user) => {
+                    const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim();
+                    const email = String(user?.email_address || "").trim();
+                    const mobile = String(user?.mobile_number || "").trim();
+                    const value = String(user?._id || "").trim();
+                    return {
+                        label: fullName || email || value,
+                        value,
+                        fullName: fullName || "Unnamed user",
+                        email,
+                        mobile,
+                        role: user?.role || "user",
+                        customerId: String(user?.user_id || "").trim(),
+                    };
+                })
+                .filter((recipient) => recipient.value && !selectedIds.has(recipient.value));
+
+            if (requestId !== recipientSearchRequestRef.current) return;
+            setRecipientSuggestions(suggestions);
+            setRecipientSearchStatus(suggestions.length > 0 ? "ready" : "empty");
+        } catch (error) {
+            if (requestId !== recipientSearchRequestRef.current) return;
+            console.error("Failed to search notification recipients", error);
+            setRecipientSuggestions([]);
+            setRecipientSearchStatus("error");
+        }
+    };
+
+    const recipientItemTemplate = (recipient) => {
+        const contact = [recipient.email, recipient.mobile].filter(Boolean).join(" · ");
+        const visibleId = recipient.customerId || recipient.value;
+        return (
+            <div className="recipient-option">
+                <div className="recipient-option-main">
+                    <span className="recipient-option-name">{recipient.fullName}</span>
+                    <span className="recipient-option-meta">{contact || recipient.role}</span>
+                </div>
+                <div className="recipient-option-side">
+                    <span className="recipient-option-role">{recipient.role === "user" ? "Customer" : recipient.role}</span>
+                    <span className="recipient-option-id" title={`User ID: ${recipient.value}`}>
+                        {visibleId}
+                    </span>
+                </div>
+            </div>
+        );
+    };
+
+    const updateSelectedRecipients = (nextRecipients) => {
+        const uniqueRecipients = [];
+        const ids = new Set();
+        (Array.isArray(nextRecipients) ? nextRecipients : []).forEach((recipient) => {
+            if (recipient?.value && !ids.has(recipient.value)) {
+                ids.add(recipient.value);
+                uniqueRecipients.push(recipient);
+            }
+        });
+        setSelectedRecipients(uniqueRecipients);
+    };
+
     // Assemble the `data` payload the mobile app understands (deep link + image
     // + channel). Returns null on a validation error (toast already shown).
     const buildData = () => {
@@ -264,7 +420,10 @@ function Notifications() {
         setLinkProduct(null);
         setOrderId("");
         setDataJson("");
-        setUserIds("");
+        recipientSearchRequestRef.current += 1;
+        setSelectedRecipients([]);
+        setRecipientSuggestions([]);
+        setRecipientSearchStatus("idle");
         setAlsoEmail(false);
     };
 
@@ -277,12 +436,16 @@ function Notifications() {
             toast.warn("Wait for the image upload to finish");
             return;
         }
+        if (audience === "users" && selectedRecipients.length === 0) {
+            toast.warn("Select at least one user");
+            return;
+        }
         const data = buildData();
         if (data === null) return;
 
         const payload = { audience, title: title.trim(), body: bodyText, data, email: alsoEmail };
         if (audience === "role") payload.role = role;
-        if (audience === "users") payload.userIds = userIds.split(",").map((s) => s.trim()).filter(Boolean);
+        if (audience === "users") payload.userIds = selectedRecipients.map((recipient) => recipient.value);
 
         setSending(true);
         try {
@@ -384,8 +547,37 @@ function Notifications() {
                                     )}
                                     {audience === "users" && (
                                         <div className="col-12">
-                                            <label className="block mb-2">User IDs (comma separated)</label>
-                                            <InputText value={userIds} onChange={(e) => setUserIds(e.target.value)} className="w-full" disabled={!canWrite} />
+                                            <label htmlFor="notification-recipients" className="block mb-2">Recipients</label>
+                                            <AutoComplete
+                                                inputId="notification-recipients"
+                                                value={selectedRecipients}
+                                                suggestions={recipientSuggestions}
+                                                completeMethod={searchNotificationRecipients}
+                                                onChange={(e) => updateSelectedRecipients(e.value)}
+                                                field="label"
+                                                multiple
+                                                minLength={2}
+                                                delay={300}
+                                                placeholder="Search name, email, phone or user ID"
+                                                className="recipient-picker"
+                                                itemTemplate={recipientItemTemplate}
+                                                selectedItemTemplate={(recipient) => recipient?.label}
+                                                disabled={!canWrite}
+                                            />
+                                            <small
+                                                className={`recipient-picker-help ${recipientSearchStatus === "error" ? "is-error" : ""}`}
+                                                aria-live="polite"
+                                            >
+                                                {selectedRecipients.length > 0
+                                                    ? `${selectedRecipients.length} user${selectedRecipients.length === 1 ? "" : "s"} selected. IDs will be added automatically.`
+                                                    : recipientSearchStatus === "loading"
+                                                        ? "Searching users..."
+                                                        : recipientSearchStatus === "empty"
+                                                            ? "No users found. Try a name, email, phone number or ID."
+                                                            : recipientSearchStatus === "error"
+                                                                ? "User search failed. Please try again."
+                                                                : "Type at least 2 characters. You do not need to copy or paste Mongo IDs."}
+                                            </small>
                                         </div>
                                     )}
                                     <div className="col-12">

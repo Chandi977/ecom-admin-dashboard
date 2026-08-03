@@ -81,3 +81,29 @@ export const productFormSchema = z.object({
     buyItWithIds: z.array(z.string()).default([]),
     relatedProductIds: z.array(z.string()).default([]),
 });
+
+/**
+ * Variant used when the signed-in role may only edit the SEO field scope.
+ *
+ * The full schema requires a thumbnail, at least one gallery image and at least
+ * one pricing tier. Those sections are hidden from an SEO-only user, so on a
+ * legacy product that is missing any of them react-hook-form would reject the
+ * submit before `onSubmit` ever ran — and the user would have no way to fix it.
+ * Relaxing exactly those three minimums keeps SEO saves possible while leaving
+ * the rules untouched for catalog editors. There is no integrity risk: the
+ * backend narrows an SEO-only request to the SEO field whitelist
+ * (authorizeScoped + SEO_PRODUCT_FIELDS), so media/pricing are never written by
+ * this path regardless of what the form holds.
+ */
+export const seoOnlyProductFormSchema = productFormSchema.extend({
+    media: z.object({
+        thumbnail: z.string().optional(),
+        images: z.array(z.string()).default([]),
+        videos: z.array(z.string()).optional(),
+        documents: z.array(z.string()).optional(),
+    }),
+    pricing: z.object({
+        basePrice: z.preprocess((val) => (val === "" || val === undefined) ? undefined : Number(val), z.number().min(0, "Base price cannot be negative").optional()),
+        priceList: z.array(priceListItemSchema).default([]),
+    }),
+});

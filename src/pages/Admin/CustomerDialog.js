@@ -7,6 +7,7 @@ import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import { toast } from "react-toastify";
+import { STAFF_ROLE_OPTIONS } from "../../rbac/permissions";
 
 const CustomerDialog = ({ onHideCustomerDialog, handlesuccess }) => {
     const [role, setRole] = useState("");
@@ -168,12 +169,16 @@ const CustomerDialog = ({ onHideCustomerDialog, handlesuccess }) => {
                             <label htmlFor="icon" className={classNames("Label__Text")}>
                                 Role
                             </label>
+                            {/* Options come from the RBAC mirror so this list cannot drift from the backend role enum. */}
                             <select style={{ height: "35px", border: "1px solid #cecece", borderRadius: "5px" }} required value={role} onChange={(e) => setRole(e.target.value)}>
                                 <option value="" disabled>
                                     Please select role
                                 </option>
-                                <option value="admin">Admin</option>
-                                <option value="catalog-manager">Catalog Manager</option>
+                                {STAFF_ROLE_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     </div>

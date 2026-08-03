@@ -30,8 +30,15 @@ import {
 } from "../../../utils/productGrid";
 import { normalizePackSizes } from "../../../utils/packSizes";
 import { parseLabelModel } from "../../../utils/labelVariants";
+import { getProductImageUrl, recoverProductImage } from "../../../utils/productImageUrl";
+import { can, isSeoOnlyRole } from "../../../rbac/permissions";
 
-const canEdit = (role) => role === "admin" || role === "catalog-manager";
+// Every cell in this sheet autosaves a non-SEO product field, so the whole grid
+// needs product:update. The SEO role (seo:write only) gets a read-only sheet —
+// its updates would be stripped server-side.
+// A blank `role` prop (parent still resolving it) falls back to the session role
+// instead of reading as "no permissions".
+const canEdit = (role) => can("product:update", role || undefined);
 
 const NUMERIC_PRODUCT_FIELDS = new Set(["gst", "availableStock"]);
 
@@ -59,6 +66,7 @@ export const ProductExcelGrid = ({
     visibleSections = ["dims", "content", "extras"],
 }) => {
     const editable = canEdit(role);
+    const seoOnly = isSeoOnlyRole(role || undefined);
     const [workingProducts, setWorkingProducts] = useState(() => products.map(toWorking));
     const [activePackSizes, setActivePackSizes] = useState([]);
     const [extras, setExtras] = useState({ open: false, productId: null, tab: 0 });
@@ -288,11 +296,16 @@ export const ProductExcelGrid = ({
     }, []);
 
     const saveProductField = useCallback((id, payload) => {
+        // Belt-and-braces: the cell editors are already detached when !editable.
+        if (!editable) {
+            toast.info("This sheet is read-only for your role.");
+            return;
+        }
         enqueueSave(id, async () => {
             const res = await productService.updateProduct(id, payload);
             if (!res?.success) toast.error(res?.message || "Update failed");
         });
-    }, [enqueueSave]);
+    }, [enqueueSave, editable]);
 
     const saveTiers = useCallback((id, tiers) => {
         const priceList = buildPriceListPayload(tiers);
@@ -512,9 +525,7 @@ export const ProductExcelGrid = ({
         if (!thumbnailKey) {
             content = <i className="pi pi-image" style={{ fontSize: "1.3rem", color: "#cbd5e1" }}></i>;
         } else {
-            const imgUrl = String(thumbnailKey).startsWith("http")
-                ? thumbnailKey
-                : `${import.meta.env.VITE_API_URL || "https://server.prempackaging.com/premind/api"}/getImage?image=${thumbnailKey}`;
+            const imgUrl = getProductImageUrl(thumbnailKey);
 
             content = (
                 <img
@@ -522,7 +533,7 @@ export const ProductExcelGrid = ({
                     alt={rowData.name || "Product"}
                     style={{ width: "30px", height: "30px", objectFit: "contain", borderRadius: "4px", border: "1px solid #dee2e6" }}
                     onError={(e) => {
-                        e.currentTarget.style.opacity = 0.3;
+                        recoverProductImage(e.currentTarget, thumbnailKey);
                     }}
                 />
             );
@@ -857,6 +868,16 @@ export const ProductExcelGrid = ({
                     )}
                 </div>
             ) : null}
+            {!editable ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", marginBottom: 8, borderRadius: 6, background: "#f8fafc", border: "1px solid #e2e8f0", color: "#64748b", fontSize: 12 }}>
+                    <i className="pi pi-lock" style={{ fontSize: 12 }} />
+                    <span>
+                        {seoOnly
+                            ? "Read-only sheet for the SEO role — bulk cell edits write pricing, stock and spec fields, which your role cannot change. Open a product to edit its SEO fields."
+                            : "Read-only sheet — editing products needs the catalog product permission."}
+                    </span>
+                </div>
+            ) : null}
             <div className="product-excel-grid" ref={gridRef} style={gridHeight ? { height: `${gridHeight}px` } : undefined}>
                 <DataTable
                     value={rows}
@@ -994,6 +1015,7 @@ export const ProductExcelGrid = ({
                 allProducts={products}
                 visible={extras.open}
                 initialTab={extras.tab}
+                readOnly={!editable}
                 onHide={() => setExtras((prev) => ({ ...prev, open: false }))}
                 onSaved={onRefetch}
             />

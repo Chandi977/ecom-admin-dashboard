@@ -25,7 +25,7 @@ import "./assets/demo/Demos.scss";
 import "./assets/layout/layout.scss";
 import "./App.scss";
 import Customers from "./pages/customers/Customers";
-import Dashboard from "./components/Dashboard";
+import RoleDashboard from "./pages/dashboards/RoleDashboard";
 import Manage from "./pages/manage/Manage";
 import Logs from "./pages/logs/Logs";
 import Notices from "./pages/notices/Notices";
@@ -56,6 +56,7 @@ import Deal from "./pages/deals/Deal";
 import Enquiries from "./pages/enquiries/Enquiries";
 import LeadsCRM from "./pages/leads/LeadsCRM";
 import LeadDetail from "./pages/leads/LeadDetail";
+import Reviews from "./pages/reviews/Reviews";
 import AllAdmin from "./pages/Admin/adminTable";
 import PinCodes from "./pages/Pincode/pincode";
 import PinCodeUpdate from "./pages/Pincode/pinCodeUpdate";
@@ -64,7 +65,18 @@ import CouponUpdate from "./pages/Coupon/CouonUpdate";
 import Analytics from "./pages/analytics/Analytics";
 import DemandSignals from "./pages/analytics/DemandSignals";
 import Notifications from "./pages/Notifications/Notifications";
+import PromotionalEmail from "./pages/PromotionalEmail/PromotionalEmail";
 import { clearAuthSession, getStoredAuthSession, isTokenExpired } from "./utils/authSession";
+import { ADMIN_PANEL_ROLES } from "./rbac/permissions";
+import { usePermissions } from "./hooks/usePermissions";
+
+// Route role sets. `manager` is a full-access role, so it appears wherever
+// `admin` does. Legacy `catalog-manager` keeps exactly the access it had.
+const ROLES_PANEL = ADMIN_PANEL_ROLES; // every admin-panel role (the "/" dashboard)
+const ROLES_FULL = ["admin", "manager"]; // staff accounts, marketing blasts, legacy pages
+const ROLES_OPS = ["admin", "manager", "general", "catalog-manager"]; // operational + catalog write pages
+const ROLES_CATALOG = ["admin", "manager", "general", "seo", "catalog-manager"]; // catalog/analytics pages the seo role also needs
+const ROLES_MERCH = ["admin", "manager", "general"]; // coupons/deals — never granted to catalog-manager
 
 const App = () => {
     const history = useHistory();
@@ -78,7 +90,9 @@ const App = () => {
     const [mobileTopbarMenuActive, setMobileTopbarMenuActive] = useState(false);
     const copyTooltipRef = useRef();
     const location = useLocation();
-    const [role, setRole] = useState();
+    // Role + permissions come from the JWT-derived session (utils/authSession.js),
+    // refined by GET /permissions/me — not from a raw localStorage read.
+    const { role, canAny } = usePermissions();
     PrimeReact.ripple = true;
     let menuClick = false;
     let mobileTopbarMenuClick = false;
@@ -203,35 +217,44 @@ const App = () => {
         "layout-theme-light": layoutColorMode === "light",
     });
 
-    useEffect(() => {
-        const role = localStorage.getItem("role");
-        setRole(role);
-    }, []);
-
-    // Declarative menu: each item lists the roles allowed to see it (empty = everyone).
-    // `catalog-manager` has read-only access across the dashboard — can view all
-    // operational pages but cannot create, edit, or delete any data.
+    // Declarative menu, gated by permission rather than a hand-maintained role list.
+    // `permissions` = show when the role holds ANY of them; omitted = every admin-panel role.
+    // `legacyRoles` = escape hatch for pre-RBAC-v2 roles that have no permission
+    // mirror (`digital marketing`) or that predate these permissions
+    // (`catalog-manager` sees the operational pages it always saw). Never widens
+    // access for admin/manager/general/seo.
     const MENU_MODEL = [
-        { label: "Dashboard", icon: "pi pi-home", to: "/", roles: ["admin", "catalog-manager"] },
-        { label: "Users", icon: "pi pi-users", to: "/customers", roles: ["admin", "catalog-manager"] },
-        { label: "Admin", icon: "pi pi-user", to: "/admin", roles: ["admin"] },
-        { label: "Brands", icon: "pi pi-question", to: "/brands", roles: ["admin", "digital marketing", "catalog-manager"] },
-        { label: "Category", icon: "pi pi-list", to: "/categories", roles: ["admin", "digital marketing", "catalog-manager"] },
-        { label: "Pincodes", icon: "pi pi-map-marker", to: "/pincode", roles: ["admin", "catalog-manager"] },
-        { label: "SubCategory", icon: "pi pi-server", to: "/subcategories", roles: ["admin", "catalog-manager"] },
-        { label: "Coupon", icon: "pi pi-tags", to: "/coupon", roles: ["admin"] },
-        { label: "Product", icon: "pi pi-box", to: "/products", roles: ["admin", "catalog-manager"] },
-        { label: "Orders", icon: "pi pi-shopping-cart", to: "/orders", roles: ["admin", "catalog-manager"] },
-        { label: "Enquiries", icon: "pi pi-inbox", to: "/enquiries", roles: ["admin", "catalog-manager"] },
-        { label: "Leads CRM", icon: "pi pi-briefcase", to: "/leads", roles: ["admin", "catalog-manager"] },
-        { label: "Notifications", icon: "pi pi-bell", to: "/notifications", roles: ["admin", "catalog-manager"] },
-        { label: "Analytics", icon: "pi pi-chart-line", to: "/analytics", roles: ["admin", "catalog-manager"] },
-        { label: "Demand Signals", icon: "pi pi-chart-bar", to: "/demand-signals", roles: ["admin"] },
+        { label: "Dashboard", icon: "pi pi-home", to: "/" },
+        { label: "Users", icon: "pi pi-users", to: "/customers", permissions: ["customer:read"] },
+        { label: "Admin", icon: "pi pi-user", to: "/admin", permissions: ["user:read", "user:write"] },
+        // brand:write (not brand:read) — the seo role reads brands but has no page for them.
+        { label: "Brands", icon: "pi pi-question", to: "/brands", permissions: ["brand:write"], legacyRoles: ["digital marketing"] },
+        { label: "Category", icon: "pi pi-list", to: "/categories", permissions: ["category:read"], legacyRoles: ["digital marketing"] },
+        { label: "Pincodes", icon: "pi pi-map-marker", to: "/pincode", permissions: ["pincode:write"], legacyRoles: ["catalog-manager"] },
+        { label: "SubCategory", icon: "pi pi-server", to: "/subcategories", permissions: ["subcategory:read"] },
+        { label: "Coupon", icon: "pi pi-tags", to: "/coupon", permissions: ["coupon:write"] },
+        { label: "Product", icon: "pi pi-box", to: "/products", permissions: ["product:read"] },
+        { label: "Orders", icon: "pi pi-shopping-cart", to: "/orders", permissions: ["order:read"] },
+        { label: "Enquiries", icon: "pi pi-inbox", to: "/enquiries", permissions: ["lead:read", "contact:write"] },
+        { label: "Leads CRM", icon: "pi pi-briefcase", to: "/leads", permissions: ["lead:read"] },
+        { label: "Reviews", icon: "pi pi-star", to: "/reviews", permissions: ["review:read", "review:moderate"] },
+        { label: "Notifications", icon: "pi pi-bell", to: "/notifications", permissions: ["notification:read"] },
+        { label: "Promotional Email", icon: "pi pi-megaphone", to: "/promotional-email", permissions: ["marketing:write"] },
+        { label: "Analytics", icon: "pi pi-chart-line", to: "/analytics", permissions: ["analytics:read"] },
+        { label: "Demand Signals", icon: "pi pi-chart-bar", to: "/demand-signals", permissions: ["marketing:read"] },
     ];
+
+    const isMenuItemVisible = (item) => {
+        if (item.legacyRoles && item.legacyRoles.includes(role)) return true;
+        // Ungated items are for the RBAC v2 panel roles only, so legacy roles keep
+        // seeing exactly the items they see today.
+        if (!item.permissions) return ROLES_PANEL.includes(role);
+        return canAny(item.permissions);
+    };
 
     const menu = [
         {
-            items: MENU_MODEL.filter((item) => item.roles.length === 0 || item.roles.includes(role)).map(({ roles, ...item }) => item),
+            items: MENU_MODEL.filter(isMenuItemVisible).map(({ permissions, legacyRoles, ...item }) => item),
         },
     ];
 
@@ -251,69 +274,73 @@ const App = () => {
                         </div>
                         <div className="layout-main-container" style={{ backgroundColor: "#F6F8FA" }}>
                             <div className="layout-main">
-                                {/* Dashboard - Admin / catalog-manager (read-only) */}
-                                <ProtectedRoute exact path="/" component={Dashboard} allowedRoles={["admin", "catalog-manager"]} />
-                                
-                                {/* Customer Management - Admin / catalog-manager (read-only) */}
-                                <ProtectedRoute exact path="/customers" component={Customers} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/customer/:id" component={Customer} allowedRoles={["admin", "catalog-manager"]} />
+                                {/* Dashboard - every admin-panel role, dispatched per role */}
+                                <ProtectedRoute exact path="/" component={RoleDashboard} allowedRoles={ROLES_PANEL} />
 
-                                {/* Admin Management - Admin and Manager */}
-                                <ProtectedRoute exact path="/admin" component={AllAdmin} allowedRoles={["admin"]} />
+                                {/* Customer Management - operations (seo has no business here) */}
+                                <ProtectedRoute exact path="/customers" component={Customers} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/customer/:id" component={Customer} allowedRoles={ROLES_OPS} />
 
-                                {/* Content Management - Admin and Digital Marketing */}
-                                <ProtectedRoute exact path="/brands" component={Brands} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/brand/:id" component={Brand} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/categories" component={Categories} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/category/:id" component={Category} allowedRoles={["admin", "catalog-manager"]} />
+                                {/* Staff accounts - full-access roles only */}
+                                <ProtectedRoute exact path="/admin" component={AllAdmin} allowedRoles={ROLES_FULL} />
 
-                                {/* Product Management - Admin and Manager */}
-                                <ProtectedRoute exact path="/subcategories" component={SubCategories} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/subcategory/:id" component={SubCategory} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/products" component={Products} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/products/create" component={ProductCreate} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/product/:id" component={Product} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/deals" component={Deals} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/deal/:id" component={Deal} allowedRoles={["admin"]} />
+                                {/* Content Management */}
+                                <ProtectedRoute exact path="/brands" component={Brands} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/brand/:id" component={Brand} allowedRoles={ROLES_OPS} />
+                                {/* seo may open categories/subcategories/products: the backend field-scopes its writes to SEO keys */}
+                                <ProtectedRoute exact path="/categories" component={Categories} allowedRoles={ROLES_CATALOG} />
+                                <ProtectedRoute exact path="/category/:id" component={Category} allowedRoles={ROLES_CATALOG} />
 
-                                {/* Orders - Admin / catalog-manager (read-only) */}
-                                <ProtectedRoute exact path="/orders" component={Orders} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/orderdetail/:id" component={OrderDetail} allowedRoles={["admin", "catalog-manager"]} />
+                                {/* Product Management */}
+                                <ProtectedRoute exact path="/subcategories" component={SubCategories} allowedRoles={ROLES_CATALOG} />
+                                <ProtectedRoute exact path="/subcategory/:id" component={SubCategory} allowedRoles={ROLES_CATALOG} />
+                                <ProtectedRoute exact path="/products" component={Products} allowedRoles={ROLES_CATALOG} />
+                                {/* Creating a product is out of the seo field scope */}
+                                <ProtectedRoute exact path="/products/create" component={ProductCreate} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/product/:id" component={Product} allowedRoles={ROLES_CATALOG} />
+                                <ProtectedRoute exact path="/deals" component={Deals} allowedRoles={ROLES_MERCH} requiredPermissions={["deal:write"]} />
+                                <ProtectedRoute exact path="/deal/:id" component={Deal} allowedRoles={ROLES_MERCH} requiredPermissions={["deal:write"]} />
 
-                                {/* Customer Data & Queries - Admin / catalog-manager (read-only) */}
-                                <ProtectedRoute exact path="/enquiries" component={Enquiries} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/data/customer" component={Enquiries} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/data/contact" component={Enquiries} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/leads" component={LeadsCRM} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/leads/:id" component={LeadDetail} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/custom-packaging" component={Enquiries} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/notify" component={Notifications} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/notifications" component={Notifications} allowedRoles={["admin", "catalog-manager"]} />
+                                {/* Orders */}
+                                <ProtectedRoute exact path="/orders" component={Orders} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/orderdetail/:id" component={OrderDetail} allowedRoles={ROLES_OPS} />
 
-                                {/* Configuration - Admin / catalog-manager (read-only) */}
-                                <ProtectedRoute exact path="/pincode" component={PinCodes} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/pincode/:id" component={PinCodeUpdate} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/coupon" component={Coupons} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/coupon/:id" component={CouponUpdate} allowedRoles={["admin"]} />
+                                {/* Customer Data & Queries */}
+                                <ProtectedRoute exact path="/enquiries" component={Enquiries} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/data/customer" component={Enquiries} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/data/contact" component={Enquiries} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/leads" component={LeadsCRM} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/leads/:id" component={LeadDetail} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/reviews" component={Reviews} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/custom-packaging" component={Enquiries} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/notify" component={Notifications} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/notifications" component={Notifications} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/promotional-email" component={PromotionalEmail} allowedRoles={ROLES_FULL} />
 
-                                {/* Analytics - Admin only */}
-                                <ProtectedRoute exact path="/analytics" component={Analytics} allowedRoles={["admin", "catalog-manager"]} />
-                                <ProtectedRoute exact path="/demand-signals" component={DemandSignals} allowedRoles={["admin"]} />
+                                {/* Configuration */}
+                                <ProtectedRoute exact path="/pincode" component={PinCodes} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/pincode/:id" component={PinCodeUpdate} allowedRoles={ROLES_OPS} />
+                                <ProtectedRoute exact path="/coupon" component={Coupons} allowedRoles={ROLES_MERCH} requiredPermissions={["coupon:write"]} />
+                                <ProtectedRoute exact path="/coupon/:id" component={CouponUpdate} allowedRoles={ROLES_MERCH} requiredPermissions={["coupon:write"]} />
 
-                                {/* Legacy/Misc pages - Admin only */}
-                                <ProtectedRoute exact path="/manage" component={Manage} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/logs" component={Logs} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/notices" component={Notices} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/loginhistory" component={LoginHistory} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/pages" component={StaticPages} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/features" component={Features} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/feature/:id" component={Feature} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/enquiry" component={Enquirey} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/enquireydetails/:id" component={EnquireyDetails} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/allStaticPages/:id" component={Pagedata} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/data" component={Warranty} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/privacypolicy" component={Pagedata} allowedRoles={["admin"]} />
-                                <ProtectedRoute exact path="/aboutus" component={Pagedata} allowedRoles={["admin"]} />
+                                {/* Analytics - includes seo (analytics:read) */}
+                                <ProtectedRoute exact path="/analytics" component={Analytics} allowedRoles={ROLES_CATALOG} />
+                                <ProtectedRoute exact path="/demand-signals" component={DemandSignals} allowedRoles={ROLES_FULL} />
+
+                                {/* Legacy/Misc pages - full-access roles only */}
+                                <ProtectedRoute exact path="/manage" component={Manage} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/logs" component={Logs} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/notices" component={Notices} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/loginhistory" component={LoginHistory} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/pages" component={StaticPages} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/features" component={Features} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/feature/:id" component={Feature} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/enquiry" component={Enquirey} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/enquireydetails/:id" component={EnquireyDetails} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/allStaticPages/:id" component={Pagedata} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/data" component={Warranty} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/privacypolicy" component={Pagedata} allowedRoles={ROLES_FULL} />
+                                <ProtectedRoute exact path="/aboutus" component={Pagedata} allowedRoles={ROLES_FULL} />
                             </div>
                             <AppFooter layoutColorMode={layoutColorMode} />
                         </div>

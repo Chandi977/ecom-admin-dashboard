@@ -14,6 +14,7 @@ import {
     buildImportPayload,
     getEntityId,
 } from "../../../utils/productGrid";
+import { can, isSeoOnlyRole } from "../../../rbac/permissions";
 
 const SAMPLE_HINT = "product id\tbrand\tproduct title\tL inch\tB inch\tH inch\tHSN code\tgst\tpack size\tMRP\tlocal SP\tweight\tstock";
 
@@ -37,6 +38,10 @@ export const ProductPasteImportDialog = ({
     const [committing, setCommitting] = useState(false);
     const [progress, setProgress] = useState(null);
     const fileRef = useRef(null);
+    // The import creates and updates products wholesale (pricing, stock, specs),
+    // so it needs both catalog write permissions — never just seo:write.
+    const canImport = can("product:create") && can("product:update");
+    const seoOnly = isSeoOnlyRole();
 
     const packSizes = useMemo(
         () => packSizesText.split(",").map((s) => s.trim()).filter((s) => s !== ""),
@@ -95,6 +100,7 @@ export const ProductPasteImportDialog = ({
     };
 
     const handleCommit = async () => {
+        if (!canImport) { toast.info("Bulk product import is not available for your role."); return; }
         if (!validItems.length) { toast.warn("Nothing valid to import."); return; }
         setCommitting(true);
         let created = 0, updated = 0, failed = 0;
@@ -140,7 +146,7 @@ export const ProductPasteImportDialog = ({
                     label={committing ? "Importing…" : `Import ${validItems.length || ""}`}
                     icon={committing ? "pi pi-spin pi-spinner" : "pi pi-upload"}
                     onClick={handleCommit}
-                    disabled={committing || !validItems.length}
+                    disabled={committing || !validItems.length || !canImport}
                 />
             </div>
         </div>
@@ -163,6 +169,17 @@ export const ProductPasteImportDialog = ({
                 product with a pack size each. Sheets that repeat <b>MRP / local SP / Stock / Wt</b>{" "}
                 columns per pack size (wide layout) are expanded automatically — just enter the pack sizes.
             </p>
+
+            {!canImport && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", marginBottom: 12, borderRadius: 6, background: "#f8fafc", border: "1px solid #e2e8f0", color: "#64748b", fontSize: 13 }}>
+                    <i className="pi pi-lock" style={{ fontSize: 13 }} />
+                    <span>
+                        {seoOnly
+                            ? "Read-only for the SEO role — a bulk import writes pricing, stock and specifications, so it needs the catalog product permissions. SEO fields stay editable on each product page."
+                            : "Bulk product import needs the catalog create and update permissions."}
+                    </span>
+                </div>
+            )}
 
             {requireTarget && (
                 <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>

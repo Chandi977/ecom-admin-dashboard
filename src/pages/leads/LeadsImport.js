@@ -5,6 +5,7 @@ import { Tag } from "primereact/tag";
 import { toast } from "react-toastify";
 import moment from "moment/moment";
 import { handlePostRequest } from "../../services/PostTemplate";
+import { can } from "../../rbac/permissions";
 
 const postJson = (data, url) => handlePostRequest(data, url, false, false)(() => {});
 
@@ -136,6 +137,8 @@ export default function LeadsImport({ visible, onHide, onImported }) {
     const [mapped, setMapped] = useState([]);
     const [parsing, setParsing] = useState(false);
     const [importing, setImporting] = useState(false);
+    // /lead/import is gated on contact:write.
+    const canWrite = can("contact:write");
 
     const reset = () => {
         setFileName("");
@@ -163,6 +166,10 @@ export default function LeadsImport({ visible, onHide, onImported }) {
     };
 
     const runImport = async () => {
+        if (!canWrite) {
+            toast.info("You do not have permission to import leads.");
+            return;
+        }
         if (!mapped.length) return;
         setImporting(true);
         let inserted = 0;
@@ -199,8 +206,13 @@ export default function LeadsImport({ visible, onHide, onImported }) {
                 notes). Each row becomes a lead with its follow-ups as an activity timeline. Re-importing is safe —
                 rows already imported are skipped.
             </p>
+            {!canWrite && (
+                <p style={{ color: "#b42318", marginTop: 0 }}>
+                    Read-only for your role — importing leads needs the contact permission.
+                </p>
+            )}
 
-            <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} style={{ marginBottom: 14 }} />
+            <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFile} disabled={!canWrite} style={{ marginBottom: 14 }} />
             {parsing ? <p>Reading file…</p> : null}
 
             {mapped.length > 0 ? (
@@ -239,7 +251,7 @@ export default function LeadsImport({ visible, onHide, onImported }) {
 
                     <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 18 }}>
                         <Button label="Cancel" className="p-button-text" onClick={() => { reset(); onHide?.(); }} />
-                        <Button label={`Import ${mapped.length} leads`} icon="pi pi-upload" onClick={runImport} loading={importing} />
+                        <Button label={`Import ${mapped.length} leads`} icon="pi pi-upload" onClick={runImport} loading={importing} disabled={!canWrite} />
                     </div>
                 </>
             ) : null}

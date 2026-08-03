@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,15 +14,14 @@ import { InventorySection } from "./components/InventorySection";
 import { DynamicSpecificationSection } from "./components/DynamicSpecificationSection";
 import { SEOSection } from "./components/SEOSection";
 import { FieldVisibilitySection } from "./components/FieldVisibilitySection";
+import { can } from "../../rbac/permissions";
 
 export const ProductCreate = () => {
     const history = useHistory();
     const location = useLocation();
-    const [role, setRole] = useState("");
-
-    useEffect(() => {
-        setRole(localStorage.getItem("role"));
-    }, []);
+    // POST /product/create needs product:create. The SEO role only holds
+    // seo:write, so it never gets a draft form it could not submit.
+    const canCreate = can("product:create");
 
     const createMutation = useCreateProduct();
 
@@ -195,11 +194,26 @@ export const ProductCreate = () => {
         }
     };
 
-    const errorCount = Object.keys(errors).length + 
-        (errors.media ? 1 : 0) + 
-        (errors.pricing ? 1 : 0) + 
-        (errors.inventory ? 1 : 0) + 
+    const errorCount = Object.keys(errors).length +
+        (errors.media ? 1 : 0) +
+        (errors.pricing ? 1 : 0) +
+        (errors.inventory ? 1 : 0) +
         (errors.seo ? 1 : 0);
+
+    // Gate the whole entry point: without product:create there is nothing on this
+    // page a user could usefully do.
+    if (!canCreate) {
+        return (
+            <div style={{ padding: "3rem", textAlign: "center", background: "#fff", borderRadius: "8px", border: "1px solid #dee2e6" }}>
+                <i className="pi pi-lock" style={{ fontSize: "2.5rem", color: "#94a3b8", marginBottom: "1rem" }}></i>
+                <h3>Creating products is not available for your role</h3>
+                <p style={{ color: "#6c757d" }}>
+                    If you handle SEO, open an existing product instead — its SEO section and slug stay editable for you.
+                </p>
+                <Button label="Back to catalog" className="p-button-secondary mt-3" onClick={() => history.push("/products")} />
+            </div>
+        );
+    }
 
     return (
         <FormProvider {...methods}>
@@ -278,7 +292,6 @@ export const ProductCreate = () => {
                             style={{ width: "120px", borderRadius: "6px" }}
                             disabled={isSubmitting || createMutation.isLoading}
                         />
-                        {(role === "admin" || role === "catalog-manager") && (
                         <Button
                             type="submit"
                             label={isSubmitting || createMutation.isLoading ? "Saving..." : "Save Product"}
@@ -287,7 +300,6 @@ export const ProductCreate = () => {
                             style={{ width: "150px", borderRadius: "6px" }}
                             disabled={isSubmitting || createMutation.isLoading}
                         />
-                        )}
                     </div>
                 </div>
             </form>

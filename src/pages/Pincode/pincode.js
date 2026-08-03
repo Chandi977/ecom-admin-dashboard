@@ -14,6 +14,7 @@ import { DEV } from "../../services/constants";
 import AddPincodeDialog from "./AddPincodeDialog";
 import { FaPen, FaTrash } from "react-icons/fa";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
+import { can } from "../../rbac/permissions";
 
 const MIN_FILTER_LENGTH = 2;
 const FILTER_DEBOUNCE_MS = 300;
@@ -24,7 +25,9 @@ function PinCodes() {
     const [manufacturers, setManufacturers] = useState([]);
     const dispatch = useDispatch();
     const history = useHistory();
-    const [role, setRole] = useState("");
+    // Serviceable-pincode / freight rows are created, edited and deleted under
+    // pincode:write.
+    const canWrite = can("pincode:write");
 
     const handledClicked = () => {
         setShowDialog(true);
@@ -39,12 +42,12 @@ function PinCodes() {
     const actionBodyTemplate = (rowData) => {
         return (
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                {role === "admin" && (
+                {canWrite && (
                 <Button className="p-button-rounded mr-1 Elipse_Icon" onClick={() => history.push(`/pincode/${rowData?._id}`)}>
                     <FaPen />
                 </Button>
                 )}
-                {role === "admin" && (
+                {canWrite && (
                     <Button
                         className="p-button-rounded p-button-text p-button-danger"
                         onClick={() => handleDelete(rowData?._id)}
@@ -70,6 +73,10 @@ function PinCodes() {
     };
 
     const handleDelete = (pincodeId) => {
+        if (!canWrite) {
+            toast.info("You do not have permission to delete pincodes.");
+            return;
+        }
         const selectedId = pincodeId
             ? [pincodeId]
             : selectedRow
@@ -140,10 +147,6 @@ function PinCodes() {
         setShowDialog(false);
     };
 
-    useEffect(() => {
-        const role = localStorage.getItem("role");
-        setRole(role);
-    }, []);
     return (
         <>
             <Dialog visible={showDialog} header="Pincode" style={{ width: "750px" }} onHide={() => setShowDialog(false)}>
@@ -157,7 +160,7 @@ function PinCodes() {
                     </h2>
                     {/* <BreadCrumb model={breadItems} home={home} /> */}
                 </div>
-                {role === "admin" && (
+                {canWrite && (
                     <div className="Top__Btn">
                         <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
                         <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />

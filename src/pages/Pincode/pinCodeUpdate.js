@@ -9,16 +9,14 @@ import { handleGetRequest } from "../../services/GetTemplate";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
 import { Dropdown } from "primereact/dropdown";
+import { can } from "../../rbac/permissions";
 
 function PinCodeUpdate() {
     const [manufacturer, setManufacturers] = useState();
     const history = useHistory();
     const { id } = useParams();
-    const [role, setRole] = useState("");
-
-    useEffect(() => {
-        setRole(localStorage.getItem("role"));
-    }, []);
+    // /pincode/update is gated on pincode:write.
+    const canWrite = can("pincode:write");
     const [pincode, setPincode] = useState(); // Number
     const [city, setCity] = useState(""); // String
     const [state, setState] = useState(""); // String
@@ -80,6 +78,10 @@ function PinCodeUpdate() {
         },
 
         onSubmit: async (data) => {
+            if (!canWrite) {
+                toast.info("You do not have permission to update pincodes.");
+                return;
+            }
             const dat = {
                 pincode: pincode,
                 city: city,
@@ -247,7 +249,7 @@ function PinCodeUpdate() {
 
                         <div className="Down__Btn">
                             <Button label="Cancel" className="Btn__Transparent" onClick={handleCancel} />
-                            {role === "admin" && <Button label="Update" className="Btn__Dark" />}
+                            {canWrite && <Button label="Update" className="Btn__Dark" />}
                         </div>
                     </form>
                 </div>

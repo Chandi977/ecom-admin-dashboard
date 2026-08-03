@@ -14,13 +14,18 @@ import { FIELD_VISIBILITY_GROUPS, normalizeFieldVisibility, specVisibilityKey, l
 import { SPEC_FIELD_KEYS, getEntityId } from "../../../utils/productGrid";
 
 const imgUrlOf = (key) => (String(key || "").startsWith("http") ? key : `${DEV}/getImage?image=${key}`);
+// Accepts every shape an image can arrive in: a raw key string, a stored
+// { image } entry, or the { key, url } upload response.
 const keyOf = (img) => (img && typeof img === "object" ? (img.image ?? img.key ?? "") : img);
 
 // Per-product editor for the relational / complex fields that don't fit a flat
 // spreadsheet cell: media (gallery/videos/documents), buy-it-with + related
 // products, quick-overview rows, storefront field visibility, and per-product
 // overrides of the category's common attributes. One Save writes them together.
-export const ProductExtrasDialog = ({ product, allProducts = [], visible, onHide, initialTab = 0, onSaved }) => {
+// `readOnly` is set for roles without product:update (e.g. the SEO role): this
+// dialog writes media, relations, attributes and field visibility, none of which
+// survive the backend's field-scoped filter for them.
+export const ProductExtrasDialog = ({ product, allProducts = [], visible, onHide, initialTab = 0, readOnly = false, onSaved }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
     const [saving, setSaving] = useState(false);
     const fileRef = useRef(null);
@@ -82,10 +87,15 @@ export const ProductExtrasDialog = ({ product, allProducts = [], visible, onHide
     const handleUpload = async (e) => {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
+        if (readOnly) {
+            toast.info("These details are read-only for your role.");
+            return;
+        }
         try {
             const keys = [];
             for (const file of files) {
-                const key = await productService.uploadImage(file);
+                // uploadImage resolves to { key, url } — gallery holds bare S3 keys.
+                const key = keyOf(await productService.uploadImage(file));
                 if (key) keys.push(key);
             }
             setGallery((prev) => {
@@ -103,6 +113,10 @@ export const ProductExtrasDialog = ({ product, allProducts = [], visible, onHide
 
     const handleSave = async () => {
         if (!product) return;
+        if (readOnly) {
+            toast.info("These details are read-only for your role.");
+            return;
+        }
         setSaving(true);
         try {
             const overviewPayload = overview
@@ -137,18 +151,33 @@ export const ProductExtrasDialog = ({ product, allProducts = [], visible, onHide
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {list.map((val, i) => (
                 <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <InputText value={val} onChange={(e) => setter(list.map((v, vi) => (vi === i ? e.target.value : v)))} style={{ flex: 1 }} className="Input__Round" />
-                    <Button icon="pi pi-trash" className="p-button-text p-button-danger" onClick={() => removeAt(setter)(i)} type="button" />
+                    <InputText value={val} onChange={(e) => setter(list.map((v, vi) => (vi === i ? e.target.value : v)))} disabled={readOnly} style={{ flex: 1 }} className="Input__Round" />
+                    {!readOnly && <Button icon="pi pi-trash" className="p-button-text p-button-danger" onClick={() => removeAt(setter)(i)} type="button" />}
                 </div>
             ))}
-            <Button label="Add" icon="pi pi-plus" className="p-button-outlined p-button-sm" style={{ width: 120 }} onClick={() => setter([...list, ""])} type="button" placeholder={placeholder} />
+            {!readOnly && (
+                <Button label="Add" icon="pi pi-plus" className="p-button-outlined p-button-sm" style={{ width: 120 }} onClick={() => setter([...list, ""])} type="button" placeholder={placeholder} />
+            )}
         </div>
     );
 
+    const readOnlyNote = (
+        <p style={{ color: "#94a3b8", fontSize: 13, margin: 0 }}>
+            Read-only for your role — this is owned by the catalog team.
+        </p>
+    );
+
     const footer = (
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <Button label="Cancel" className="p-button-text" onClick={onHide} disabled={saving} />
-            <Button label={saving ? "Saving…" : "Save"} icon={saving ? "pi pi-spin pi-spinner" : "pi pi-save"} onClick={handleSave} disabled={saving} />
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8 }}>
+            {readOnly && (
+                <small style={{ color: "#94a3b8", marginRight: "auto" }}>
+                    Read-only for your role — media, relations and attributes belong to the catalog team.
+                </small>
+            )}
+            <Button label={readOnly ? "Close" : "Cancel"} className="p-button-text" onClick={onHide} disabled={saving} />
+            {!readOnly && (
+                <Button label={saving ? "Saving…" : "Save"} icon={saving ? "pi pi-spin pi-spinner" : "pi pi-save"} onClick={handleSave} disabled={saving} />
+            )}
         </div>
     );
 
@@ -170,16 +199,22 @@ export const ProductExtrasDialog = ({ product, allProducts = [], visible, onHide
                                 {gallery.map((key, i) => (
                                     <div key={`${key}-${i}`} style={{ position: "relative", border: thumbnail === key ? "2px solid #6366f1" : "1px solid #dee2e6", borderRadius: 6, padding: 2 }}>
                                         <img src={imgUrlOf(key)} alt="" style={{ width: 72, height: 72, objectFit: "contain", display: "block" }} onError={(e) => { e.currentTarget.style.opacity = 0.3; }} />
+                                        {!readOnly && (
                                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
                                             <Button icon="pi pi-star" className={`p-button-text p-button-sm ${thumbnail === key ? "p-button-warning" : ""}`} tooltip="Set as thumbnail" onClick={() => setThumbnail(key)} type="button" style={{ width: 26, height: 24 }} />
                                             <Button icon="pi pi-times" className="p-button-text p-button-sm p-button-danger" onClick={() => { setGallery(gallery.filter((_, gi) => gi !== i)); if (thumbnail === key) setThumbnail(""); }} type="button" style={{ width: 26, height: 24 }} />
                                         </div>
+                                        )}
                                     </div>
                                 ))}
                                 {gallery.length === 0 && <span style={{ color: "#94a3b8", fontSize: 13 }}>No images yet.</span>}
                             </div>
                             <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleUpload} style={{ display: "none" }} />
-                            <Button label="Upload Images" icon="pi pi-upload" className="p-button-outlined p-button-sm" style={{ marginTop: 10 }} onClick={() => fileRef.current?.click()} type="button" />
+                            {readOnly ? (
+                                <div style={{ marginTop: 10 }}>{readOnlyNote}</div>
+                            ) : (
+                                <Button label="Upload Images" icon="pi pi-upload" className="p-button-outlined p-button-sm" style={{ marginTop: 10 }} onClick={() => fileRef.current?.click()} type="button" />
+                            )}
                         </div>
                         <div>
                             <label className="Label__Text" style={{ fontWeight: 600 }}>Video URLs</label>
@@ -196,12 +231,13 @@ export const ProductExtrasDialog = ({ product, allProducts = [], visible, onHide
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                         <div>
                             <label className="Label__Text" style={{ fontWeight: 600, display: "block", marginBottom: 6 }}>Buy It With</label>
-                            <MultiSelect value={buyItWith} options={productOptions} onChange={(e) => setBuyItWith(e.value)} filter display="chip" placeholder="Select products" style={{ width: "100%" }} />
+                            <MultiSelect value={buyItWith} options={productOptions} onChange={(e) => setBuyItWith(e.value)} filter display="chip" placeholder="Select products" disabled={readOnly} style={{ width: "100%" }} />
                         </div>
                         <div>
                             <label className="Label__Text" style={{ fontWeight: 600, display: "block", marginBottom: 6 }}>Related Products</label>
-                            <MultiSelect value={related} options={productOptions} onChange={(e) => setRelated(e.value)} filter display="chip" placeholder="Select products" style={{ width: "100%" }} />
+                            <MultiSelect value={related} options={productOptions} onChange={(e) => setRelated(e.value)} filter display="chip" placeholder="Select products" disabled={readOnly} style={{ width: "100%" }} />
                         </div>
+                        {readOnly ? readOnlyNote : null}
                     </div>
                 </TabPanel>
 
@@ -210,29 +246,35 @@ export const ProductExtrasDialog = ({ product, allProducts = [], visible, onHide
                         <small className="p-text-secondary">Quick-overview rows shown on the product page. Untick to hide a row.</small>
                         {overview.map((f, i) => (
                             <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                                <InputText value={f.label} placeholder="Label" onChange={(e) => setOverview(overview.map((r, ri) => (ri === i ? { ...r, label: e.target.value } : r)))} style={{ flex: "1 1 160px" }} className="Input__Round" />
-                                <InputText value={f.value} placeholder="Value" onChange={(e) => setOverview(overview.map((r, ri) => (ri === i ? { ...r, value: e.target.value } : r)))} style={{ flex: "1 1 160px" }} className="Input__Round" />
+                                <InputText value={f.label} placeholder="Label" onChange={(e) => setOverview(overview.map((r, ri) => (ri === i ? { ...r, label: e.target.value } : r)))} disabled={readOnly} style={{ flex: "1 1 160px" }} className="Input__Round" />
+                                <InputText value={f.value} placeholder="Value" onChange={(e) => setOverview(overview.map((r, ri) => (ri === i ? { ...r, value: e.target.value } : r)))} disabled={readOnly} style={{ flex: "1 1 160px" }} className="Input__Round" />
                                 <label style={{ display: "flex", alignItems: "center", gap: 4, margin: 0 }}>
-                                    <Checkbox checked={f.visible !== false} onChange={(e) => setOverview(overview.map((r, ri) => (ri === i ? { ...r, visible: e.checked } : r)))} />
+                                    <Checkbox checked={f.visible !== false} disabled={readOnly} onChange={(e) => setOverview(overview.map((r, ri) => (ri === i ? { ...r, visible: e.checked } : r)))} />
                                     <span style={{ fontSize: 12 }}>Show</span>
                                 </label>
-                                <Button icon="pi pi-trash" className="p-button-text p-button-danger" onClick={() => removeAt(setOverview)(i)} type="button" />
+                                {!readOnly && <Button icon="pi pi-trash" className="p-button-text p-button-danger" onClick={() => removeAt(setOverview)(i)} type="button" />}
                             </div>
                         ))}
-                        <Button label="Add Row" icon="pi pi-plus" className="p-button-outlined p-button-sm" style={{ width: 130 }} onClick={() => setOverview([...overview, { label: "", value: "", visible: true }])} type="button" />
+                        {readOnly ? readOnlyNote : (
+                            <Button label="Add Row" icon="pi pi-plus" className="p-button-outlined p-button-sm" style={{ width: 130 }} onClick={() => setOverview([...overview, { label: "", value: "", visible: true }])} type="button" />
+                        )}
                     </div>
                 </TabPanel>
 
                 <TabPanel header="Field Visibility">
-                    <FieldVisibilityGrid
-                        groups={visibilityGroups}
-                        value={visibility}
-                        onToggle={(key, checked) => setVisibility((prev) => ({ ...prev, [key]: checked }))}
-                    />
+                    {/* FieldVisibilityGrid has no read-only mode, so show the note
+                        instead of toggles that would be discarded on save. */}
+                    {readOnly ? readOnlyNote : (
+                        <FieldVisibilityGrid
+                            groups={visibilityGroups}
+                            value={visibility}
+                            onToggle={(key, checked) => setVisibility((prev) => ({ ...prev, [key]: checked }))}
+                        />
+                    )}
                 </TabPanel>
 
                 <TabPanel header="Common Attributes">
-                    <CommonAttributesEditor value={attrPairs} onChange={setAttrPairs} />
+                    {readOnly ? readOnlyNote : <CommonAttributesEditor value={attrPairs} onChange={setAttrPairs} />}
                 </TabPanel>
             </TabView>
         </Dialog>

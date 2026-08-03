@@ -9,6 +9,8 @@ import { handlePostRequest } from "../../services/PostTemplate";
 import { handleGetRequest } from "../../services/GetTemplate";
 import { Dropdown } from "primereact/dropdown";
 import { Calendar } from "primereact/calendar";
+import { toast } from "react-toastify";
+import { can } from "../../rbac/permissions";
 import "primereact/resources/themes/saga-blue/theme.css"; // Choose your theme
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
@@ -21,6 +23,8 @@ function AddCoupon({ onsuccess }) {
     const [selectedCategory, setSelectedCategory] = useState();
     const [selectedStartDate, setSelectedStartDate] = useState(null); // State for start date
     const [showProductFields, setShowProductFields] = useState(false);
+    // /coupon/create is gated on coupon:write.
+    const canWrite = can("coupon:write");
 
     const validationSchema = Yup.object({
         discountPercentage: Yup.number()
@@ -86,6 +90,10 @@ function AddCoupon({ onsuccess }) {
         },
         validationSchema,
         onSubmit: async (data) => {
+            if (!canWrite) {
+                toast.info("You do not have permission to create coupons.");
+                return;
+            }
             const dat = {
                 couponCode: data.couponCode,
                 description: data.name,
@@ -274,7 +282,12 @@ function AddCoupon({ onsuccess }) {
                     </div>
                 </div>
                 <div className="Down__Btn">
-                    <Button label="Create Coupon" className="Btn__Dark" type="submit" />
+                    {!canWrite && (
+                        <small className="p-text-secondary" style={{ marginRight: "1rem" }}>
+                            Read-only for your role — creating coupons needs the coupon permission.
+                        </small>
+                    )}
+                    <Button label="Create Coupon" className="Btn__Dark" type="submit" disabled={!canWrite} />
                 </div>
             </form>
         </>

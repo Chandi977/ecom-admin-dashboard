@@ -8,6 +8,7 @@ import { useHistory, useParams } from "react-router-dom";
 import { handleGetRequest } from "../../services/GetTemplate";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
+import { can } from "../../rbac/permissions";
 
 function Deal() {
     const [manufacturer, setManufacturers] = useState();
@@ -20,6 +21,8 @@ function Deal() {
     const [discount, setDiscount] = useState();
     const [selectedProduct, setSelectedProduct] = useState();
     const [products, setProducts] = useState();
+    // /deal/update is gated on deal:write.
+    const canWrite = can("deal:write");
 
     const getData = useCallback(async () => {
         const res = await handleGetRequest(`/deal/get/${id}`);
@@ -50,6 +53,10 @@ function Deal() {
         },
 
         onSubmit: async (data) => {
+            if (!canWrite) {
+                toast.info("You do not have permission to update deals.");
+                return;
+            }
             const dat = {
                 deal_id: deal_id,
                 newPrice: newPrice,
@@ -169,8 +176,13 @@ function Deal() {
                         </div>
 
                         <div className="Down__Btn">
+                            {!canWrite && (
+                                <small className="p-text-secondary" style={{ marginRight: "1rem" }}>
+                                    Read-only for your role — editing deals needs the deal permission.
+                                </small>
+                            )}
                             <Button label="Cancel" className="Btn__Transparent" onClick={handleCancel} />
-                            <Button label="Update" className="Btn__Dark" />
+                            <Button label="Update" className="Btn__Dark" disabled={!canWrite} />
                         </div>
                     </form>
                 </div>

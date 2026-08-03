@@ -9,6 +9,7 @@ import moment from "moment";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
+import { can } from "../../rbac/permissions";
 import AddCoupon from "./AddCouponDialog";
 
 function Coupons() {
@@ -20,7 +21,8 @@ function Coupons() {
     const [rows, setRows] = useState(12);
     const dispatch = useDispatch();
     const history = useHistory();
-    const [role, setRole] = useState("");
+    // /coupon/create, /coupon/update and /coupon/delete are gated on coupon:write.
+    const canWrite = can("coupon:write");
 
     const handledClicked = () => {
         setShowDialog(true);
@@ -45,7 +47,7 @@ function Coupons() {
     const actionBodyTemplate = (rowData) => {
         return (
             <div>
-                <Button icon="pi pi-pencil" className="p-button-rounded mr-2 Elipse_Icon" onClick={(e) => handleActionButton(e, rowData)} aria-controls="popup_menu" aria-haspopup />
+                {canWrite && <Button icon="pi pi-pencil" className="p-button-rounded mr-2 Elipse_Icon" onClick={(e) => handleActionButton(e, rowData)} aria-controls="popup_menu" aria-haspopup />}
             </div>
         );
     };
@@ -62,6 +64,10 @@ function Coupons() {
     };
 
     const handleDelete = () => {
+        if (!canWrite) {
+            toast.info("You do not have permission to delete coupons.");
+            return;
+        }
         const selectedId = selectedRow.map((val, index) => {
             return val?._id;
         });
@@ -89,11 +95,6 @@ function Coupons() {
         setShowDialog(false);
     };
 
-    useEffect(() => {
-        const role = localStorage.getItem("role");
-        setRole(role);
-    }, []);
-
     // const reversedManufacturers = [...manufacturers].reverse();
     // console.log("reversed array", reversedManufacturers);
     // console.log("original array", manufacturers);
@@ -108,7 +109,7 @@ function Coupons() {
                     <h2 className="pb-4">Coupon Codes ({total})</h2>
                     {/* <BreadCrumb model={breadItems} home={home} /> */}
                 </div>
-                {role === "admin" && (
+                {canWrite && (
                     <div className="Top__Btn">
                         <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
                         <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />

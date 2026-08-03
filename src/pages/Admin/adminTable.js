@@ -9,6 +9,8 @@ import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { exportJsonToExcel } from "../../utils/exportToExcel";
+import { ROLE_LABELS } from "../../rbac/permissions";
+import { usePermissions } from "../../hooks/usePermissions";
 
 function AllAdmin() {
     const [showDialog, setShowDialog] = useState(false);
@@ -16,6 +18,9 @@ function AllAdmin() {
     const [users, setUsers] = useState([]);
     const [customers, setCustomers] = useState([]);
     const history = useHistory();
+    // Staff accounts are managed by full-access roles only (user:write).
+    const { can } = usePermissions();
+    const canManageStaff = can("user:write");
 
     const getData = useCallback(async () => {
         try {
@@ -35,6 +40,10 @@ function AllAdmin() {
     }, [getData]);
 
     const handleDelete = async (value) => {
+        if (!canManageStaff) {
+            toast.info("You are not authorized to delete staff accounts.");
+            return;
+        }
         if (!value?._id) {
             toast.info("Select an admin to delete.");
             return;
@@ -50,11 +59,10 @@ function AllAdmin() {
     };
 
     const handledClicked = () => {
-        const role = localStorage.getItem("role");
-        if (role === "admin") {
+        if (canManageStaff) {
             setShowDialog(true);
         } else {
-            toast.info("You are not authorized to add customer");
+            toast.info("You are not authorized to add staff accounts.");
         }
     };
 
@@ -151,6 +159,16 @@ function AllAdmin() {
                     font-size: 0.95rem;
                     font-weight: 600;
                 }
+                .admin-info .admin-role {
+                    color: #0c4e9c;
+                    background: #e9f3f8;
+                    border: 1px solid #cfe3f0;
+                    border-radius: 9999px;
+                    padding: 2px 12px;
+                    font-size: 0.8rem;
+                    font-weight: 700;
+                    letter-spacing: 0.02em;
+                }
                 .admin-info .admin-date {
                     color: #94a3b8;
                     font-size: 0.8rem;
@@ -211,7 +229,7 @@ function AllAdmin() {
                     display: block;
                 }
             `}</style>
-            <Dialog visible={showDialog} header="Add Admin / Catalog Manager" style={{ width: "750px" }} onHide={() => setShowDialog(false)}>
+            <Dialog visible={showDialog} header="Add Staff Account" style={{ width: "750px" }} onHide={() => setShowDialog(false)}>
                 <CustomerDialog onHideCustomerDialog={onHideCustomerDialog} handlesuccess={handlesuccess} />
             </Dialog>
 
@@ -221,8 +239,12 @@ function AllAdmin() {
                     {/* <BreadCrumb model={breadItems} home={home} /> */}
                 </div>
                 <div className="Top__Btn">
-                    <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
-                    <Button icon="pi pi-trash" iconPos="right" onClick={handleBulkDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />
+                    {canManageStaff && (
+                        <>
+                            <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
+                            <Button icon="pi pi-trash" iconPos="right" onClick={handleBulkDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />
+                        </>
+                    )}
                     <Button
                         label="Download"
                         className="buttonsaaa"
@@ -239,20 +261,24 @@ function AllAdmin() {
                         </div>
                         <div className="admin-info">
                             <div className="admin-name">{admin.first_name || "-"}</div>
+                            {/* Unknown/legacy role keys fall back to the raw value. */}
+                            <div className="admin-role">{ROLE_LABELS[admin.role] || admin.role || "-"}</div>
                             <div className="admin-email">{admin.email_address || "-"}</div>
                             <div className="admin-contact">{admin.mobile_number || "-"}</div>
                             <div className="admin-date">{moment(admin.createdAt).format("DD/MM/YYYY")}</div>
                         </div>
-                        <div className="admin-actions">
-                            <button className="admin-action-btn admin-action-edit" onClick={() => history.push(`/customer/${admin._id}`)}>
-                                <i className="pi pi-pencil" style={{ fontSize: "1.1rem" }}></i>
-                                <span className="tooltip">Edit Admin</span>
-                            </button>
-                            <button className="admin-action-btn admin-action-delete" onClick={() => handleDelete(admin)}>
-                                <i className="pi pi-trash" style={{ fontSize: "1.1rem" }}></i>
-                                <span className="tooltip">Delete Admin</span>
-                            </button>
-                        </div>
+                        {canManageStaff && (
+                            <div className="admin-actions">
+                                <button className="admin-action-btn admin-action-edit" onClick={() => history.push(`/customer/${admin._id}`)}>
+                                    <i className="pi pi-pencil" style={{ fontSize: "1.1rem" }}></i>
+                                    <span className="tooltip">Edit Admin</span>
+                                </button>
+                                <button className="admin-action-btn admin-action-delete" onClick={() => handleDelete(admin)}>
+                                    <i className="pi pi-trash" style={{ fontSize: "1.1rem" }}></i>
+                                    <span className="tooltip">Delete Admin</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>

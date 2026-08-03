@@ -5,7 +5,9 @@ import { Button } from "primereact/button";
 import { InputText  } from "primereact/inputtext";
 import { InputSwitch } from "primereact/inputswitch";
 import { useDispatch } from "react-redux";
+import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
+import { can } from "../../rbac/permissions";
 
 // pincode,
 //     city,
@@ -19,7 +21,9 @@ import { handlePostRequest } from "../../services/PostTemplate";
 
 function AddPincodeDialog({ onsuccess }) {
     const dispatch = useDispatch();
-    
+    // /freight/create backs the pincode list — gated on pincode:write.
+    const canWrite = can("pincode:write");
+
 
     const formik = useFormik({
         initialValues: {
@@ -36,6 +40,10 @@ function AddPincodeDialog({ onsuccess }) {
         },
 
         onSubmit: async (data) => {
+            if (!canWrite) {
+                toast.info("You do not have permission to add pincodes.");
+                return;
+            }
             const dat = {
                 pincode: parseInt(data.pincode),
                 city: data.city,
@@ -169,7 +177,12 @@ function AddPincodeDialog({ onsuccess }) {
 
                 </div>
                 <div className="Down__Btn">
-                    <Button label="Create Brand" className="Btn__Dark" type="submit" />
+                    {!canWrite && (
+                        <small className="p-text-secondary" style={{ marginRight: "1rem" }}>
+                            Read-only for your role — adding pincodes needs the pincode permission.
+                        </small>
+                    )}
+                    <Button label="Create Brand" className="Btn__Dark" type="submit" disabled={!canWrite} />
                 </div>
             </form>
         </>

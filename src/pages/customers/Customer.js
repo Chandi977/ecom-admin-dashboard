@@ -13,6 +13,7 @@ import moment from "moment";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { toast } from "react-toastify";
+import { can } from "../../rbac/permissions";
 
 function Customer() {
     const dispatch = useDispatch();
@@ -20,11 +21,8 @@ function Customer() {
     const [passwordDaialog, setPasswordDialog] = useState(false);
     const [user, setUser] = useState();
     const { id } = useParams();
-    const [role, setRole] = useState("");
-
-    useEffect(() => {
-        setRole(localStorage.getItem("role"));
-    }, []);
+    // /edituser and the password reset both go through user:write.
+    const canWrite = can("user:write");
 
     const getData = useCallback(async (userId) => {
         const result = await handleGetRequest(`/getuser/${userId}`);
@@ -48,6 +46,10 @@ function Customer() {
         },
 
         onSubmit: async (data) => {
+            if (!canWrite) {
+                toast.info("You do not have permission to edit users.");
+                return;
+            }
             const dat = {
                 first_name: data?.first_name,
                 last_name: data?.last_name,
@@ -93,7 +95,7 @@ function Customer() {
                     <BreadCrumb model={breadItems} home={home} />
                 </div>
                 <div className="middle__">
-                    {role === "admin" && <Button label="Change Password" className="grey__button" onClick={() => setPasswordDialog(true)} />}
+                    {canWrite && <Button label="Change Password" className="grey__button" onClick={() => setPasswordDialog(true)} />}
                 </div>
             </div>
             <div className="customer_details_section">
@@ -166,7 +168,12 @@ function Customer() {
                             </div>
                         </div>
                         <div className="Down__Btn">
-                            {role === "admin" && <Button label="Edit" className="Btn__Dark" />}
+                            {!canWrite && (
+                                <small className="p-text-secondary" style={{ marginRight: "1rem" }}>
+                                    Read-only for your role — account changes need the user permission.
+                                </small>
+                            )}
+                            {canWrite && <Button label="Edit" className="Btn__Dark" />}
                         </div>
                     </form>
                 </div>

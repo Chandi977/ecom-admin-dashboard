@@ -13,6 +13,8 @@ import { ProductDetailsDialog } from "./components/ProductDetailsDialog";
 import ProductExcelGrid from "./components/ProductExcelGrid";
 import ProductPasteImportDialog from "./components/ProductPasteImportDialog";
 import { PRODUCT_SORT_OPTIONS, sortProducts } from "../../utils/productSorting";
+import { getProductImageUrl, recoverProductImage } from "../../utils/productImageUrl";
+import { can, isSeoOnlyRole } from "../../rbac/permissions";
 
 const ITEMS_PER_PAGE = 10;
 const CATEGORY_SECTION_ORDER = ["main", "rollabel", "packpro"];
@@ -63,6 +65,13 @@ export const ProductList = () => {
     });
 
     const [role] = useState(() => localStorage.getItem("role") || "");
+    // Catalog write permissions. The SEO role holds seo:write but not
+    // product:update, so it still gets into the editor (SEO fields + slug only)
+    // while every create/delete/bulk control stays out of reach.
+    const canUpdate = can("product:update");
+    const canCreate = can("product:create");
+    const canDelete = can("product:delete");
+    const seoOnly = isSeoOnlyRole();
 
     const { data: brandsList = [] } = useBrands();
     const { data: categoriesList = [] } = useCategories();
@@ -218,14 +227,22 @@ export const ProductList = () => {
     }, []);
 
     const handleDeleteSingle = useCallback((product) => {
+        if (!canDelete) {
+            toast.info("You do not have permission to delete products.");
+            return;
+        }
         if (!product?._id) return;
         const label = product.product_id || product.name || "this product";
         if (window.confirm(`Delete ${label}? This cannot be undone.`)) {
             deleteMutation.mutate([product._id]);
         }
-    }, [deleteMutation]);
+    }, [deleteMutation, canDelete]);
 
     const handleDeleteSelected = async () => {
+        if (!canDelete) {
+            toast.info("You do not have permission to delete products.");
+            return;
+        }
         if (!selectedRows.length) {
             toast.warn("Select at least one product to delete");
             return;
@@ -245,9 +262,7 @@ export const ProductList = () => {
         const thumbnailKey = rowData?.media?.thumbnail || rowData?.images?.[0]?.image || rowData?.images?.[0];
         if (!thumbnailKey) return <i className="pi pi-image" style={{ fontSize: "1.5rem", color: "#ccc" }}></i>;
         
-        const imgUrl = thumbnailKey.startsWith("http")
-            ? thumbnailKey
-            : `${import.meta.env.VITE_API_URL || "https://server.prempackaging.com/premind/api"}/getImage?image=${thumbnailKey}`;
+        const imgUrl = getProductImageUrl(thumbnailKey);
 
         return (
             <img
@@ -255,7 +270,7 @@ export const ProductList = () => {
                 alt={rowData.name}
                 style={{ width: "40px", height: "40px", objectFit: "contain", borderRadius: "4px", border: "1px solid #dee2e6" }}
                 onError={(e) => {
-                    e.target.src = "https://via.placeholder.com/40?text=No+Img";
+                    recoverProductImage(e.currentTarget, thumbnailKey);
                 }}
             />
         );
@@ -325,12 +340,14 @@ export const ProductList = () => {
                     tooltip="View details"
                     tooltipOptions={{ position: "bottom" }}
                 />
-                {(role === "admin" || role === "catalog-manager") && (
+                {/* SEO-only users open the same editor, but only its SEO fields
+                    (and the slug) are editable there. */}
+                {(canUpdate || seoOnly) && (
                 <Button
                     icon="pi pi-pencil"
                     className="p-button-rounded p-button-text p-button-sm p-button-info"
                     onClick={() => history.push(`/product/${rowData._id}`)}
-                    tooltip="Edit product"
+                    tooltip={canUpdate ? "Edit product" : "Edit SEO fields"}
                     tooltipOptions={{ position: "bottom" }}
                 />
                 )}
@@ -497,6 +514,11 @@ export const ProductList = () => {
                     <p style={{ margin: 0, fontSize: "13px", color: "#6c757d" }}>
                         {catalogPath}
                     </p>
+                    {seoOnly && (
+                        <p style={{ margin: 0, fontSize: "13px", color: "#94a3b8" }}>
+                            Read-only catalog for the SEO role — open a product to edit its SEO fields.
+                        </p>
+                    )}
                 </div>
                 <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
                     <div style={{ display: "flex", border: "1px solid #d8dee9", borderRadius: "6px", overflow: "hidden" }}>
@@ -515,7 +537,7 @@ export const ProductList = () => {
                             style={{ borderRadius: 0 }}
                         />
                     </div>
-                    {(role === "admin" || role === "catalog-manager") && (
+                    {canCreate && (
                         <>
                         <Button
                             label="Import"
@@ -531,6 +553,9 @@ export const ProductList = () => {
                             onClick={handleAddProduct}
                             style={{ borderRadius: "6px" }}
                         />
+                        </>
+                    )}
+                    {canDelete && (
                         <Button
                             label="Delete"
                             icon="pi pi-trash"
@@ -539,7 +564,6 @@ export const ProductList = () => {
                             onClick={handleDeleteSelected}
                             style={{ borderRadius: "6px" }}
                         />
-                        </>
                     )}
                 </div>
             </div>
@@ -649,7 +673,7 @@ export const ProductList = () => {
                                 context={{ categoryId: selectedCategoryId, subCategoryId: selectedSubCategoryId }}
                                 role={role}
                                 loading={isLoading}
-                                onDeleteProduct={handleDeleteSingle}
+                                onDeleteProduct={canDelete ? handleDeleteSingle : undefined}
                                 onRefetch={() => queryClient.invalidateQueries(productKeys.all)}
                                 showCategoryColumns={!selectedSubCategoryId}
                                 emptyMessage="No products found."

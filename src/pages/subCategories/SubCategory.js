@@ -4,6 +4,7 @@ import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { Dropdown } from "primereact/dropdown";
 import { InputText } from "primereact/inputtext";
+import { InputTextarea } from "primereact/inputtextarea";
 import { useHistory, useParams } from "react-router-dom";
 import { handleGetRequest } from "../../services/GetTemplate";
 import { handlePutRequest } from "../../services/PutTemplate";
@@ -16,6 +17,12 @@ import ProductExcelGrid from "../../features/products/components/ProductExcelGri
 import ProductPasteImportDialog from "../../features/products/components/ProductPasteImportDialog";
 import { MultiSelect } from "primereact/multiselect";
 import { normalizePackSizes } from "../../utils/packSizes";
+import Editor from "../../components/SafeRichTextEditor";
+import { EditorState, ContentState, convertToRaw } from "draft-js";
+import draftToHtml from "draftjs-to-html";
+import htmlToDraft from "html-to-draftjs";
+import { can, isSeoOnlyRole } from "../../rbac/permissions";
+
 
 const SECTION_OPTIONS = [
     { label: "Dimensions & Specs", value: "dims" },
@@ -30,6 +37,26 @@ const getAuthHeader = () => {
 
 const normalizeText = (value) => String(value || "").trim().toLowerCase();
 const getId = (value) => (typeof value === "object" ? value?._id : value);
+
+const toFaqRows = (faqs) =>
+    (Array.isArray(faqs) ? faqs : []).map((faq) => ({
+        question: String(faq?.question || ""),
+        answer: String(faq?.answer || ""),
+    }));
+
+const normalizeSeoContent = (content) => ({
+    heading: String(content?.heading || "").trim(),
+    description: String(content?.description || "").trim(),
+    faqs: toFaqRows(content?.faqs)
+        .map((faq) => ({
+            question: faq.question.trim(),
+            answer: faq.answer.trim(),
+        }))
+        .filter((faq) => faq.question && faq.answer),
+});
+
+const seoContentMatches = (expected, actual) =>
+    JSON.stringify(normalizeSeoContent(expected)) === JSON.stringify(normalizeSeoContent(actual));
 
 function SubCategory() {
     const [manufacturer, setManufacturers] = useState();
@@ -51,7 +78,19 @@ function SubCategory() {
     const [newPackSize, setNewPackSize] = useState("");
     const [savingPackSizes, setSavingPackSizes] = useState(false);
     const [visibleSections, setVisibleSections] = useState(["dims", "content", "extras"]);
-    const editable = role === "admin" || role === "catalog-manager";
+    const [seoOpen, setSeoOpen] = useState(false);
+    const [seoHeading, setSeoHeading] = useState("");
+    const [editorState, setEditorState] = useState(() => EditorState.createEmpty());
+    const [seoFaqs, setSeoFaqs] = useState([]);
+    const [savingSeo, setSavingSeo] = useState(false);
+    // Pack sizes are a sub-category field, so they need subcategory:update.
+    const editable = can("subcategory:update");
+    // seo_content is inside SEO_SUBCATEGORY_FIELDS, so the SEO role's PUT survives
+    // the backend's field filter — this editor is the SEO role's job here.
+    const seoContentEditable = editable || can("seo:write");
+    const seoOnly = isSeoOnlyRole();
+    // Creating products / bulk-importing into this sub-category are product writes.
+    const canCreateProduct = can("product:create");
 
     const selectedCategoryObj = useMemo(
         () => categories.find((cat) => String(cat?._id) === String(selectedCategory)),
@@ -158,6 +197,10 @@ function SubCategory() {
     };
 
     const handleDeleteProduct = async (product) => {
+        if (!can("product:delete")) {
+            toast.info("You do not have permission to delete products.");
+            return;
+        }
         const productId = product?._id;
         if (!productId) {
             toast.error("Unable to delete product. Missing product id.");
@@ -236,6 +279,133 @@ function SubCategory() {
         if (!confirmed) return;
 
         await savePackSizes(packSizes.filter((item) => Number(item) !== Number(size)), `Pack size ${size} removed.`);
+    };
+
+    // --- Sub-category SEO content (shared by every product page below it) -----
+
+    const openSeoDialog = () => {
+        const content = manufacturer?.seo_content || {};
+        setSeoHeading(String(content.heading || ""));
+        const rawDesc = String(content.description || "");
+        setSeoFaqs(toFaqRows(content.faqs));
+
+        if (rawDesc.trim()) {
+            try {
+                let htmlInput = rawDesc;
+                if (!/<[a-z][\s\S]*>/i.test(rawDesc)) {
+                    htmlInput = rawDesc
+                        .split(/\n\s*\n/)
+                        .map((chunk) => {
+                            const trimmed = chunk.trim();
+                            if (!trimmed) return "";
+                            if (trimmed.startsWith("## ")) return `<h2>${trimmed.slice(3).trim()}</h2>`;
+                            if (trimmed.startsWith("# ")) return `<h1>${trimmed.slice(2).trim()}</h1>`;
+                            if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+                                const lis = trimmed
+                                    .split("\n")
+                                    .map((l) => `<li>${l.replace(/^[-*]\s+/, "")}</li>`)
+                                    .join("");
+                                return `<ul>${lis}</ul>`;
+                            }
+                            if (/^\d+[.)]\s+/.test(trimmed)) {
+                                const lis = trimmed
+                                    .split("\n")
+                                    .map((l) => `<li>${l.replace(/^\d+[.)]\s+/, "")}</li>`)
+                                    .join("");
+                                return `<ol>${lis}</ol>`;
+                            }
+                            return `<p>${trimmed.replace(/\n/g, "<br/>")}</p>`;
+                        })
+                        .join("");
+                }
+                const blocksFromHtml = htmlToDraft(htmlInput);
+                if (blocksFromHtml && blocksFromHtml.contentBlocks) {
+                    const contentState = ContentState.createFromBlockArray(
+                        blocksFromHtml.contentBlocks,
+                        blocksFromHtml.entityMap
+                    );
+                    setEditorState(EditorState.createWithContent(contentState));
+                } else {
+                    setEditorState(EditorState.createEmpty());
+                }
+            } catch (err) {
+                console.error("Error setting editor state:", err);
+                setEditorState(EditorState.createEmpty());
+            }
+        } else {
+            setEditorState(EditorState.createEmpty());
+        }
+        setSeoOpen(true);
+    };
+
+    const handleEditorChange = (newState) => {
+        setEditorState(newState);
+    };
+
+    const updateFaq = (index, field, value) => {
+        setSeoFaqs((prev) => prev.map((faq, i) => (i === index ? { ...faq, [field]: value } : faq)));
+    };
+
+    const moveFaq = (index, offset) => {
+        const target = index + offset;
+        setSeoFaqs((prev) => {
+            if (target < 0 || target >= prev.length) return prev;
+            const next = [...prev];
+            [next[index], next[target]] = [next[target], next[index]];
+            return next;
+        });
+    };
+
+    const handleSaveSeoContent = async () => {
+        if (!seoContentEditable || savingSeo) return;
+
+        // Rows missing either side are dropped server-side; warn instead of
+        // silently discarding half-written copy.
+        const partialRow = seoFaqs.some((faq) => {
+            const hasQuestion = faq.question.trim().length > 0;
+            const hasAnswer = faq.answer.trim().length > 0;
+            return hasQuestion !== hasAnswer;
+        });
+        if (partialRow) {
+            toast.error("Every FAQ needs both a question and an answer. Fill or remove the incomplete ones.");
+            return;
+        }
+
+        const currentEditorContent = editorState.getCurrentContent();
+        const description = currentEditorContent.hasText()
+            ? draftToHtml(convertToRaw(currentEditorContent)).trim()
+            : "";
+        const seo_content = normalizeSeoContent({
+            heading: seoHeading.trim(),
+            description,
+            faqs: seoFaqs,
+        });
+
+        setSavingSeo(true);
+        try {
+            const res = await handlePutRequest({ id, seo_content }, "/subcategory/update");
+            if (res?.success) {
+                // Read the record back from MongoDB before reporting success.
+                // This prevents an older backend build from accepting the PUT
+                // while silently dropping the newer seo_content field.
+                const verifyRes = await handleGetRequest(`/subcategory/get/${id}`);
+                const persistedSubCategory = verifyRes?.data;
+
+                if (!verifyRes?.success || !persistedSubCategory ||
+                    !seoContentMatches(seo_content, persistedSubCategory.seo_content)) {
+                    toast.error("The server accepted the request but did not persist the SEO content. Keep this dialog open and restart/update the backend before trying again.");
+                    return;
+                }
+
+                setManufacturers(persistedSubCategory);
+                toast.success("SEO content saved. It now shows on every product page in this subcategory.");
+                setSeoOpen(false);
+                return;
+            }
+            toast.warn(res?.message || "Unable to save SEO content.");
+        } finally {
+            setSavingSeo(false);
+        }
     };
 
     return (
@@ -376,6 +546,120 @@ function SubCategory() {
                     line-height: 1.4;
                     margin-bottom: 16px;
                 }
+                .seo-content-meta {
+                    color: #64748b;
+                    font-size: 13px;
+                    line-height: 1.5;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 12px 14px;
+                    margin-bottom: 20px;
+                }
+                .seo-content-field {
+                    margin-bottom: 22px;
+                }
+                .seo-content-field .p-inputtext,
+                .seo-content-field .p-inputtextarea {
+                    width: 100%;
+                    margin-top: 6px;
+                }
+                .seo-content-hint {
+                    display: block;
+                    margin-top: 6px;
+                    color: #64748b;
+                    font-size: 12px;
+                    line-height: 1.5;
+                }
+                .seo-editor-container {
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    background: #fff;
+                    margin-top: 6px;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                }
+                .seo-sticky-toolbar {
+                    position: sticky !important;
+                    top: 0 !important;
+                    z-index: 100 !important;
+                    background: #f8fafc !important;
+                    border-bottom: 1px solid #cbd5e1 !important;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+                    margin-bottom: 0 !important;
+                    padding: 6px 8px !important;
+                    flex-shrink: 0;
+                }
+                .seo-editor-container .rdw-editor-main {
+                    max-height: 360px !important;
+                    min-height: 200px !important;
+                    overflow-y: auto !important;
+                    padding: 12px 16px !important;
+                    background: #fff;
+                }
+                .seo-editor-container .rdw-editor-wrapper {
+                    display: flex;
+                    flex-direction: column;
+                }
+                .seo-content-hint code {
+                    background: #f1f5f9;
+                    border-radius: 4px;
+                    padding: 1px 5px;
+                    font-size: 11px;
+                    color: #182C5A;
+                }
+                .seo-faq-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    margin-bottom: 12px;
+                }
+                .seo-faq-empty {
+                    color: #94a3b8;
+                    font-size: 13px;
+                    border: 1px dashed #cbd5e1;
+                    border-radius: 8px;
+                    padding: 18px;
+                    text-align: center;
+                }
+                .seo-faq-item {
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 12px 14px 14px;
+                    margin-bottom: 12px;
+                    background: #fff;
+                }
+                .seo-faq-item-head {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                }
+                .seo-faq-index {
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: #182C5A;
+                    letter-spacing: 0.04em;
+                }
+                .seo-faq-actions {
+                    display: flex;
+                    gap: 2px;
+                }
+                .seo-faq-actions .p-button {
+                    width: 30px;
+                    height: 30px;
+                }
+                .seo-content-footer {
+                    display: flex;
+                    align-items: center;
+                    justify-content: flex-end;
+                    gap: 10px;
+                    border-top: 1px solid #e2e8f0;
+                    padding-top: 16px;
+                    margin-top: 4px;
+                }
                 @media (max-width: 1100px) {
                     .subcategory-edit-layout {
                         grid-template-columns: 1fr;
@@ -390,6 +674,11 @@ function SubCategory() {
                             <div style={{ transform: "scale(0.9)", transformOrigin: "left center" }}>
                                 <BreadCrumb model={breadItems} home={home} style={{ border: "none", padding: 0, background: "transparent" }} />
                             </div>
+                            {seoOnly && (
+                                <small style={{ color: "#94a3b8" }}>
+                                    Read-only for the SEO role — the SEO Content editor (description + FAQ) remains fully editable.
+                                </small>
+                            )}
                         </div>
                         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                             <Dropdown
@@ -413,8 +702,18 @@ function SubCategory() {
                                 style={{ minWidth: 160, height: "38px", borderRadius: "6px" }}
                                 panelStyle={{ fontSize: 13 }}
                             />
-                            {(role === "admin" || role === "catalog-manager") && (
-                            <>
+                            {/* The SEO role keeps this one — seo_content is its job here. */}
+                            {seoContentEditable && (
+                            <Button
+                                label="SEO Content"
+                                icon="pi pi-align-left"
+                                className="p-button-outlined"
+                                type="button"
+                                onClick={openSeoDialog}
+                                style={{ height: "38px" }}
+                            />
+                            )}
+                            {editable && (
                             <Button
                                 label="Pack Sizes"
                                 icon="pi pi-list"
@@ -423,6 +722,9 @@ function SubCategory() {
                                 onClick={() => setPackSizeOpen(true)}
                                 style={{ height: "38px" }}
                             />
+                            )}
+                            {canCreateProduct && (
+                            <>
                             <Button
                                 label="Import from Excel"
                                 icon="pi pi-file-import"
@@ -453,7 +755,7 @@ function SubCategory() {
                             role={role}
                             loading={productsLoading}
                             onRefetch={() => fetchSubCategoryProducts(manufacturer, categories)}
-                            onDeleteProduct={handleDeleteProduct}
+                            onDeleteProduct={can("product:delete") ? handleDeleteProduct : undefined}
                             emptyMessage="No products found for this subcategory."
                             visibleSections={visibleSections}
                         />
@@ -520,6 +822,138 @@ function SubCategory() {
                             )}
                         </div>
                     ))}
+                </div>
+            </Dialog>
+            <Dialog
+                visible={seoOpen}
+                header={`SEO Content — ${manufacturer?.name || "Subcategory"}`}
+                style={{ width: "820px", maxWidth: "96vw" }}
+                onHide={() => setSeoOpen(false)}
+            >
+                <div className="seo-content-meta">
+                    This description and FAQ render on the product page of <strong>every product</strong> in this subcategory,
+                    and the FAQ is also published as FAQ structured data for search engines. Write it once here instead of
+                    repeating it per product.
+                </div>
+
+                <div className="seo-content-field">
+                    <label htmlFor="seo_heading" className="Label__Text">
+                        Section Heading
+                    </label>
+                    <InputText
+                        id="seo_heading"
+                        value={seoHeading}
+                        onChange={(event) => setSeoHeading(event.target.value)}
+                        placeholder={`About ${manufacturer?.name || "this subcategory"}`}
+                        className="Input__Round"
+                        disabled={!seoContentEditable}
+                    />
+                    <small className="seo-content-hint">Leave blank to use “About {manufacturer?.name || "…"}”.</small>
+                </div>
+
+                <div className="seo-content-field">
+                    <label htmlFor="seo_description" className="Label__Text">
+                        Description
+                    </label>
+                    <div className="seo-editor-container">
+                        <Editor
+                            editorState={editorState}
+                            onEditorStateChange={handleEditorChange}
+                            readOnly={!seoContentEditable}
+                            toolbarClassName="seo-sticky-toolbar"
+                            wrapperStyle={{ minHeight: "280px" }}
+                        />
+                    </div>
+                    <small className="seo-content-hint">
+                        Use the Word-style formatting toolbar above to add Headings (H1, H2, H3), Bold text, Bullet lists, Numbered lists, Alignments, and Links.
+                        <br />
+                        Write only what is true for the <strong>whole subcategory</strong> — per-product values (product
+                        code, size, bundle qty) already render in the product page Specifications tab.
+                    </small>
+                </div>
+
+                <div className="seo-content-field">
+                    <div className="seo-faq-header">
+                        <label className="Label__Text" style={{ margin: 0 }}>
+                            FAQ ({seoFaqs.length})
+                        </label>
+                        <Button
+                            label="Add Question"
+                            icon="pi pi-plus"
+                            className="p-button-outlined"
+                            type="button"
+                            onClick={() => setSeoFaqs((prev) => [...prev, { question: "", answer: "" }])}
+                            disabled={!seoContentEditable}
+                            style={{ height: "34px" }}
+                        />
+                    </div>
+
+                    {seoFaqs.length === 0 ? (
+                        <div className="seo-faq-empty">No questions yet. Add the ones buyers actually ask before ordering.</div>
+                    ) : (
+                        seoFaqs.map((faq, index) => (
+                            <div className="seo-faq-item" key={index}>
+                                <div className="seo-faq-item-head">
+                                    <span className="seo-faq-index">Q{index + 1}</span>
+                                    <div className="seo-faq-actions">
+                                        <Button
+                                            icon="pi pi-arrow-up"
+                                            className="p-button-text p-button-sm"
+                                            type="button"
+                                            aria-label="Move question up"
+                                            onClick={() => moveFaq(index, -1)}
+                                            disabled={!seoContentEditable || index === 0}
+                                        />
+                                        <Button
+                                            icon="pi pi-arrow-down"
+                                            className="p-button-text p-button-sm"
+                                            type="button"
+                                            aria-label="Move question down"
+                                            onClick={() => moveFaq(index, 1)}
+                                            disabled={!seoContentEditable || index === seoFaqs.length - 1}
+                                        />
+                                        <Button
+                                            icon="pi pi-trash"
+                                            className="p-button-text p-button-danger p-button-sm"
+                                            type="button"
+                                            aria-label="Remove question"
+                                            onClick={() => setSeoFaqs((prev) => prev.filter((_, i) => i !== index))}
+                                            disabled={!seoContentEditable}
+                                        />
+                                    </div>
+                                </div>
+                                <InputText
+                                    value={faq.question}
+                                    onChange={(event) => updateFaq(index, "question", event.target.value)}
+                                    placeholder="What ply corrugated box should I use for e-commerce shipping?"
+                                    className="Input__Round"
+                                    disabled={!seoContentEditable}
+                                />
+                                <InputTextarea
+                                    value={faq.answer}
+                                    onChange={(event) => updateFaq(index, "answer", event.target.value)}
+                                    rows={3}
+                                    autoResize
+                                    placeholder="Answer shown to buyers and submitted as FAQ structured data."
+                                    className="Input__Round"
+                                    disabled={!seoContentEditable}
+                                />
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                <div className="seo-content-footer">
+                    <Button label="Cancel" className="p-button-text" type="button" onClick={() => setSeoOpen(false)} />
+                    <Button
+                        label={savingSeo ? "Saving" : "Save SEO Content"}
+                        icon="pi pi-check"
+                        className="Btn__Dark"
+                        type="button"
+                        onClick={handleSaveSeoContent}
+                        disabled={!seoContentEditable || savingSeo}
+                        style={{ width: "200px", height: "38px" }}
+                    />
                 </div>
             </Dialog>
         </>

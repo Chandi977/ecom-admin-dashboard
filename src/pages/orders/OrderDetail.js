@@ -6,6 +6,7 @@ import moment from "moment";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
 import { Dialog } from "primereact/dialog";
+import { can } from "../../rbac/permissions";
 
 function OrderDetail() {
     const [displayModal, setDisplayModal] = useState(false);
@@ -17,11 +18,9 @@ function OrderDetail() {
     const [trackingId, setTrackingId] = useState("");
     const [deliveryPartner, setDeliveryPartner] = useState("");
     const [deliveredDate, setDeliveredDate] = useState("");
-    const [role, setRole] = useState("");
-
-    useEffect(() => {
-        setRole(localStorage.getItem("role"));
-    }, []);
+    // Fulfilment edits (shipping / tracking / delivered / payment verification)
+    // all hit the /order/update/* routes, which require order:write.
+    const canWrite = can("order:write");
 
     const history = useHistory();
     const { id } = useParams();
@@ -39,6 +38,10 @@ function OrderDetail() {
 
     /* ---------- Update handlers (unchanged logic) ----------- */
     const handleShippingDateUpdate = async () => {
+        if (!canWrite) {
+            toast.info("You do not have permission to update orders.");
+            return;
+        }
         const isValidDate = moment(shippingDate, "DD-MM-YYYY", true).isValid();
         if (!isValidDate) {
             toast.error("Please use DD-MM-YYYY format.");
@@ -58,6 +61,10 @@ function OrderDetail() {
     };
 
     const handleDeliveredDateUpdate = async () => {
+        if (!canWrite) {
+            toast.info("You do not have permission to update orders.");
+            return;
+        }
         const isValidDate = moment(deliveredDate, "DD-MM-YYYY", true).isValid();
         if (!isValidDate) {
             toast.error("Please use DD-MM-YYYY format.");
@@ -77,6 +84,10 @@ function OrderDetail() {
     };
 
     const handleTrackingIdUpdate = async () => {
+        if (!canWrite) {
+            toast.info("You do not have permission to update orders.");
+            return;
+        }
         if (!trackingId || !deliveryPartner) {
             toast.error("Both Tracking ID and Delivery Partner are required.");
             return;
@@ -96,6 +107,10 @@ function OrderDetail() {
     };
 
     const handleVerifyClick = async () => {
+        if (!canWrite) {
+            toast.info("You do not have permission to update orders.");
+            return;
+        }
         try {
             const data = { _id: orderId, paymentStatus: "Payment Verified", status: "Payment Verified" };
             const response = await handlePutRequest(data, "/order/update/payment/status");
@@ -312,7 +327,7 @@ function OrderDetail() {
                                     <div className="value">
                                         {resData?.trackingId} — {resData?.deliveryPartner}
                                     </div>
-                                ) : role === "admin" ? (
+                                ) : canWrite ? (
                                     <form
                                         onSubmit={(e) => {
                                             e.preventDefault();
@@ -336,7 +351,7 @@ function OrderDetail() {
                                 <div className="label">Shipped Date</div>
                                 {resData?.shippingDate ? (
                                     <div className="value">{resData?.shippingDate}</div>
-                                ) : role === "admin" ? (
+                                ) : canWrite ? (
                                     <div className="row-inline">
                                         <input type="text" placeholder="DD-MM-YYYY" value={shippingDate} onChange={(e) => e.target.value.length <= 10 && setShippingDate(e.target.value)} />
                                         <button className="btn" onClick={handleShippingDateUpdate}>
@@ -353,7 +368,7 @@ function OrderDetail() {
                                 <div className="label">Delivered Date</div>
                                 {resData?.deliveredDate ? (
                                     <div className="value">{resData?.deliveredDate}</div>
-                                ) : role === "admin" ? (
+                                ) : canWrite ? (
                                     <div className="row-inline">
                                         <input type="text" placeholder="DD-MM-YYYY" value={deliveredDate} onChange={(e) => e.target.value.length <= 10 && setDeliveredDate(e.target.value)} />
                                         <button className="btn" onClick={handleDeliveredDateUpdate}>
@@ -381,7 +396,7 @@ function OrderDetail() {
                 style={{ width: "50vw" }}
                 footer={
                     <div>
-                        {role === "admin" && <Button label="Verify Payment" className="p-button-success" onClick={handleVerifyClick} />}
+                        {canWrite && <Button label="Verify Payment" className="p-button-success" onClick={handleVerifyClick} />}
                         <Button label="Cancel" className="p-button-secondary" onClick={() => setDisplayModal(false)} />
                     </div>
                 }

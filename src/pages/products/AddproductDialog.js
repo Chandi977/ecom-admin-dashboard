@@ -11,11 +11,14 @@ import { EditorState } from "draft-js";
 import draftToHtml from "draftjs-to-html";
 import { toast } from "react-toastify";
 import { createOverviewField, mergeOverviewFieldsWithTemplate, normalizeOverviewFields, slugifyOverviewFieldKey } from "../../utils/overviewFields";
+import { can } from "../../rbac/permissions";
 
 function AddproductDialog({ onsuccess }) {
     const [text1, setText1] = useState(EditorState.createEmpty());
     const [description, setDescription] = useState("");
     const dispatch = useDispatch();
+    // /product/create is gated on product:create (the SEO role only holds seo:write).
+    const canCreate = can("product:create");
     const [categories, setCategories] = useState([]);
     const [subCategories, setSubCategories] = useState([]);
     const [brands, setBrands] = useState([]);
@@ -139,6 +142,10 @@ function AddproductDialog({ onsuccess }) {
         },
 
         onSubmit: async (data) => {
+            if (!canCreate) {
+                toast.info("You do not have permission to create products.");
+                return;
+            }
             if (!data.slug.trim()) {
                 toast.error("Slug is required");
                 return;
@@ -749,7 +756,12 @@ function AddproductDialog({ onsuccess }) {
                     </div>
                 </div>
                 <div className="Down__Btn">
-                    <Button label="Create Product" className="Btn__Dark" type="submit" />
+                    {!canCreate && (
+                        <small className="p-text-secondary" style={{ marginRight: "1rem" }}>
+                            Read-only for your role — creating products needs the catalog product permission.
+                        </small>
+                    )}
+                    <Button label="Create Product" className="Btn__Dark" type="submit" disabled={!canCreate} />
                 </div>
             </form>
         </>

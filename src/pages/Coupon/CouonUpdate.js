@@ -10,6 +10,7 @@ import { handleGetRequest } from "../../services/GetTemplate";
 import { toast } from "react-toastify";
 import { Dropdown } from "primereact/dropdown";
 import { Calendar } from "primereact/calendar";
+import { can } from "../../rbac/permissions";
 
 function CouponUpdate() {
     const [manufacturer, setManufacturers] = useState();
@@ -30,6 +31,8 @@ function CouponUpdate() {
     const [maxDiscountCap, setMaxDiscountCap] = useState(null);
     const [couponDescription, setCouponDescription] = useState("");
     const [categories, setCategories] = useState([]);
+    // /coupon/update is gated on coupon:write.
+    const canWrite = can("coupon:write");
     const getData = useCallback(async () => {
         const res = await handleGetRequest(`/coupon/get/${id}`);
         const cat = await handleGetRequest("/category/all");
@@ -90,6 +93,10 @@ function CouponUpdate() {
             couponDescription: "",
         },
         onSubmit: async () => {
+            if (!canWrite) {
+                toast.info("You do not have permission to update coupons.");
+                return;
+            }
             const dat = {
                 type,
                 name,
@@ -331,8 +338,13 @@ function CouponUpdate() {
                         </div>
 
                         <div className="Down__Btn m-0 p-0">
+                            {!canWrite && (
+                                <small className="p-text-secondary" style={{ marginRight: "1rem" }}>
+                                    Read-only for your role — editing coupons needs the coupon permission.
+                                </small>
+                            )}
                             <Button label="Cancel Changes" className="btn-danger" style={{ marginTop: "10px" }} onClick={handleCancel} type="button" />
-                            <Button label="Update Changes" className="Btn__Dark" type="submit" />
+                            <Button label="Update Changes" className="Btn__Dark" type="submit" disabled={!canWrite} />
                         </div>
                     </form>
                 </div>

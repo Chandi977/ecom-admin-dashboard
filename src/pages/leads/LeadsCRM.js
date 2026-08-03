@@ -12,6 +12,7 @@ import { toast } from "react-toastify";
 import moment from "moment/moment";
 import { handleGetRequest } from "../../services/GetTemplate";
 import { handlePatchRequest } from "../../services/PatchTemplate";
+import { can } from "../../rbac/permissions";
 import LeadsImport from "./LeadsImport";
 import LeadCreate from "./LeadCreate";
 
@@ -73,7 +74,7 @@ function StatCard({ label, value, color }) {
     );
 }
 
-function LeadCard({ lead, onOpen, onQuickStatus, saving }) {
+function LeadCard({ lead, onOpen, onQuickStatus, saving, canWrite }) {
     const followUp = lead.nextFollowUpAt ? moment(lead.nextFollowUpAt) : null;
     const overdue = followUp && followUp.isBefore(moment(), "day");
     return (
@@ -107,7 +108,7 @@ function LeadCard({ lead, onOpen, onQuickStatus, saving }) {
                     value={lead.status}
                     options={STATUS_OPTIONS}
                     onChange={(e) => onQuickStatus(lead, e.value)}
-                    disabled={saving}
+                    disabled={saving || !canWrite}
                     style={{ width: "100%" }}
                 />
             </div>
@@ -129,6 +130,9 @@ export default function LeadsCRM() {
     const [savingId, setSavingId] = useState(null);
     const [importOpen, setImportOpen] = useState(false);
     const [createOpen, setCreateOpen] = useState(false);
+    // Creating / importing / re-staging a lead all write to the lead module,
+    // which is gated on contact:write. Reading the pipeline is not.
+    const canWrite = can("contact:write");
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -182,6 +186,10 @@ export default function LeadsCRM() {
     }, [filtered]);
 
     const changeStatus = async (lead, status) => {
+        if (!canWrite) {
+            toast.info("You have read-only access to leads.");
+            return;
+        }
         if (!status || status === lead.status) return;
         setSavingId(lead._id);
         const res = await handlePatchRequest({ status }, `/lead/${lead._id}`);
@@ -234,7 +242,7 @@ export default function LeadsCRM() {
     const statusBody = (r) => (
         <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 150 }}>
             <Tag severity={STATUS_SEVERITY[r.status]} value={STATUS_LABELS[r.status] || r.status} />
-            <Dropdown value={r.status} options={STATUS_OPTIONS} onChange={(e) => changeStatus(r, e.value)} disabled={savingId === r._id} style={{ width: "100%" }} />
+            <Dropdown value={r.status} options={STATUS_OPTIONS} onChange={(e) => changeStatus(r, e.value)} disabled={savingId === r._id || !canWrite} style={{ width: "100%" }} />
         </div>
     );
 
@@ -255,8 +263,8 @@ export default function LeadsCRM() {
                     </span>
                     <Dropdown value={statusFilter} options={STATUS_OPTIONS} onChange={(e) => setStatusFilter(e.value)} placeholder="All statuses" showClear style={{ minWidth: 150 }} />
                     <Dropdown value={sourceFilter} options={sourceOptions} onChange={(e) => setSourceFilter(e.value)} placeholder="All sources" showClear style={{ minWidth: 150 }} />
-                    <Button icon="pi pi-plus" label="New Lead" onClick={() => setCreateOpen(true)} />
-                    <Button icon="pi pi-upload" label="Import CSV" className="p-button-outlined p-button-help" onClick={() => setImportOpen(true)} />
+                    {canWrite && <Button icon="pi pi-plus" label="New Lead" onClick={() => setCreateOpen(true)} />}
+                    {canWrite && <Button icon="pi pi-upload" label="Import CSV" className="p-button-outlined p-button-help" onClick={() => setImportOpen(true)} />}
                     <Button icon="pi pi-download" label="Export" className="p-button-outlined" onClick={exportCSV} />
                     <Button icon="pi pi-refresh" label="Refresh" onClick={load} loading={loading} />
                 </div>
@@ -266,6 +274,11 @@ export default function LeadsCRM() {
                 Every enquiry from the website contact and custom-packaging forms lands here. Click a lead to open its
                 workspace — log calls, add follow-ups and notes. Use the status dropdown to move it through the pipeline.
             </p>
+            {!canWrite && (
+                <p style={{ color: "#94a3b8", marginTop: "-8px", marginBottom: "16px" }}>
+                    You have read-only access to leads — pipeline changes are disabled.
+                </p>
+            )}
 
             <div className="grid">
                 <StatCard label="Total leads" value={stats.total} color="#6366f1" />
@@ -287,7 +300,7 @@ export default function LeadsCRM() {
                             </div>
                             <div className="crm-col-body">
                                 {leadsByStatus[col.value].map((lead) => (
-                                    <LeadCard key={lead._id} lead={lead} onOpen={openLead} onQuickStatus={changeStatus} saving={savingId === lead._id} />
+                                    <LeadCard key={lead._id} lead={lead} onOpen={openLead} onQuickStatus={changeStatus} saving={savingId === lead._id} canWrite={canWrite} />
                                 ))}
                                 {leadsByStatus[col.value].length === 0 ? <div className="crm-col-empty">{loading ? "Loading…" : "No leads"}</div> : null}
                             </div>

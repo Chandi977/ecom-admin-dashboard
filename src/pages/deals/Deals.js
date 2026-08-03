@@ -14,6 +14,7 @@ import Axios from "axios";
 import { DEV } from "../../services/constants";
 import AdddealDialog from "./AdddealDialog";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
+import { can } from "../../rbac/permissions";
 
 const MIN_FILTER_LENGTH = 2;
 const FILTER_DEBOUNCE_MS = 300;
@@ -28,7 +29,8 @@ function Deals() {
     const [isFiltering, setIsFiltering] = useState(false);
     const dispatch = useDispatch();
     const history = useHistory();
-    const [role, setRole] = useState("");
+    // /deal/create, /deal/update and /deal/delete are gated on deal:write.
+    const canWrite = can("deal:write");
 
     const breadItems = [{ label: "Home" }, { label: "Deals" }];
     const home = { icon: "pi pi-home", url: "/" };
@@ -57,7 +59,7 @@ function Deals() {
     const actionBodyTemplate = (rowData) => {
         return (
             <div>
-                <Button icon="pi pi-ellipsis-v" className="p-button-rounded mr-2 Elipse_Icon" onClick={(e) => handleActionButton(e, rowData)} aria-controls="popup_menu" aria-haspopup />
+                {canWrite && <Button icon="pi pi-ellipsis-v" className="p-button-rounded mr-2 Elipse_Icon" onClick={(e) => handleActionButton(e, rowData)} aria-controls="popup_menu" aria-haspopup />}
             </div>
         );
     };
@@ -74,6 +76,10 @@ function Deals() {
     };
 
     const handleDelete = () => {
+        if (!canWrite) {
+            toast.info("You do not have permission to delete deals.");
+            return;
+        }
         const selectedId = selectedRow.map((val, index) => {
             return val?._id;
         });
@@ -155,10 +161,6 @@ function Deals() {
         setShowDialog(false);
     };
 
-    useEffect(() => {
-        const role = localStorage.getItem("role");
-        setRole(role);
-    }, []);
     return (
         <>
             <Dialog visible={showDialog} header="Deal" style={{ width: "750px" }} onHide={() => setShowDialog(false)}>
@@ -170,7 +172,7 @@ function Deals() {
                     <h2>Deals</h2>
                     <BreadCrumb model={breadItems} home={home} />
                 </div>
-                {role === "admin" && (
+                {canWrite && (
                     <div className="Top__Btn">
                         <Button label="Add" icon="pi pi-plus" iconPos="right" onClick={handledClicked} className="Btn__DarkAdd" style={{ width: "240px" }} />
                         <Button icon="pi pi-trash" iconPos="right" onClick={handleDelete} className="Btn__DarkDelete" style={{ width: "240px" }} />
