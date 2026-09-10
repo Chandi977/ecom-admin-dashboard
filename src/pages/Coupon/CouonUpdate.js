@@ -33,25 +33,26 @@ function CouponUpdate() {
     const [categories, setCategories] = useState([]);
     // /coupon/update is gated on coupon:write.
     const canWrite = can("coupon:write");
-    const getData = useCallback(async () => {
+        const getData = useCallback(async () => {
         const res = await handleGetRequest(`/coupon/get/${id}`);
         const cat = await handleGetRequest("/category/all");
 
-        setType(res?.data?.type);
-        setName(res?.data?.name);
-        setCouponCode(res?.data?.couponCode);
-        setProductType(res?.data?.productType);
-        setBrand(res?.data?.brand);
-        setCategory(res?.data?.category);
-        setStartDate(res?.data?.startDate ? new Date(res?.data?.startDate) : null);
-        setEndDate(res?.data?.endDate ? new Date(res?.data?.endDate) : null);
-        setNoOfUse(res?.data?.noOfUse);
-        setDiscountPercentage(res?.data?.discountPercentage);
-        setDiscountPrice(res?.data?.discountPrice);
-        setMinimumOrderValue(res?.data?.minimumOrderValue);
-        setMaxDiscountCap(res?.data?.maxDiscountCap);
-        setCouponDescription(res?.data?.couponDescription);
-        setManufacturers(res?.data);
+        const couponData = res?.data;
+        setType(couponData?.discountType === "percentage" ? "product" : "product");
+        setName(couponData?.description || "");
+        setCouponCode(couponData?.couponCode || "");
+        setProductType(couponData?.appliesTo || "all");
+        setBrand(couponData?.scopeValue || null);
+        setCategory(couponData?.scopeValue || null);
+        setStartDate(couponData?.validFrom ? new Date(couponData?.validFrom) : null);
+        setEndDate(couponData?.validTo ? new Date(couponData?.validTo) : null);
+        setNoOfUse(couponData?.couponUse || "single");
+        setDiscountPercentage(couponData?.discountType === "percentage" ? couponData?.discountValue : null);
+        setDiscountPrice(couponData?.discountType === "fixed" ? couponData?.discountValue : null);
+        setMinimumOrderValue(couponData?.minOrderValue || 0);
+        setMaxDiscountCap(couponData?.maxDiscount || 0);
+        setCouponDescription(couponData?.description || "");
+        setManufacturers(couponData);
         setCategories(cat?.data);
     }, [id]);
 
@@ -97,21 +98,31 @@ function CouponUpdate() {
                 toast.info("You do not have permission to update coupons.");
                 return;
             }
+            const discountType = discountPercentage > 0 ? "percentage" : "fixed";
+            const discountValue = discountType === "percentage"
+                ? parseInt(discountPercentage || 0)
+                : parseInt(discountPrice || 0);
+
+            let scopeValue = undefined;
+            if (productType === "brand" && brand) {
+                scopeValue = brand;
+            } else if (productType === "category" && category) {
+                scopeValue = category;
+            }
+
             const dat = {
-                type,
-                name,
-                couponCode,
-                productType,
-                brand,
-                category,
-                startDate,
-                endDate,
-                noOfUse,
-                discountPercentage,
-                discountPrice,
-                minimumOrderValue,
-                maxDiscountCap,
-                couponDescription,
+                couponCode: couponCode?.toUpperCase(),
+                description: name,
+                discountType,
+                discountValue,
+                maxDiscount: parseInt(maxDiscountCap || 0),
+                minOrderValue: parseInt(minimumOrderValue || 0),
+                validFrom: startDate,
+                validTo: endDate,
+                usageLimit: 1,
+                appliesTo: productType || "all",
+                scopeValue,
+                couponUse: noOfUse || "single",
                 _id: id,
             };
             const res = await handlePutRequest(dat, "/coupon/update");

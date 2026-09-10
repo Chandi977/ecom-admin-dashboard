@@ -94,17 +94,31 @@ function AddCoupon({ onsuccess }) {
                 toast.info("You do not have permission to create coupons.");
                 return;
             }
+            const discountType = data.discountPercentage > 0 ? "percentage" : "fixed";
+            const discountValue = discountType === "percentage"
+                ? parseInt(data.discountPercentage || 0)
+                : parseInt(data.discountPrice || 0);
+
+            let scopeValue = undefined;
+            if (data.productType === "brand" && selectedBrand) {
+                scopeValue = selectedBrand;
+            } else if (data.productType === "category" && selectedCategory) {
+                scopeValue = selectedCategory;
+            }
+
             const dat = {
-                couponCode: data.couponCode,
+                couponCode: data.couponCode?.toUpperCase(),
                 description: data.name,
-                discountType: data.discountPercentage ? "percentage" : "fixed",
-                discountValue: parseInt(data.discountPercentage || data.discountPrice || 0),
+                discountType,
+                discountValue,
                 maxDiscount: parseInt(data.maxDiscountCap || 0),
                 minOrderValue: parseInt(data.minimumOrderValue || 0),
                 validFrom: data.startDate,
                 validTo: data.endDate,
                 usageLimit: 1,
                 appliesTo: data.productType || "all",
+                scopeValue,
+                couponUse: data.noOfUse || "single",
             };
             await dispatch(handlePostRequest(dat, "/coupon/create", true, true));
             onsuccess();
