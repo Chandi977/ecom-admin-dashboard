@@ -9,8 +9,8 @@ import moment from "moment";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
 import { useDispatch } from "react-redux";
+import apiClient from "../../services/apiClient";
 import { DEV } from "../../services/constants";
-import Axios from "axios";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
 const MIN_FILTER_LENGTH = 2;
@@ -60,7 +60,7 @@ function Enquirey() {
         }
         setIsFiltering(true);
         setSkip(0);
-        const result = await Axios.get(DEV + "/searchEnquiry", {
+        const result = await apiClient.get(DEV + "/searchEnquiry", {
             params: {
                 [names]: trimmed,
             },

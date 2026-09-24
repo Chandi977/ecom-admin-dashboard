@@ -12,7 +12,7 @@ import { useDispatch } from "react-redux";
 import { handleDeleteRequest } from "../../services/DeleteTemplate";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
-import Axios from "axios";
+import apiClient from "../../services/apiClient";
 import { DEV } from "../../services/constants";
 import AddFaqDialog from "./AddFaqDialog";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
@@ -120,7 +120,7 @@ function Faqs() {
         }
         setIsFiltering(true);
         setSkip(0);
-        const result = await Axios.get(DEV + "/faqSearch", {
+        const result = await apiClient.get(DEV + "/faqSearch", {
             params: {
                 [names]: trimmed,
             },

@@ -11,7 +11,7 @@ import moment from "moment";
 import { useDispatch } from "react-redux";
 import { handleDeleteRequest } from "../../services/DeleteTemplate";
 import GlobalOfferDialogue from "./GlobalOfferDialogue";
-import Axios from "axios";
+import apiClient from "../../services/apiClient";
 import { DEV } from "../../services/constants";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
@@ -123,7 +123,7 @@ function GlobalOffers() {
         }
         setIsFiltering(true);
         setSkip(0);
-        const result = await Axios.get(DEV + "/searchOffer", {
+        const result = await apiClient.get(DEV + "/searchOffer", {
             params: {
                 [names]: trimmed,
             },

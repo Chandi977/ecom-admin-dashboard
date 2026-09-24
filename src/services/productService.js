@@ -1,4 +1,4 @@
-import axios from "axios";
+import apiClient from "./apiClient";
 import { DEV } from "./constants";
 
 const getAuthHeader = () => {
@@ -8,7 +8,7 @@ const getAuthHeader = () => {
 
 export const productService = {
     async getProducts(params = {}) {
-        const response = await axios.get(`${DEV}/product/get`, {
+        const response = await apiClient.get(`${DEV}/product/get`, {
             params: {
                 ...params,
                 includeMeta: true,
@@ -20,7 +20,7 @@ export const productService = {
     },
 
     async searchProducts(params = {}) {
-        const response = await axios.get(`${DEV}/product/search`, {
+        const response = await apiClient.get(`${DEV}/product/search`, {
             params: {
                 ...params,
                 includeMeta: true,
@@ -32,14 +32,14 @@ export const productService = {
     },
 
     async getProductById(id) {
-        const response = await axios.get(`${DEV}/product/get/id/${id}`, {
+        const response = await apiClient.get(`${DEV}/product/get/id/${id}`, {
             headers: getAuthHeader(),
         });
         return response.data;
     },
 
     async createProduct(payload) {
-        const response = await axios.post(`${DEV}/product/create`, payload, {
+        const response = await apiClient.post(`${DEV}/product/create`, payload, {
             headers: {
                 "Content-Type": "application/json",
                 ...getAuthHeader(),
@@ -49,7 +49,7 @@ export const productService = {
     },
 
     async updateProduct(id, payload) {
-        const response = await axios.put(
+        const response = await apiClient.put(
             `${DEV}/product/update`,
             { id, ...payload },
             {
@@ -63,7 +63,7 @@ export const productService = {
     },
 
     async deleteProducts(ids) {
-        const response = await axios.post(
+        const response = await apiClient.post(
             `${DEV}/product/delete`,
             { id: ids },
             {
@@ -78,7 +78,7 @@ export const productService = {
 
     async deleteProductImages(keys) {
         const payload = { keys: Array.isArray(keys) ? keys : [keys] };
-        const response = await axios.post(`${DEV}/product/image/delete`, payload, {
+        const response = await apiClient.post(`${DEV}/product/image/delete`, payload, {
             headers: {
                 "Content-Type": "application/json",
                 ...getAuthHeader(),
@@ -91,7 +91,7 @@ export const productService = {
         const formData = new FormData();
         formData.append("image", file);
         
-        const response = await axios.post(`${DEV}/uploadImage`, formData, {
+        const response = await apiClient.post(`${DEV}/uploadImage`, formData, {
             headers: {
                 ...getAuthHeader(),
             },
@@ -112,7 +112,7 @@ export const productService = {
     async importCSV(file) {
         const formData = new FormData();
         formData.append("csv", file);
-        const response = await axios.post(`${DEV}/product/csv/import`, formData, {
+        const response = await apiClient.post(`${DEV}/product/csv/import`, formData, {
             headers: {
                 ...getAuthHeader(),
             },

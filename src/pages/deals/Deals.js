@@ -10,7 +10,7 @@ import moment from "moment";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
-import Axios from "axios";
+import apiClient from "../../services/apiClient";
 import { DEV } from "../../services/constants";
 import AdddealDialog from "./AdddealDialog";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
@@ -114,7 +114,7 @@ function Deals() {
         }
         setIsFiltering(true);
         setSkip(0);
-        const result = await Axios.get(DEV + "/deal/search", {
+        const result = await apiClient.get(DEV + "/deal/search", {
             params: {
                 [names]: trimmed,
             },

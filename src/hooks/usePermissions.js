@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useQuery } from "react-query";
-import axios from "axios";
+import apiClient from "../services/apiClient";
 import { DEV } from "../services/constants";
 import { getStoredAuthSession } from "../utils/authSession";
 import { ALL_PERMISSIONS, ROLE_LABELS, isFullAccessRole, permissionsForRole } from "../rbac/permissions";
@@ -22,13 +22,15 @@ const localSnapshot = (role) => ({
 });
 
 /**
- * Deliberately calls axios directly instead of services/GetTemplate's
- * handleGetRequest: that helper toasts on failure and force-logs-out on 401/403,
- * and this probe must fail silently while the endpoint is being rolled out.
+ * Deliberately uses the shared apiClient but with `skipAuthRedirect` so this
+ * permission probe can answer "not permitted / not deployed" silently instead
+ * of kicking the whole session (the caller keeps its local RBAC mirror).
+ * A genuinely expired local token is still blocked in the request interceptor.
  */
 const fetchMyPermissions = async () => {
     const token = localStorage.getItem("token");
-    const response = await axios.get(`${DEV}/permissions/me`, {
+    const response = await apiClient.get(`${DEV}/permissions/me`, {
+        skipAuthRedirect: true,
         ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
     });
     return response?.data?.data;

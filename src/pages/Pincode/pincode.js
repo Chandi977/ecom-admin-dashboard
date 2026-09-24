@@ -9,7 +9,7 @@ import moment from "moment";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
-import Axios from "axios";
+import apiClient from "../../services/apiClient";
 import { DEV } from "../../services/constants";
 import AddPincodeDialog from "./AddPincodeDialog";
 import { FaPen, FaTrash } from "react-icons/fa";
@@ -114,7 +114,7 @@ function PinCodes() {
             getBrands();
             return;
         }
-        const result = await Axios.get(DEV + "/pinCode/search", {
+        const result = await apiClient.get(DEV + "/pinCode/search", {
             params: {
                 [names]: trimmed,
             },

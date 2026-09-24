@@ -11,7 +11,7 @@ import moment from "moment";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { handlePostRequest } from "../../services/PostTemplate";
-import Axios from "axios";
+import apiClient from "../../services/apiClient";
 import { DEV } from "../../services/constants";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
@@ -101,7 +101,7 @@ function Features() {
         }
         setIsFiltering(true);
         setSkip(0);
-        const result = await Axios.get(DEV + "/searchFeature", {
+        const result = await apiClient.get(DEV + "/searchFeature", {
             params: {
                 [names]: trimmed,
             },

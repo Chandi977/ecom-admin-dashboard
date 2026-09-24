@@ -7,7 +7,7 @@ import { Dialog } from "primereact/dialog";
 import CustomerDialog from "../Admin/CustomerDialog";
 import { handleGetRequest } from "../../services/GetTemplate";
 import moment from "moment";
-import Axios from "axios";
+import apiClient from "../../services/apiClient";
 import { DEV } from "../../services/constants";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
@@ -167,7 +167,7 @@ function Customers() {
         }
         setIsFiltering(true);
         setSkip(0);
-        const result = await Axios.get(DEV + "/searchusers", {
+        const result = await apiClient.get(DEV + "/searchusers", {
             params: {
                 [names]: trimmed,
             },

@@ -13,7 +13,7 @@ import { handleDeleteRequest } from "../../services/DeleteTemplate";
 import AddOfferDialogue from "./AddOfferDialogue";
 import { toast } from "react-toastify";
 import { handlePostRequest } from "../../services/PostTemplate";
-import Axios from "axios";
+import apiClient from "../../services/apiClient";
 import { DEV } from "../../services/constants";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 
@@ -127,7 +127,7 @@ function Offers() {
         }
         setIsFiltering(true);
         setSkip(0);
-        const result = await Axios.get(DEV + "/searchDeal", {
+        const result = await apiClient.get(DEV + "/searchDeal", {
             params: {
                 [names]: trimmed,
             },

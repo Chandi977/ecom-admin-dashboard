@@ -1,7 +1,7 @@
-import axios from "axios";
 import { toast } from "react-toastify";
 import { DEV } from "./constants";
-import { handleAuthFailure, isAuthFailureStatus } from "../utils/authSession";
+import { isAuthFailureStatus } from "../utils/authSession";
+import apiClient from "./apiClient";
 
 const CACHEABLE_GET_URLS = new Set(["/category/all", "/subcategory/all", "/brand/all"]);
 const GET_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -32,7 +32,7 @@ export const handleGetRequest = async (url, params, isShowToast = false) => {
 
     const request = (async () => {
         try {
-            const response = await axios.get(DEV + url, {
+            const response = await apiClient.get(DEV + url, {
                 params: {
                     ...(requestParams?.skip && { skip: requestParams?.skip }),
                     ...requestParams,
@@ -48,12 +48,12 @@ export const handleGetRequest = async (url, params, isShowToast = false) => {
             }
             return response.data;
         } catch (error) {
-            const id = toast.loading("Please wait...");
             if (isAuthFailureStatus(error?.response?.status)) {
+                // apiClient interceptor already cleared the session, toasted the
+                // expiry message and redirected to /auth — just drop stale caches.
                 clearGetRequestCache();
-                toast.update(id, { render: error?.response?.data?.messages || error?.response?.data?.message || "Session expired. Please log in again.", type: "error", isLoading: false, autoClose: 3000 });
-                handleAuthFailure();
             } else {
+                const id = toast.loading("Please wait...");
                 toast.update(id, { render: error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!", type: "warn", isLoading: false, autoClose: 3000 });
             }
         } finally {

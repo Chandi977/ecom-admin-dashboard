@@ -484,6 +484,11 @@ export const ProductList = () => {
                 .product-catalog-main {
                     min-width: 0;
                 }
+                .product-catalog-filters {
+                    position: sticky;
+                    top: 84px;
+                    z-index: 10;
+                }
                 .product-catalog-path {
                     display: inline-flex;
                     align-items: center;
@@ -505,6 +510,9 @@ export const ProductList = () => {
                     .product-catalog-sidebar {
                         position: static;
                         max-height: none;
+                    }
+                    .product-catalog-filters {
+                        position: static;
                     }
                 }
             `}</style>
@@ -633,7 +641,7 @@ export const ProductList = () => {
                         <span>{catalogPath}</span>
                     </div>
                     <div
-                        className="card"
+                        className="card product-catalog-filters"
                         style={{
                             display: "flex",
                             flexWrap: "wrap",

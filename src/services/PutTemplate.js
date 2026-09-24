@@ -1,12 +1,12 @@
-import axios from "axios";
 import { toast } from "react-toastify";
 import { DEV } from "./constants";
 import { clearGetRequestCache } from "./GetTemplate";
-import { handleAuthFailure, isAuthFailureStatus } from "../utils/authSession";
+import { isAuthFailureStatus } from "../utils/authSession";
+import apiClient from "./apiClient";
 
 export const handlePutRequest = async (data, url) => {
     const token = localStorage.getItem("token");
-    const response = await axios({
+    const response = await apiClient({
         method: "put",
         url: `${DEV + url}`,
         data: data,
@@ -21,9 +21,9 @@ export const handlePutRequest = async (data, url) => {
         })
         .catch((error) => {
             if (isAuthFailureStatus(error?.response?.status)) {
+                // apiClient interceptor already cleared the session, toasted the
+                // expiry message and redirected to /auth — drop stale caches only.
                 clearGetRequestCache();
-                toast.warn(error?.response?.data?.messages || error?.response?.data?.message || "Session expired. Please log in again.");
-                handleAuthFailure();
             } else if (error?.response?.status === 400 || error?.response?.status === 500) {
                 toast.warn(error?.response?.data?.messages || error?.response?.data?.message || "Something went wrong !!");
             } else {

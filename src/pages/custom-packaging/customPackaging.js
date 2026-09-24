@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import Axios from "axios";
+import apiClient from "../../services/apiClient";
 import { DEV } from "../../services/constants";
 
 function CustomPackaging({ embedded = false }) {
@@ -10,7 +10,7 @@ function CustomPackaging({ embedded = false }) {
     useEffect(() => {
         async function fetchData() {
             try {
-                const response = await Axios.get(DEV + "/custom/packaging/get");
+                const response = await apiClient.get(DEV + "/custom/packaging/get");
                 console.log(response);
                 const sortedData = response.data.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                 setManufacturers(sortedData);

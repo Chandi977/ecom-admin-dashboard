@@ -9,7 +9,7 @@ import { useHistory, useParams } from "react-router-dom";
 import { handleGetRequest } from "../../services/GetTemplate";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
-import Axios from "axios";
+import apiClient from "../../services/apiClient";
 import { DEV } from "../../services/constants";
 import { productService } from "../../services/productService";
 import { PRODUCT_SORT_OPTIONS, sortProducts } from "../../utils/productSorting";
@@ -101,7 +101,7 @@ function SubCategory() {
     const sortedProducts = useMemo(() => sortProducts(subCategoryProducts, sortBy), [subCategoryProducts, sortBy]);
 
     const fetchProducts = useCallback(async (payload) => {
-        const productsRes = await Axios.post(
+        const productsRes = await apiClient.post(
             `${DEV}/product/filter`,
             {
                 ...payload,

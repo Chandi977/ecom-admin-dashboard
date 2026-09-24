@@ -7,7 +7,7 @@ import moment from "moment";
 import { handlePutRequest } from "../../services/PutTemplate";
 import { toast } from "react-toastify";
 import { Dialog } from "primereact/dialog";
-import Axios from "axios";
+import apiClient from "../../services/apiClient";
 
 function OrderDetail() {
     const [selectedRow, setselectedRow] = useState([]);
@@ -85,7 +85,7 @@ function OrderDetail() {
 
     const handleVerifyClick = async () => {
         try {
-            const response = await Axios.put("https://server.prempackaging.com/premind/api/order/update/payment/status", { _id: orderId, paymentStatus: "Payment Verified", status: "Payment Verified" });
+            const response = await apiClient.put("https://server.prempackaging.com/premind/api/order/update/payment/status", { _id: orderId, paymentStatus: "Payment Verified", status: "Payment Verified" });
             if (response.data.success) {
                 toast.success("UTR verified successfully");
                 setPaymentVerified(true);

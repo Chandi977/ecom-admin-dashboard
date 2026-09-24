@@ -1,6 +1,6 @@
-import axios from "axios";
 import { useQuery } from "react-query";
 import { DEV } from "../services/constants";
+import apiClient from "../services/apiClient";
 import { handleAuthFailure } from "../utils/authSession";
 
 /**
@@ -10,13 +10,10 @@ import { handleAuthFailure } from "../utils/authSession";
  * react-query is used because that is how the app already wraps server reads
  * (see hooks/useProductQuery.js) and the provider is mounted in index.jsx.
  *
- * The request itself goes through axios directly (same shape as
- * services/productService.js) instead of services/GetTemplate.handleGetRequest,
- * because handleGetRequest toasts on every failure and routes 403 into
- * handleAuthFailure() -> forced logout. Both are wrong for an optional stats
- * widget: these two endpoints may not be deployed yet, and a role that lacks
- * the stats permission must still be able to use the rest of the page.
- * A real 401 (expired token) is still handed to the app-wide handler.
+ * The request goes through the shared apiClient, but with `skipAuthRedirect`
+ * so 403/404 from a not-yet-deployed endpoint does not force a logout. A real
+ * 401 (expired token) is still handed to the app-wide handler below. The
+ * request interceptor also blocks an already-expired local token entirely.
  */
 
 export const roleDashboardKeys = {
@@ -70,7 +67,7 @@ const requestDashboard = async (url) => {
     let payload;
 
     try {
-        const response = await axios.get(DEV + url, { headers: authHeaders() });
+        const response = await apiClient.get(DEV + url, { headers: authHeaders(), skipAuthRedirect: true });
         payload = response?.data;
     } catch (error) {
         const status = error?.response?.status || 0;

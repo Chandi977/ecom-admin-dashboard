@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import Axios from "axios";
+import apiClient from "../../services/apiClient";
+import { toast } from "react-toastify";
 import moment from "moment/moment";
 
 function ContactData({ embedded = false }) {
@@ -10,7 +11,7 @@ function ContactData({ embedded = false }) {
     useEffect(() => {
         async function fetchData() {
             try {
-                const response = await Axios.get("https://server.prempackaging.com/premind/api/contact/form/get");
+                const response = await apiClient.get("https://server.prempackaging.com/premind/api/contact/form/get");
                 // console.log(response);
                 setManufacturers(response.data.data);
             } catch (error) {
